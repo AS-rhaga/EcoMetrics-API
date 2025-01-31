@@ -52,6 +52,22 @@ def get_fuel_oil_type():
     data = response['Items']
     return data
 
+def get_fuel_oil_type_by_oiletype(fuel_oil_type):
+    data = []
+    response = __dynamodb_client.query(
+        TableName=__table_name_fuel_oil_type,
+        ExpressionAttributeNames={
+            '#name0': 'fuel_oil_type',
+        },
+        ExpressionAttributeValues={
+            ':value0': {'S': fuel_oil_type},
+        },
+        KeyConditionExpression='#name0 = :value0'
+    )
+    data = response['Items']
+    
+    return data
+
 def get_user(user_id):
     data = []
     response = __dynamodb_client.query(

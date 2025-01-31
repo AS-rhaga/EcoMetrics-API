@@ -314,7 +314,7 @@ def lambda_handler(event, context):
                         calculated_distance = float(res_simulation_voyage[i]["distance"]["S"])
                         
                     elif arrival_time >= dt_now:
-                        
+
                         # 現在時間からArrivalTimeまでの時間算出
                         calculated_sailing_time = calc_time_diff(dt_now, arrival_time)
                         # Leg内航海時間との割合を算出し、その分のDistanceを切り出して使用
@@ -472,28 +472,28 @@ def lambda_handler(event, context):
             # 選択年が前年以前の場合、YearToDateには値設定せず、EndOfYearに「Januarytonow」の値を設定
 
             # 返却用データセットに値を設定
-            imo                 = res_vesselalarm[0]["imo"]["S"]
+            imo                 = imo
             VesselName          = res_vesselmaster[0]["VesselName"]["S"]
-            l4w_distance        = round(float(res_vesselalarm[0]["oneMonth_distance"]["S"]))
-            l4w_foc             = round(float(res_vesselalarm[0]["oneMonth_foc"]["S"]), 1)
-            l4w_cii_score       = res_vesselalarm[0]["oneMonth"]["S"]
-            l4w_from            = res_vesselalarm[0]["oneMonth_from"]["S"]
-            l4w_to              = res_vesselalarm[0]["oneMonth_to"]["S"]
+            l4w_distance        = round(float(res_vesselalarm[0]["oneMonth_distance"]["S"])) if res_vesselalarm else 0
+            l4w_foc             = round(float(res_vesselalarm[0]["oneMonth_foc"]["S"]), 1) if res_vesselalarm else 0
+            l4w_cii_score       = res_vesselalarm[0]["oneMonth"]["S"] if res_vesselalarm else ""
+            l4w_from            = res_vesselalarm[0]["oneMonth_from"]["S"] if res_vesselalarm else ""
+            l4w_to              = res_vesselalarm[0]["oneMonth_to"]["S"] if res_vesselalarm else ""
             ytd_distance        = 0
             ytd_foc             = 0
             ytd_cii_score       = ""
             ytd_from            = ""
             ytd_to              = ""
-            eoy_distance        = round(float(res_vesselalarm[0]["Januarytonow_distance"]["S"]))
-            eoy_foc             = round(float(res_vesselalarm[0]["Januarytonow_foc"]["S"]), 1)
-            eoy_cii_score       = res_vesselalarm[0]["Januarytonow"]["S"]
-            eoy_from            = res_vesselalarm[0]["Januarytonow_from"]["S"]
-            eoy_to              = res_vesselalarm[0]["Januarytonow_to"]["S"]
-            ly_distance         = round(float(res_vesselalarm[0]["LastYear_distance"]["S"]))
-            ly_foc              = round(float(res_vesselalarm[0]["LastYear_foc"]["S"]), 1)
-            ly_cii_score        = res_vesselalarm[0]["LastYear"]["S"]
-            ly_from             = res_vesselalarm[0]["LastYear_from"]["S"]
-            ly_to               = res_vesselalarm[0]["LastYear_to"]["S"]
+            eoy_distance        = round(float(res_vesselalarm[0]["Januarytonow_distance"]["S"])) if res_vesselalarm else 0
+            eoy_foc             = round(float(res_vesselalarm[0]["Januarytonow_foc"]["S"]), 1) if res_vesselalarm else 0
+            eoy_cii_score       = res_vesselalarm[0]["Januarytonow"]["S"] if res_vesselalarm else ""
+            eoy_from            = res_vesselalarm[0]["Januarytonow_from"]["S"] if res_vesselalarm else ""
+            eoy_to              = res_vesselalarm[0]["Januarytonow_to"]["S"] if res_vesselalarm else ""
+            ly_distance         = round(float(res_vesselalarm[0]["LastYear_distance"]["S"])) if res_vesselalarm else 0
+            ly_foc              = round(float(res_vesselalarm[0]["LastYear_foc"]["S"]), 1) if res_vesselalarm else 0
+            ly_cii_score        = res_vesselalarm[0]["LastYear"]["S"] if res_vesselalarm else ""
+            ly_from             = res_vesselalarm[0]["LastYear_from"]["S"] if res_vesselalarm else ""
+            ly_to               = res_vesselalarm[0]["LastYear_to"]["S"] if res_vesselalarm else ""
 
         data = {
             "imo"               : imo,

@@ -7,14 +7,41 @@ import boto3
 
 from Util import Util
 
-# Ecoで使用する燃料の情報リスト
-LNG_info_list = {}
-HFO_info_list = {}
-LFO_info_list = {}
-MDO_info_list = {}
-MGO_info_list = {}
+def make_fuel_oil_type_info_list():
 
-def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+    # Ecoで使用する燃料の情報リスト
+    fuel_oil_info_list = {
+        "HFO_info_list": [],
+        "LFO_info_list": [],
+        "MDO_info_list": [],
+        "MGO_info_list": [],
+        "LNG_OMS_info_list": []
+    }
+
+    # 燃料情報リストを取得し、データセットを作成する
+    fuel_oil_name_list = ["HFO", "LFO", "MDO", "MGO", "LNG(Otto Medium Speed)"]
+    fuel_oil_type_info_list = []
+
+    for fuel_oil_name in fuel_oil_name_list:
+        fuel_oil_type_info_list.append(select.get_fuel_oil_type(fuel_oil_name)[0])
+    for fuel_oil_type_info in fuel_oil_type_info_list:
+        name = fuel_oil_type_info["fuel_oil_type"]["S"]
+
+        # それぞれの燃料リストに格納する
+        if name == "HFO":
+            fuel_oil_info_list["HFO_info_list"] = fuel_oil_type_info
+        elif name == "LFO":
+            fuel_oil_info_list["LFO_info_list"] = fuel_oil_type_info
+        elif name == "MGO":
+            fuel_oil_info_list["MDO_info_list"] = fuel_oil_type_info
+        elif name == "MGO":
+            fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info
+        elif name == "LNG(Otto Medium Speed)":        
+            fuel_oil_info_list["LNG_OMS_info_list"] = fuel_oil_type_info
+
+    return fuel_oil_info_list
+
+def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
 
     # EUAの算出
     co2_lng = 0
@@ -40,19 +67,19 @@ def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mg
 
         print(f"eu_ets_rate: {(eu_ets_rate)}")
         if total_lng > 0:
-            lng_co2_factor =  float(LNG_info_list["emission_factor"]["S"])
+            lng_co2_factor =  float(fuel_oil_info_list["LNG_OMS_info_list"]["emission_factor"]["S"])
             co2_lng = total_lng * lng_co2_factor
         if total_hfo > 0:
-            hfo_co2_factor =  float(HFO_info_list["emission_factor"]["S"])
+            hfo_co2_factor =  float(fuel_oil_info_list["HFO_info_list"]["emission_factor"]["S"])
             co2_hfo = total_hfo * hfo_co2_factor
         if total_lfo > 0:
-            lfo_co2_factor =  float(LFO_info_list["emission_factor"]["S"])
+            lfo_co2_factor =  float(fuel_oil_info_list["LFO_info_list"]["emission_factor"]["S"])
             co2_lfo = total_lfo * lfo_co2_factor
         if total_mdo > 0:
-            mdo_co2_factor =  float(MDO_info_list["emission_factor"]["S"])
+            mdo_co2_factor =  float(fuel_oil_info_list["MDO_info_list"]["emission_factor"]["S"])
             co2_mdo = total_mdo * mdo_co2_factor
         if total_mgo > 0:
-            mgo_co2_factor =  float(MGO_info_list["emission_factor"]["S"])
+            mgo_co2_factor =  float(fuel_oil_info_list["MGO_info_list"]["emission_factor"]["S"])
             co2_mgo = total_mgo * mgo_co2_factor
 
         # CO2の総排出量(MT)
@@ -63,7 +90,7 @@ def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mg
         print(f"eua_formatted{type(eua_formatted)}: {eua_formatted}")
     return str(eua_formatted)
 
-def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     energy_lng = 0
     energy_hfo = 0
     energy_lfo = 0
@@ -71,19 +98,19 @@ def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
     energy_mgo = 0
 
     if total_lng > 0:
-        lng_lcv =  float(LNG_info_list["lcv"]["S"])
+        lng_lcv =  float(fuel_oil_info_list["LNG_OMS_info_list"]["lcv"]["S"])
         energy_lng += total_lng * lng_lcv
     if total_hfo > 0:
-        hfo_lcv =  float(HFO_info_list["lcv"]["S"])
+        hfo_lcv =  float(fuel_oil_info_list["HFO_info_list"]["lcv"]["S"])
         energy_hfo += total_hfo * hfo_lcv
     if total_lfo > 0:
-        lfo_lcv =  float(LFO_info_list["lcv"]["S"])
+        lfo_lcv =  float(fuel_oil_info_list["LFO_info_list"]["lcv"]["S"])
         energy_lfo += total_lfo * lfo_lcv
     if total_mdo > 0:
-        mdo_lcv =  float(MDO_info_list["lcv"]["S"])
+        mdo_lcv =  float(fuel_oil_info_list["MDO_info_list"]["lcv"]["S"])
         energy_mdo += total_mdo * mdo_lcv
     if total_mgo > 0:
-        mgo_lcv =  float(MGO_info_list["lcv"]["S"])
+        mgo_lcv =  float(fuel_oil_info_list["MGO_info_list"]["lcv"]["S"])
         energy_mgo += total_mgo * mgo_lcv
 
     energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo) * float(eu_rate) / 100
@@ -108,28 +135,28 @@ def calc_GHG_Max(year):
     print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
     return GHG_Max
 
-def calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+def calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     sum_ghg = 0
     sum_foc = 0
 
     if total_lng > 0:
-        lng_ghg_intensity =  float(LNG_info_list["ghg_intensity"]["S"])
+        lng_ghg_intensity =  float(fuel_oil_info_list["LNG_OMS_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_lng * lng_ghg_intensity
         sum_foc += total_lng
     if total_hfo > 0:
-        hfo_ghg_intensity =  float(HFO_info_list["ghg_intensity"]["S"])
+        hfo_ghg_intensity =  float(fuel_oil_info_list["HFO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_hfo * hfo_ghg_intensity
         sum_foc += total_hfo
     if total_lfo > 0:
-        lfo_ghg_intensity =  float(LFO_info_list["ghg_intensity"]["S"])
+        lfo_ghg_intensity =  float(fuel_oil_info_list["LFO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_lfo * lfo_ghg_intensity
         sum_foc += total_lfo
     if total_mdo > 0:
-        mdo_ghg_intensity =  float(MDO_info_list["ghg_intensity"]["S"])
+        mdo_ghg_intensity =  float(fuel_oil_info_list["MDO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_mdo * mdo_ghg_intensity
         sum_foc += total_mdo
     if total_mgo > 0:
-        mgo_ghg_intensity =  float(MGO_info_list["ghg_intensity"]["S"])
+        mgo_ghg_intensity =  float(fuel_oil_info_list["MGO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_mgo * mgo_ghg_intensity
         sum_foc += total_mgo
 
@@ -137,14 +164,19 @@ def calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
     print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual
 
-def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list):
     GHG_Max    = calc_GHG_Max(year_timestamp)
-    GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
-    cb = (GHG_Max - GHG_Actual) * energy
-    print(f"cb{type(cb)}: {cb}")
-    cb_formatted = str(round(float(cb), 1))
-    print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
-    return cb_formatted
+    cb = 0
+
+    # ゼロ割防止のため、燃料消費量がゼロでない場合のみ計算する
+    total_foc = total_lng + total_hfo + total_lfo + total_mdo + total_mgo
+    if total_foc > 0:
+        GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+        cb = (GHG_Max - GHG_Actual) * energy
+        print(f"cb{type(cb)}: {cb}")
+        # cb_formatted = str(round(float(cb), 1))
+        # print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
+    return cb
 
 def check_eu_rate(port_code, eta_port_code):
     eu_rate = 0
@@ -165,12 +197,6 @@ def check_port_name(port_code):
     return port_name
 
 def main(imo, timestamp):
-
-    global LNG_info_list
-    global HFO_info_list
-    global LFO_info_list
-    global MDO_info_list
-    global MGO_info_list
 
     keep_state            = ""
     keep_port_code        = ""
@@ -233,22 +259,9 @@ def main(imo, timestamp):
     print(f"Got NoonReport.")
 
     # Fuel-Oil-Typeリストを取得する
-    fuel_oil_type_info_list = select.get_fuel_oil_type()
+    fuel_oil_type_info_list = make_fuel_oil_type_info_list()
 
     # print(f"fuel_oil_type_info_list[{type(fuel_oil_type_info_list)}]: {fuel_oil_type_info_list}")
-
-    for i in range(len(fuel_oil_type_info_list)):
-        name = fuel_oil_type_info_list[i]["fuel_oil_type"]["S"]
-        if  name == "LNG":
-            LNG_info_list = fuel_oil_type_info_list[i]
-        elif name == "HFO":
-            HFO_info_list = fuel_oil_type_info_list[i]
-        elif name == "LFO":
-            LFO_info_list = fuel_oil_type_info_list[i]
-        elif name == "MDO":
-            MDO_info_list = fuel_oil_type_info_list[i]
-        elif name == "MGO":
-            MGO_info_list = fuel_oil_type_info_list[i]
 
     # NoonReportのレコード数分回す
     for i in range(len(res_np)):
@@ -317,7 +330,7 @@ def main(imo, timestamp):
             departure_time   = year_timestamp + "/01/01 00:00"
             print(f"eta_port_code[{type(eta_port_code)}]: {eta_port_code}")
             arrival_port     = check_port_name(eta_port_code)
-            leg_type         = "Port" if state == "IN PORT" else "Salling"
+            leg_type         = "Port" if state == "IN PORT" else "Sailing"
             sum_displacement = 0
             noonreport_count = 0
             print(f"leg_type[{type(leg_type)}]: {leg_type}")
@@ -359,11 +372,11 @@ def main(imo, timestamp):
                 print("Leg終了、登録処理開始")
                 print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
                 #EUA, CBを算出
-                eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+                leg_eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"EUA[{type(eua)}]: {eua}")
-                energy     = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+                energy     = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"energy[{type(energy)}]: {energy}")
-                cb         = calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+                leg_cb         = calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"CB[{type(cb)}]: {cb}")
 
                 # DB登録用データセットを作成、更新する。
@@ -384,6 +397,8 @@ def main(imo, timestamp):
                 total_mdo        = str(round(float(total_mdo), 1))
                 total_mgo        = str(round(float(total_mgo), 1))
                 total_total_foc  = str(round(float(total_total_foc), 1))
+                leg_eua          = str(round(float(leg_eua), 2))
+                leg_cb           = str(round(float(leg_cb * 10**(-6)), 2))   # g→tonに変換。×10^(-6)
                 eu_rate          = str(eu_rate)
 
                 dataset = {
@@ -411,8 +426,8 @@ def main(imo, timestamp):
                     "latest_me_rpm": latest_me_rpm,
                     "latest_me_load": latest_me_load,
                     "latest_foc": latest_foc, 
-                    "eua": eua,
-                    "cb": cb,
+                    "eua": leg_eua,
+                    "cb": leg_cb,
                     "timestamp": dt_now_str
                 }
                 # print(f"dataset[{type(dataset)}]: {dataset}")
@@ -424,14 +439,14 @@ def main(imo, timestamp):
                 print("新規legのデータを作成")
                 departure_port = check_port_name(port_code)
                 departure_time   = local_date
-                leg_type         = "Port" if state == "IN PORT" else "Salling"
+                leg_type         = "Port" if state == "IN PORT" else "Sailing"
 
                 # 停泊中の場合、出発地点と到着地は同じ
                 if leg_type == "Port":
                     eta_port_code = port_code
 
                 print(f"port_code:{(port_code)}, eta_port_code:{(eta_port_code)}")
-                arrival_port     = check_port_name(eta_port_code) if leg_type == "Salling" else departure_port
+                arrival_port     = check_port_name(eta_port_code) if leg_type == "Sailing" else departure_port
                 eu_rate          = check_eu_rate(port_code, eta_port_code)
                 sum_displacement = 0
                 noonreport_count = 0
@@ -503,12 +518,12 @@ def main(imo, timestamp):
             print("NoonReport最終レコード。Leg終了、登録処理開始")
             print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
             #EUA, CBを算出
-            eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+            leg_eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             print(f"EUA[{type(eua)}]: {eua}")
-            energy     = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+            energy     = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             print(f"energy[{type(energy)}]: {energy}")
-            cb         = calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
-            print(f"CB[{type(cb)}]: {cb}")
+            leg_cb         = calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+            print(f"Leg_CB[{type(leg_cb)}]: {leg_cb}")
 
             # DB登録用データセットを作成、更新する。
             leg_count       += 1
@@ -517,6 +532,7 @@ def main(imo, timestamp):
             # 航海に出発した場合この時点で海上なので、port_codeを参照できない
             if state != "IN PORT":
                 port_code = keep_port_code
+                arrival_time = local_date
             arrival_port     = check_port_name(port_code)
             print(f"arrival_port_name: {(arrival_port)}")
 
@@ -528,6 +544,8 @@ def main(imo, timestamp):
             total_mdo        = str(round(float(total_mdo), 1))
             total_mgo        = str(round(float(total_mgo), 1))
             total_total_foc  = str(round(float(total_total_foc), 1))
+            leg_eua          = str(round(float(leg_eua), 1))
+            leg_cb           = str(round(float(leg_cb * 10**(-6))))   # g→tonに変換。×10^(-6)
             eu_rate          = str(eu_rate)
 
             dataset = {
@@ -536,7 +554,7 @@ def main(imo, timestamp):
                 "departure_port": departure_port,
                 "departure_time": departure_time,
                 "arrival_port": arrival_port,
-                "arrival_time": local_date,
+                "arrival_time": arrival_time,
                 "eu_rate": eu_rate,
                 "displacement": avg_displacement,
                 "leg_type": leg_type,
@@ -555,8 +573,8 @@ def main(imo, timestamp):
                 "latest_me_rpm": latest_me_rpm,
                 "latest_me_load": latest_me_load,
                 "latest_foc": latest_foc, 
-                "eua": eua,
-                "cb": cb,
+                "eua": leg_eua,
+                "cb": leg_cb,
                 "timestamp": dt_now_str
             }
             # print(f"dataset[{type(dataset)}]: {dataset}")

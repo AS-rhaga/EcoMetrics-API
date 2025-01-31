@@ -73,70 +73,63 @@ def make_fuel_oil_type_info_list():
 
     return fuel_oil_info_list, fuel_oil_name_list
 
-# EUAの算出メソッド
-def calc_co2(year, eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_info_list):
+# CO2排出量の算出メソッド
+def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_info_list):
 
     # EUAの算出
     co2_total   = 0
     eu_ets_rate = 0
-    eua         = 0
 
-    # EU Rateの確認
-    if eu_rate == 0:
-        # EU外航海は対象外なのでゼロ
-        total_co2 = 0
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
     else:
-        # EU-ETS対象割合を確認
-        if year == "2024":
-            eu_ets_rate = 40
-        elif year == "2025":
-            eu_ets_rate = 70
-        else:
-            eu_ets_rate = 100
+        eu_ets_rate = 100
 
-        print(f"eu_ets_rate: {(eu_ets_rate)}")
-        if lng_ods > 0:
-            lng_ods_co2_factor =  float(fuel_oil_type_info_list["LNG_ODS_info_list"]["emission_factor"]["S"])
-            co2_total += lng_ods * lng_ods_co2_factor
-        if lng_oms > 0:
-            lng_oms_co2_factor =  float(fuel_oil_type_info_list["LNG_OMS_info_list"]["emission_factor"]["S"])
-            co2_total += lng_oms * lng_oms_co2_factor
-        if lng_oss > 0:
-            lng_oss_co2_factor =  float(fuel_oil_type_info_list["LNG_OSS_info_list"]["emission_factor"]["S"])
-            co2_total += lng_oms * lng_oss_co2_factor
-        if hfo > 0:
-            hfo_co2_factor =  float(fuel_oil_type_info_list["HFO_info_list"]["emission_factor"]["S"])
-            co2_total += hfo * hfo_co2_factor
-        if lfo > 0:
-            lfo_co2_factor =  float(fuel_oil_type_info_list["LFO_info_list"]["emission_factor"]["S"])
-            co2_total += lfo * lfo_co2_factor
-        if mdo > 0:
-            mdo_co2_factor =  float(fuel_oil_type_info_list["MDO_info_list"]["emission_factor"]["S"])
-            co2_total += mdo * mdo_co2_factor
-        if mgo > 0:
-            mgo_co2_factor =  float(fuel_oil_type_info_list["MGO_info_list"]["emission_factor"]["S"])
-            co2_total += mgo * mgo_co2_factor
-        if lpg_p > 0:
-            lpg_p_co2_factor = float(fuel_oil_type_info_list["LPG_Propane_info_list"]["emission_factor"]["S"])
-            co2_total += lpg_p * lpg_p_co2_factor
-        if lpg_b > 0:
-            lpg_b_co2_factor = float(fuel_oil_type_info_list["LPG_Butane_info_list"]["emission_factor"]["S"])
-            co2_total += lpg_b * lpg_b_co2_factor
-        if nh3_ng > 0:
-            nh3_ng_co2_factor = float(fuel_oil_type_info_list["NH3_Ng_info_list"]["emission_factor"]["S"])
-            co2_total += nh3_ng * nh3_ng_co2_factor
-        if nh3_ef > 0:
-            nh3_ef_co2_factor = float(fuel_oil_type_info_list["NH3_eFuel_info_list"]["emission_factor"]["S"])
-            co2_total += nh3_ef * nh3_ef_co2_factor
-        if methanol_ng > 0:
-            methanol_ng_co2_factor = float(fuel_oil_type_info_list["Methanol_Ng_info_list"]["emission_factor"]["S"])
-            co2_total = methanol_ng * methanol_ng_co2_factor
-        if h2_ng > 0:
-            h2_ng_co2_factor = float(fuel_oil_type_info_list["H2_Ng_info_list"]["emission_factor"]["S"])
-            co2_total += h2_ng * h2_ng_co2_factor
+    print(f"eu_ets_rate: {(eu_ets_rate)}")
+    if lng_ods > 0:
+        lng_ods_co2_factor =  float(fuel_oil_type_info_list["LNG_ODS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_ods * lng_ods_co2_factor
+    if lng_oms > 0:
+        lng_oms_co2_factor =  float(fuel_oil_type_info_list["LNG_OMS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_oms * lng_oms_co2_factor
+    if lng_oss > 0:
+        lng_oss_co2_factor =  float(fuel_oil_type_info_list["LNG_OSS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_oms * lng_oss_co2_factor
+    if hfo > 0:
+        hfo_co2_factor =  float(fuel_oil_type_info_list["HFO_info_list"]["emission_factor"]["S"])
+        co2_total += hfo * hfo_co2_factor
+    if lfo > 0:
+        lfo_co2_factor =  float(fuel_oil_type_info_list["LFO_info_list"]["emission_factor"]["S"])
+        co2_total += lfo * lfo_co2_factor
+    if mdo > 0:
+        mdo_co2_factor =  float(fuel_oil_type_info_list["MDO_info_list"]["emission_factor"]["S"])
+        co2_total += mdo * mdo_co2_factor
+    if mgo > 0:
+        mgo_co2_factor =  float(fuel_oil_type_info_list["MGO_info_list"]["emission_factor"]["S"])
+        co2_total += mgo * mgo_co2_factor
+    if lpg_p > 0:
+        lpg_p_co2_factor = float(fuel_oil_type_info_list["LPG_Propane_info_list"]["emission_factor"]["S"])
+        co2_total += lpg_p * lpg_p_co2_factor
+    if lpg_b > 0:
+        lpg_b_co2_factor = float(fuel_oil_type_info_list["LPG_Butane_info_list"]["emission_factor"]["S"])
+        co2_total += lpg_b * lpg_b_co2_factor
+    if nh3_ng > 0:
+        nh3_ng_co2_factor = float(fuel_oil_type_info_list["NH3_Ng_info_list"]["emission_factor"]["S"])
+        co2_total += nh3_ng * nh3_ng_co2_factor
+    if nh3_ef > 0:
+        nh3_ef_co2_factor = float(fuel_oil_type_info_list["NH3_eFuel_info_list"]["emission_factor"]["S"])
+        co2_total += nh3_ef * nh3_ef_co2_factor
+    if methanol_ng > 0:
+        methanol_ng_co2_factor = float(fuel_oil_type_info_list["Methanol_Ng_info_list"]["emission_factor"]["S"])
+        co2_total = methanol_ng * methanol_ng_co2_factor
+    if h2_ng > 0:
+        h2_ng_co2_factor = float(fuel_oil_type_info_list["H2_Ng_info_list"]["emission_factor"]["S"])
+        co2_total += h2_ng * h2_ng_co2_factor
         
-        eua = co2_total * eu_rate / 100
-    return eua
+    return co2_total
 
 # EUAの算出メソッド
 def calc_eua(year, eu_rate, total_co2):
@@ -376,10 +369,18 @@ def lambda_handler(event, context):
     total_co2         = 0
     total_distance    = 0
     total_eua         = 0
-    total_eua_cost    = 0
     total_energy      = 0
     total_cb          = 0
     total_cb_cost     = 0
+
+    # Y軸設定用の変数定義
+    max_eua = 0
+    min_cb = 0
+    max_cb = 0
+    eua_tickInterval = 0
+    cb_tickInterval = 0
+
+    year_to_leg_cb    = 0
 
     company_id = ""
     eua_price  = 0
@@ -407,7 +408,8 @@ def lambda_handler(event, context):
     # 処理実施時の年、日付を取得
     dt_now = datetime.now()
     now_year = str(dt_now.year)
-    str_now = dt_now.strftime('%Y-%m-%dT%H:%M')
+    str_now = dt_now.strftime('%Y/%m/%d %H:%M')
+    # str_now = dt_now.strftime('%Y-%m-%dT%H:%M')
 
     # VesselMaster取得
     res_vesselmaster = select.get_vessel_master(imo)
@@ -474,7 +476,7 @@ def lambda_handler(event, context):
             EUAList_YeartoDate.append([i + 1, leg_eua])
 
             # このlegで排出したco2量を算出
-            leg_co2 = calc_co2(now_year, eu_rate, 0, leg_lng, 0, leg_hfo, leg_lfo, leg_mdo, leg_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
+            leg_co2 = calc_co2(now_year, 0, leg_lng, 0, leg_hfo, leg_lfo, leg_mdo, leg_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
 
             # 合計用変数に加算する
             total_lng_oms  += leg_lng
@@ -486,15 +488,22 @@ def lambda_handler(event, context):
             total_co2      += leg_co2
             total_distance += leg_distance
             total_eua      += leg_eua
+            print(f"total_lng_oms:{total_lng_oms}, total_hfo:{total_hfo}, total_lfo:{total_lfo}, total_mdo:{total_mdo}, total_mgo:{total_mgo}")
 
             # CBを算出する
             to_thisLeg_energy = calc_energy(eu_rate, 0, total_lng_oms, 0, total_hfo, total_lfo, total_mdo, total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
             total_energy     += to_thisLeg_energy
-            to_thisLeg_GHG    = calc_GHG_Actual(0, total_lng_oms, total_hfo, total_lfo, total_mdo, total_mgo, 0, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
+            to_thisLeg_GHG    = calc_GHG_Actual(0, total_lng_oms, 0, total_hfo, total_lfo, total_mdo, total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
             to_thisLeg_cb     = calc_cb(now_year, to_thisLeg_energy, to_thisLeg_GHG)
+            print(f"to_thisLeg_energy:{to_thisLeg_energy}, to_thisLeg_GHG:{to_thisLeg_GHG}, to_thisLeg_cb:{to_thisLeg_cb}")
 
             # CBList_YeartoDateにEUAをセット
             CBList_YeartoDate.append([i + 1, float(to_thisLeg_cb)])
+
+            # Y軸設定用の変数に値を設定
+            max_eua = leg_eua if max_eua < leg_eua else max_eua
+            max_cb = float(to_thisLeg_cb) if max_cb < float(to_thisLeg_cb) else max_cb
+            min_cb = float(to_thisLeg_cb) if min_cb > float(to_thisLeg_cb) else min_cb
 
             # 最後のleg分だけ、CBのシミュレーション用データセットに追加（折れ線ブラフ描画のため）
             if i == len(this_year_leg_list) - 1:
@@ -538,6 +547,9 @@ def lambda_handler(event, context):
 
             # 各legの期間から、反映割合を算出する
             # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
+            print(f"str_now:{str_now}")
+            print(f"str_departure_time:{str_departure_time}")
+            print(f"dt_departure_time:{dt_departure_time}")
             if str_now <= str_departure_time:
                 print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
                 return_departure_time = str_departure_time
@@ -556,6 +568,8 @@ def lambda_handler(event, context):
                 return_arrival_time   = str_arrival_time
                 return_leg_total_time = leg_part_time
                 leg_rate              = float(leg_part_time / leg_total_time)
+                print(f"leg_rate:{leg_rate}")
+                print(f"leg_part_time:{leg_part_time}")
             else:
                 print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
                 # 以降の処理は行わず、次のlegを確認
@@ -566,8 +580,13 @@ def lambda_handler(event, context):
             leg_distance           = float(res_simulation[i]["distance"]["S"]) * leg_rate
             leg_eu_rate            = int(res_simulation[i]["eu_rate"]["S"])
 
+            print(f"leg_distance:{leg_distance}")
+
             # log_speedを算出
-            leg_log_speed = leg_distance / leg_total_time
+            leg_log_speed = leg_distance / return_leg_total_time
+            print(f"return_leg_total_time:{return_leg_total_time}")
+            print(f"leg_log_speed:{leg_log_speed}")
+
 
             # FOC Formulasがある場合
             if res_foc_formulas:
@@ -591,7 +610,7 @@ def lambda_handler(event, context):
                 # 1時間あたりのFOC算出
                 simulation_foc_per_hour = simulation_foc_per_day / 24
                 # Leg内総FOCを算出
-                simulation_leg_foc = simulation_foc_per_hour * leg_total_time
+                simulation_leg_foc = simulation_foc_per_hour * return_leg_total_time
 
                 # 燃料別消費量を算出する
                 output_fuel_list = []
@@ -664,12 +683,12 @@ def lambda_handler(event, context):
                     output_fuel_list.append(output_fuel)
 
                 # シミュレーション部分で実際に排出したco2を算出する
-                simulation_leg_co2 = calc_co2(now_year, leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+                simulation_leg_co2 = calc_co2(now_year, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
 
                 # シミュレーション部分のEUAを算出する
                 simulation_leg_eua = calc_eua(now_year, leg_eu_rate, simulation_leg_co2)
                 # EUA Costの算出
-                total_eua_cost = simulation_leg_eua * eua_price
+                # total_eua_cost = round(simulation_leg_eua, 1) * eua_price
 
                 # シミュレーション部分のCBを算出する
                 simulation_leg_GHG = calc_GHG_Actual(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
@@ -708,14 +727,19 @@ def lambda_handler(event, context):
                             else:
                                 break
                         penalty_factor = 1 + (flag_count) / 10
-                        total_cb_cost  = abs(float(simulation_leg_cb)) * penalty_factor * 2400 / (simulation_leg_GHG * 41000)
+                        total_cb_cost  = abs(float(year_to_leg_cb)) * penalty_factor * 2400 / (year_to_leg_GHG * 41000) # 最終的な値を保持したい
 
                     # 合計用変数に加算する
                     total_distance += leg_distance
-                    total_foc      += (simulation_leg_lng + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_ethanol + simulation_leg_lpg_b + simulation_leg_methanol)
+                    total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
                     total_co2      += simulation_leg_co2
                     total_eua      += simulation_leg_eua
-                    total_cb        = float(simulation_leg_cb) # 最終的な値を保持したいため、足さない。
+                    total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
+
+                    # Y軸設定用の変数に値を設定
+                    max_eua = simulation_leg_eua if max_eua < simulation_leg_eua else max_eua
+                    max_cb = float(year_to_leg_cb) if max_cb < float(year_to_leg_cb) else max_cb
+                    min_cb = float(year_to_leg_cb) if min_cb > float(year_to_leg_cb) else min_cb
 
                 # Voyage Planのシミュレーション用データ
                 str_eua = str(round(simulation_leg_eua, 1))
@@ -942,12 +966,10 @@ def lambda_handler(event, context):
 
                 leg_eu_rate = float(res_simulation[0]["eu_rate"]["S"])
 
-                simulation_leg_co2 = calc_co2(now_year, leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+                simulation_leg_co2 = calc_co2(now_year, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
 
                 # シミュレーション部分のEUAを算出する
                 simulation_leg_eua = calc_eua(now_year, leg_eu_rate, simulation_leg_co2)
-                # EUA Costの算出
-                total_eua_cost = simulation_leg_eua * eua_price
 
                 # シミュレーション部分のEU Rateを取得
                 simulation_eu_rate = float(res_simulation[0]["eu_rate"]["S"])
@@ -989,15 +1011,20 @@ def lambda_handler(event, context):
                             else:
                                 break
                         penalty_factor = 1 + (flag_count) / 10
-                        total_cb_cost  = abs(float(simulation_leg_cb)) * penalty_factor * 2400 / (simulation_leg_GHG * 41000)
+                        total_cb_cost  = abs(float(year_to_leg_cb)) * penalty_factor * 2400 / (year_to_leg_GHG * 41000)
 
                     # 合計用変数に加算する
                     total_distance += total_ballast_laden_distance
-                    total_foc      += (simulation_leg_lng + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_ethanol + simulation_leg_lpg_b + simulation_leg_methanol)
+                    total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
                     total_co2      += simulation_leg_co2
                     total_eua      += simulation_leg_eua
-                    total_cb        = float(simulation_leg_cb) # 最終的な値を保持したいため、足さない。
-                
+                    total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
+
+                    # Y軸設定用の変数に値を設定
+                    max_eua = simulation_leg_eua if max_eua < simulation_leg_eua else max_eua
+                    max_cb = float(year_to_leg_cb) if max_cb < float(year_to_leg_cb) else max_cb
+                    min_cb = float(year_to_leg_cb) if min_cb > float(year_to_leg_cb) else min_cb                
+
                 # Speed Planのシミュレーション用データ
                 str_eua = str(round(simulation_leg_eua, 1))
                 str_cb  = str(round(float(simulation_leg_cb), 1))
@@ -1085,7 +1112,7 @@ def lambda_handler(event, context):
         str_foc      = str(round(total_foc, 1))      if total_foc      != "" else ""
         str_co2      = str(round(total_co2))      if total_co2      != "" else ""
         str_eua      = str(round(total_eua, 1))      if total_eua      != "" else ""
-        str_eua_cost = str(round(total_eua_cost)) if total_eua_cost != "" else ""
+        str_eua_cost = str(round(round(total_eua, 1) * eua_price)) if total_eua != "" else ""
         str_cb       = str(round(total_cb, 1))       if total_cb       != "" else ""
         str_cb_cost  = str(round(total_cb_cost))  if total_cb_cost  != "" else ""
 
@@ -1148,6 +1175,19 @@ def lambda_handler(event, context):
             graph_data_cb = { "name": tmp_simulation_XAxis, "y": CBList_Simulation[i + 1][1]}
             CBList_Simulation[i + 1] = graph_data_cb
 
+        # Y軸のtickInterval調整
+        eua_tickInterval_tmp = math.ceil(round(max_eua / 2, 0) / 100) * 100
+        cb_tickInterval_tmp = math.ceil(round((max_cb + abs(min_cb)) / 2, 0) / 100) * 100
+        # 数値の桁数を計算
+        eua_digit_count = len(str(eua_tickInterval_tmp))
+        cb_digit_count = len(str(cb_tickInterval_tmp))
+        # 最上位桁のみを抽出
+        eua_first_digit = int(str(eua_tickInterval_tmp)[0])
+        cb_first_digit = int(str(cb_tickInterval_tmp)[0])
+        # 最上位桁以外を0にする
+        eua_tickInterval = eua_first_digit * (10 ** (eua_digit_count - 1))
+        cb_tickInterval = cb_first_digit * (10 ** (cb_digit_count - 1))
+
     datas = {
         "VESSELMASTER"                      : VESSELMASTER,
         "VesselList"                        : VesselList,
@@ -1159,7 +1199,9 @@ def lambda_handler(event, context):
         "CBList_YeartoDate"                 : CBList_YeartoDate,
         "CBList_Simulation"                 : CBList_Simulation,
         "SimulationResultTotal"             : SimulationResultTotal,
-        "XAxisList"                         : XAxisList
+        "XAxisList"                         : XAxisList,
+        "EUA_YAXIS"                         :{"max": round(max_eua, 0) , "tickInterval": eua_tickInterval },
+        "CB_YAXIS"                          :{"max": round(max_cb, 0) ,"min": round(min_cb, 0) , "tickInterval":cb_tickInterval  }
     }
 
     datas = json.dumps(datas)

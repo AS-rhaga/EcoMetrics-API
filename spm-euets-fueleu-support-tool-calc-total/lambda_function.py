@@ -129,7 +129,16 @@ def lambda_handler(event, context):
 
         imoList = pooling_imo_str.strip("()").split('-')
 
+        total_lng    = 0
+        total_hfo    = 0
+        total_lfo    = 0
+        total_mdo    = 0
+        total_mgo    = 0
+        total_energy = 0
+
         for loop_imo in imoList:
+
+            print(f"loop_imo:{loop_imo}")
 
             # imoが空の場合を考慮
             if loop_imo =="":
@@ -163,13 +172,13 @@ def lambda_handler(event, context):
 
         # プーリンググループ合計のCBを算出する
         total_cb     = calc_cb(year_now, total_energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
-        str_total_cb = str(round(total_cb, 1))
+        str_total_cb = str(round(total_cb / 1000000, 1))
 
         # CBがマイナスの場合、コストを算出する
         if total_cb < 0:
             total_GHG_Actual  = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
             total_cb_cost     = abs(total_cb) / total_GHG_Actual * 2400 / 41000
-            str_total_cb_cost = str(round(total_cb_cost, 0))
+            str_total_cb_cost = str(round(total_cb_cost))
         else:
             str_total_cb_cost    = "0"
 

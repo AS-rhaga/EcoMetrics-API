@@ -65,8 +65,8 @@ def get_foc_formulas(imo):
         KeyConditionExpression='#name0 = :value0'
     )
     # データが存在するか確認
-    if 'Item' in response:
-        return response['Item']
+    if 'Items' in response:
+        return response['Items']
     else:
         return None
 
@@ -260,8 +260,8 @@ def get_simulation_voyage(imo, year):
     )
 
     # データが存在するか確認
-    if 'Item' in response:
-        return response['Item']
+    if 'Items' in response:
+        return response['Items']
     else:
         return None       
 
@@ -280,7 +280,7 @@ def get_simulation_speed(imo, year):
         KeyConditionExpression='#name0 = :value0 AND #name1 = :value1'
     )
     # データが存在するか確認
-    if 'Item' in response:
-        return response['Item']
+    if 'Items' in response:
+        return response['Items']
     else:
         return None

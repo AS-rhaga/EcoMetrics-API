@@ -11,12 +11,20 @@ _table_name_fuel_oil_type = os.environ['FUEL_OIL_TYPE']
 _table_name_year_total    = os.environ['YEAR_TOTAL']
 _table_name_pooling_group = os.environ['POOLING_GROUP']
 
-def get_fuel_oil_type():
+def get_fuel_oil_type(fuel_oil_type):
     data = []
-    response = _dynamodb_client.scan(
-        TableName=_table_name_fuel_oil_type
+    response = _dynamodb_client.query(
+        TableName=_table_name_fuel_oil_type,
+        ExpressionAttributeNames={
+            '#name0': 'fuel_oil_type',
+        },
+        ExpressionAttributeValues={
+            ':value0': {'S': fuel_oil_type},
+        },
+        KeyConditionExpression='#name0 = :value0'
     )
     data = response['Items']
+    
     return data
 
 def get_noonreport(imo, timestamp_from, timestamp_to):

@@ -29,7 +29,7 @@ def upsert_voyage_total(data, retry_count: int=42) -> None:
                     "departure_time" : { "S": data["departure_time"]},
                     "arrival_port"   : { "S": data["arrival_port"]},
                     "arrival_time"   : { "S": data["arrival_time"]},
-                    "eu_rate"        : { "S": data["eu_rate"]},
+                    # "eu_rate"        : { "S": data["eu_rate"]},
                     "dispracement"   : { "S": data["dispracement"]},
                     "operater"       : { "S": data["operater"]},
                     "distance"       : { "S": data["distance"] },

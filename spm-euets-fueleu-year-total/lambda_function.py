@@ -9,63 +9,41 @@ import boto3
 
 from Util import Util
 
-# Ecoで使用する燃料の情報リスト
-LNG_info_list = {}
-HFO_info_list = {}
-LFO_info_list = {}
-MDO_info_list = {}
-MGO_info_list = {}
+def make_fuel_oil_type_info_list():
 
-def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+    # Ecoで使用する燃料の情報リスト
+    fuel_oil_info_list = {
+        "HFO_info_list": [],
+        "LFO_info_list": [],
+        "MDO_info_list": [],
+        "MGO_info_list": [],
+        "LNG_OMS_info_list": []
+    }
 
-    # EUAの算出
-    co2_lng = 0
-    co2_hfo = 0
-    co2_lfo = 0
-    co2_mdo = 0
-    co2_mgo = 0
-    eu_ets_rate = 0
-    eua = 0
+    # 燃料情報リストを取得し、データセットを作成する
+    fuel_oil_name_list = ["HFO", "LFO", "MDO", "MGO", "LNG(Otto Medium Speed)"]
+    fuel_oil_type_info_list = []
 
-    # EU Rateの確認
-    if eu_rate == 0:
-        # EU外航海は対象外なのでゼロ
-        total_co2 = 0
-    else:
-        # EU-ETS対象割合を確認
-        if year == "2024":
-            eu_ets_rate = 40
-        elif year == "2025":
-            eu_ets_rate = 70
-        else:
-            eu_ets_rate = 100
+    for fuel_oil_name in fuel_oil_name_list:
+        fuel_oil_type_info_list.append(select.get_fuel_oil_type(fuel_oil_name)[0])
+    for fuel_oil_type_info in fuel_oil_type_info_list:
+        name = fuel_oil_type_info["fuel_oil_type"]["S"]
 
-        print(f"eu_ets_rate: {(eu_ets_rate)}")
-        if total_lng > 0:
-            lng_co2_factor =  float(LNG_info_list["emission_factor"]["S"])
-            co2_lng = total_lng * lng_co2_factor
-        if total_hfo > 0:
-            hfo_co2_factor =  float(HFO_info_list["emission_factor"]["S"])
-            co2_hfo = total_hfo * hfo_co2_factor
-        if total_lfo > 0:
-            lfo_co2_factor =  float(LFO_info_list["emission_factor"]["S"])
-            co2_lfo = total_lfo * lfo_co2_factor
-        if total_mdo > 0:
-            mdo_co2_factor =  float(MDO_info_list["emission_factor"]["S"])
-            co2_mdo = total_mdo * mdo_co2_factor
-        if total_mgo > 0:
-            mgo_co2_factor =  float(MGO_info_list["emission_factor"]["S"])
-            co2_mgo = total_mgo * mgo_co2_factor
+        # それぞれの燃料リストに格納する
+        if name == "HFO":
+            fuel_oil_info_list["HFO_info_list"] = fuel_oil_type_info
+        elif name == "LFO":
+            fuel_oil_info_list["LFO_info_list"] = fuel_oil_type_info
+        elif name == "MGO":
+            fuel_oil_info_list["MDO_info_list"] = fuel_oil_type_info
+        elif name == "MGO":
+            fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info
+        elif name == "LNG(Otto Medium Speed)":        
+            fuel_oil_info_list["LNG_OMS_info_list"] = fuel_oil_type_info
 
-        # CO2の総排出量(MT)
-        total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
-        print(f"total_co2{type(total_co2)}: {total_co2}")
-        eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
-        eua_formatted = Util.format_to_one_decimal(round(float(eua), 1))
-        print(f"eua_formatted{type(eua_formatted)}: {eua_formatted}")
-    return str(eua_formatted)
+    return fuel_oil_info_list
 
-def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     energy_lng = 0
     energy_hfo = 0
     energy_lfo = 0
@@ -73,19 +51,19 @@ def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
     energy_mgo = 0
 
     if total_lng > 0:
-        lng_lcv =  float(LNG_info_list["lcv"]["S"])
+        lng_lcv =  float(fuel_oil_info_list["LNG_OMS_info_list"]["lcv"]["S"])
         energy_lng += total_lng * lng_lcv
     if total_hfo > 0:
-        hfo_lcv =  float(HFO_info_list["lcv"]["S"])
+        hfo_lcv =  float(fuel_oil_info_list["HFO_info_list"]["lcv"]["S"])
         energy_hfo += total_hfo * hfo_lcv
     if total_lfo > 0:
-        lfo_lcv =  float(LFO_info_list["lcv"]["S"])
+        lfo_lcv =  float(fuel_oil_info_list["LFO_info_list"]["lcv"]["S"])
         energy_lfo += total_lfo * lfo_lcv
     if total_mdo > 0:
-        mdo_lcv =  float(MDO_info_list["lcv"]["S"])
+        mdo_lcv =  float(fuel_oil_info_list["MDO_info_list"]["lcv"]["S"])
         energy_mdo += total_mdo * mdo_lcv
     if total_mgo > 0:
-        mgo_lcv =  float(MGO_info_list["lcv"]["S"])
+        mgo_lcv =  float(fuel_oil_info_list["MGO_info_list"]["lcv"]["S"])
         energy_mgo += total_mgo * mgo_lcv
 
     energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo) * float(eu_rate) / 100
@@ -110,28 +88,28 @@ def calc_GHG_Max(year):
     print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
     return GHG_Max
 
-def calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+def calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     sum_ghg = 0
     sum_foc = 0
 
     if total_lng > 0:
-        lng_ghg_intensity =  float(LNG_info_list["ghg_intensity"]["S"])
+        lng_ghg_intensity =  float(fuel_oil_info_list["LNG_OMS_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_lng * lng_ghg_intensity
         sum_foc += total_lng
     if total_hfo > 0:
-        hfo_ghg_intensity =  float(HFO_info_list["ghg_intensity"]["S"])
+        hfo_ghg_intensity =  float(fuel_oil_info_list["HFO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_hfo * hfo_ghg_intensity
         sum_foc += total_hfo
     if total_lfo > 0:
-        lfo_ghg_intensity =  float(LFO_info_list["ghg_intensity"]["S"])
+        lfo_ghg_intensity =  float(fuel_oil_info_list["LFO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_lfo * lfo_ghg_intensity
         sum_foc += total_lfo
     if total_mdo > 0:
-        mdo_ghg_intensity =  float(MDO_info_list["ghg_intensity"]["S"])
+        mdo_ghg_intensity =  float(fuel_oil_info_list["MDO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_mdo * mdo_ghg_intensity
         sum_foc += total_mdo
     if total_mgo > 0:
-        mgo_ghg_intensity =  float(MGO_info_list["ghg_intensity"]["S"])
+        mgo_ghg_intensity =  float(fuel_oil_info_list["MGO_info_list"]["ghg_intensity"]["S"])
         sum_ghg += total_mgo * mgo_ghg_intensity
         sum_foc += total_mgo
 
@@ -139,22 +117,21 @@ def calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
     print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual
 
-def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     GHG_Max    = calc_GHG_Max(year_timestamp)
-    GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
-    cb = (GHG_Max - GHG_Actual) * energy
-    print(f"cb{type(cb)}: {cb}")
-    cb_formatted = round(float(cb), 1)
-    print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
-    return cb_formatted
+    cb = 0
+
+    # ゼロ割防止のため、燃料消費量がゼロでない場合のみ計算する
+    if total_lng + total_hfo + total_lfo + total_mdo + total_mgo > 0:
+        GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+        cb = (GHG_Max - GHG_Actual) * energy
+        print(f"cb{type(cb)}: {cb}")
+        # cb_formatted = round(float(cb), 1)
+        # print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
+
+    return cb
 
 def main(imo, timestamp):
-
-    global LNG_info_list
-    global HFO_info_list
-    global LFO_info_list
-    global MDO_info_list
-    global MGO_info_list
 
     operator_list = []
     year_total_distance = 0
@@ -205,20 +182,7 @@ def main(imo, timestamp):
     print(f"dt_timestamp_year_to_str{type(dt_timestamp_year_to_str)}: {dt_timestamp_year_to_str}")
 
     # Fuel-Oil-Typeリストを取得する
-    fuel_oil_type_info_list = select.get_fuel_oil_type()
-    for i in range(len(fuel_oil_type_info_list)):
-        name = fuel_oil_type_info_list[i]["fuel_oil_type"]["S"]
-        if  name == "LNG":
-            LNG_info_list = fuel_oil_type_info_list[i]
-        elif name == "HFO":
-            HFO_info_list = fuel_oil_type_info_list[i]
-        elif name == "LFO":
-            LFO_info_list = fuel_oil_type_info_list[i]
-        elif name == "MDO":
-            MDO_info_list = fuel_oil_type_info_list[i]
-        elif name == "MGO":
-            MGO_info_list = fuel_oil_type_info_list[i]
-
+    fuel_oil_type_info_list = make_fuel_oil_type_info_list()
 
     # leg-totalデータ取得
     res_leg = select.get_leg_total(imo, year_timestamp)
@@ -257,7 +221,7 @@ def main(imo, timestamp):
 
             # 【残】どのオペレーターのリストに足し合わせるかを振り分ける
 
-            energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+            energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             year_total_energy += energy
             year_total_distance     += distance
             year_total_lng          += total_lng
@@ -273,7 +237,7 @@ def main(imo, timestamp):
             operator_list.append(operator)
             print(f"operator_list[{type(operator_list)}]: {operator_list}")
 
-            energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+            energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             year_total_energy += energy
             year_total_distance     += distance
             year_total_lng          += total_lng
@@ -287,7 +251,7 @@ def main(imo, timestamp):
     # print(f"total_data[{type(total_data)}]: {total_data}")
 
     # CBの算出
-    year_total_cb     = calc_cb(year_timestamp, year_total_energy, year_total_lng, year_total_hfo, year_total_lfo, year_total_mdo, year_total_mgo)
+    year_total_cb     = calc_cb(year_timestamp, year_total_energy, year_total_lng, year_total_hfo, year_total_lfo, year_total_mdo, year_total_mgo, fuel_oil_type_info_list)
     print(f"year_total_cb[{type(year_total_cb)}]: {year_total_cb}")
 
     year_and_ope = year_timestamp + operator
@@ -364,7 +328,7 @@ def main(imo, timestamp):
     year_total_mgo      = str(round(float(year_total_mgo), 1))
     year_total_foc      = str(round(float(year_total_foc), 1))
     year_total_eua      = str(round(float(year_total_eua), 1))
-    year_total_cb       = str(round(float(year_total_cb), 1))
+    year_total_cb       = str(round(float(year_total_cb * 10**(-6)), 2))   # g→tonに変換。×10^(-6)
     banking             = str(round(float(banking), 1))
 
     dataset = {

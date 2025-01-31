@@ -2,6 +2,7 @@
 import ast
 import math
 from datetime import datetime
+import re
 
 def to_datetime(str_time):
 
@@ -70,11 +71,22 @@ def to_datetime(str_time):
 # foc formulas
 def util_focformulas(response):
     
-    vesselmaster = {
+    focformulas = {
         "imo"                : response[0]["imo"]["S"],
         "me_ballast"         : response[0]["me_ballast"]["S"],
         "me_laden"           : response[0]["me_laden"]["S"],
         "auxiliary_equipment": response[0]["auxiliary_equipment"]["S"]
     }
     
-    return vesselmaster
+    return focformulas
+
+# FuelListをリストに変換
+def convertFuelOileStringToList(text):
+    
+    pattern = r'\([^()]*\([^()]*\)[^()]*\)|\([^()]*\)'
+    matches = re.findall(pattern, text)
+
+    # 前後の括弧を除去
+    cleaned_matches = [match[1:-1] for match in matches]
+
+    return cleaned_matches

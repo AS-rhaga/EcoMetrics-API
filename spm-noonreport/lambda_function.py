@@ -5,6 +5,7 @@ import os
 import json
 from datetime import datetime
 import boto3
+import traceback
 
 dynamoconfig = DynamoDBConfigTools("spm-link-list")
 
@@ -38,6 +39,7 @@ def main(imo: str, timestamp: str, company_db: str, event_type: str) -> None:
     if "Item" in response:
         response = response["Item"]
     else:
+        print("No Item")
         return
     
     param = {
@@ -50,10 +52,12 @@ def main(imo: str, timestamp: str, company_db: str, event_type: str) -> None:
         req = requests.get(url, params=param, headers=_HEADERS)
         
     except Exception as e:
+        print(f"requests.get e: {str(e)}")
+        print(traceback.format_exc())
         raise e
         
     if req.headers.get("Content-Encoding"):
-        print(req.text)
+        print(f"req.text: {req.text}")
         return
     else:
         res_json = json.loads(req.text)
@@ -120,6 +124,8 @@ def lambda_handler(event,context):
         #     print(json.dumps(str(e)))
 
     except Exception as e:
+        print(f"e: {str(e)}")
+        print(traceback.format_exc())
         return {
             "statusCode": 500,
             "body": json.dumps(str(e))

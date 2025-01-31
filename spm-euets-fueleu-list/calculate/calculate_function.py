@@ -129,7 +129,8 @@ def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b,
         sum_ghg += h2_ng * h2_ng_ghg_intensity
         sum_foc += h2_ng
 
-    GHG_Actual = round(float(sum_ghg / sum_foc), 2)
+    if sum_foc != 0:
+        GHG_Actual = round(float(sum_ghg / sum_foc), 2)
     print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual
 
@@ -191,3 +192,86 @@ def calc_cb(year_timestamp, energy, GHG_Actual):
     print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
 
     return cb_formatted
+
+# CO2排出量の算出メソッド
+def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_info_list):
+
+    # EUAの算出
+    co2_total   = 0
+    eu_ets_rate = 0
+
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
+    else:
+        eu_ets_rate = 100
+
+    print(f"eu_ets_rate: {(eu_ets_rate)}")
+    if lng_ods > 0:
+        lng_ods_co2_factor =  float(fuel_oil_type_info_list["LNG_ODS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_ods * lng_ods_co2_factor
+    if lng_oms > 0:
+        lng_oms_co2_factor =  float(fuel_oil_type_info_list["LNG_OMS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_oms * lng_oms_co2_factor
+    if lng_oss > 0:
+        lng_oss_co2_factor =  float(fuel_oil_type_info_list["LNG_OSS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_oms * lng_oss_co2_factor
+    if hfo > 0:
+        hfo_co2_factor =  float(fuel_oil_type_info_list["HFO_info_list"]["emission_factor"]["S"])
+        co2_total += hfo * hfo_co2_factor
+    if lfo > 0:
+        lfo_co2_factor =  float(fuel_oil_type_info_list["LFO_info_list"]["emission_factor"]["S"])
+        co2_total += lfo * lfo_co2_factor
+    if mdo > 0:
+        mdo_co2_factor =  float(fuel_oil_type_info_list["MDO_info_list"]["emission_factor"]["S"])
+        co2_total += mdo * mdo_co2_factor
+    if mgo > 0:
+        mgo_co2_factor =  float(fuel_oil_type_info_list["MGO_info_list"]["emission_factor"]["S"])
+        co2_total += mgo * mgo_co2_factor
+    if lpg_p > 0:
+        lpg_p_co2_factor = float(fuel_oil_type_info_list["LPG_Propane_info_list"]["emission_factor"]["S"])
+        co2_total += lpg_p * lpg_p_co2_factor
+    if lpg_b > 0:
+        lpg_b_co2_factor = float(fuel_oil_type_info_list["LPG_Butane_info_list"]["emission_factor"]["S"])
+        co2_total += lpg_b * lpg_b_co2_factor
+    if nh3_ng > 0:
+        nh3_ng_co2_factor = float(fuel_oil_type_info_list["NH3_Ng_info_list"]["emission_factor"]["S"])
+        co2_total += nh3_ng * nh3_ng_co2_factor
+    if nh3_ef > 0:
+        nh3_ef_co2_factor = float(fuel_oil_type_info_list["NH3_eFuel_info_list"]["emission_factor"]["S"])
+        co2_total += nh3_ef * nh3_ef_co2_factor
+    if methanol_ng > 0:
+        methanol_ng_co2_factor = float(fuel_oil_type_info_list["Methanol_Ng_info_list"]["emission_factor"]["S"])
+        co2_total = methanol_ng * methanol_ng_co2_factor
+    if h2_ng > 0:
+        h2_ng_co2_factor = float(fuel_oil_type_info_list["H2_Ng_info_list"]["emission_factor"]["S"])
+        co2_total += h2_ng * h2_ng_co2_factor
+        
+    return co2_total
+
+# EUAの算出メソッド
+def calc_eua(year, eu_rate, total_co2):
+
+    # EUAの算出
+    eu_ets_rate = 0
+    eua = 0
+
+    # EU Rateの確認
+    if eu_rate == 0:
+        # EU外航海は対象外なのでゼロ
+        total_co2 = 0
+    else:
+        # EU-ETS対象割合を確認
+        if year == "2024":
+            eu_ets_rate = 40
+        elif year == "2025":
+            eu_ets_rate = 70
+        else:
+            eu_ets_rate = 100
+        print(f"eu_ets_rate: {(eu_ets_rate)}")
+
+        eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
+        print(f"eua{type(eua)}: {eua}")
+    return eua

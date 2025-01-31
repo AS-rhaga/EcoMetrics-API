@@ -1,7 +1,7 @@
 
 import ast
 import jwt
-from poseidon import dynamodb
+from dynamodb import select
 
 # 認可：IMO参照権限チェック
 def imo_check(token, imo):
@@ -11,12 +11,12 @@ def imo_check(token, imo):
         decoded = jwt.decode(token, algorithms=['HS256'], options={'verify_signature': False})
     
         user_id = decoded['sub']
-        res_user = dynamodb.get_user(user_id)
+        res_user = select.get_user(user_id)
         
         group_id      = res_user[0]["group_id"]["S"]
         company_id    = res_user[0]["company_id"]["S"]
         
-        res_group = dynamodb.get_group(company_id)
+        res_group = select.get_group_auth(company_id)
         
         imo_list = []
         group_list = []

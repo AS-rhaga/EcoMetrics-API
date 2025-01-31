@@ -9,21 +9,68 @@ import auth
 from dynamodb import insert, select, delete
 from Util import Util
 
-# Ecoで使用する燃料の情報リスト
-LNG_info_list = {}
-HFO_info_list = {}
-LFO_info_list = {}
-MDO_info_list = {}
-MGO_info_list = {}
-
-def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+# CO2排出量の算出メソッド
+def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_info_list):
 
     # EUAの算出
-    co2_lng = 0
-    co2_hfo = 0
-    co2_lfo = 0
-    co2_mdo = 0
-    co2_mgo = 0
+    co2_total   = 0
+    eu_ets_rate = 0
+
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
+    else:
+        eu_ets_rate = 100
+
+    print(f"eu_ets_rate: {(eu_ets_rate)}")
+    if lng_ods > 0:
+        lng_ods_co2_factor =  float(fuel_oil_type_info_list["LNG_ODS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_ods * lng_ods_co2_factor
+    if lng_oms > 0:
+        lng_oms_co2_factor =  float(fuel_oil_type_info_list["LNG_OMS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_oms * lng_oms_co2_factor
+    if lng_oss > 0:
+        lng_oss_co2_factor =  float(fuel_oil_type_info_list["LNG_OSS_info_list"]["emission_factor"]["S"])
+        co2_total += lng_oms * lng_oss_co2_factor
+    if hfo > 0:
+        hfo_co2_factor =  float(fuel_oil_type_info_list["HFO_info_list"]["emission_factor"]["S"])
+        co2_total += hfo * hfo_co2_factor
+    if lfo > 0:
+        lfo_co2_factor =  float(fuel_oil_type_info_list["LFO_info_list"]["emission_factor"]["S"])
+        co2_total += lfo * lfo_co2_factor
+    if mdo > 0:
+        mdo_co2_factor =  float(fuel_oil_type_info_list["MDO_info_list"]["emission_factor"]["S"])
+        co2_total += mdo * mdo_co2_factor
+    if mgo > 0:
+        mgo_co2_factor =  float(fuel_oil_type_info_list["MGO_info_list"]["emission_factor"]["S"])
+        co2_total += mgo * mgo_co2_factor
+    if lpg_p > 0:
+        lpg_p_co2_factor = float(fuel_oil_type_info_list["LPG_Propane_info_list"]["emission_factor"]["S"])
+        co2_total += lpg_p * lpg_p_co2_factor
+    if lpg_b > 0:
+        lpg_b_co2_factor = float(fuel_oil_type_info_list["LPG_Butane_info_list"]["emission_factor"]["S"])
+        co2_total += lpg_b * lpg_b_co2_factor
+    if nh3_ng > 0:
+        nh3_ng_co2_factor = float(fuel_oil_type_info_list["NH3_Ng_info_list"]["emission_factor"]["S"])
+        co2_total += nh3_ng * nh3_ng_co2_factor
+    if nh3_ef > 0:
+        nh3_ef_co2_factor = float(fuel_oil_type_info_list["NH3_eFuel_info_list"]["emission_factor"]["S"])
+        co2_total += nh3_ef * nh3_ef_co2_factor
+    if methanol_ng > 0:
+        methanol_ng_co2_factor = float(fuel_oil_type_info_list["Methanol_Ng_info_list"]["emission_factor"]["S"])
+        co2_total = methanol_ng * methanol_ng_co2_factor
+    if h2_ng > 0:
+        h2_ng_co2_factor = float(fuel_oil_type_info_list["H2_Ng_info_list"]["emission_factor"]["S"])
+        co2_total += h2_ng * h2_ng_co2_factor
+        
+    return co2_total
+
+# EUAの算出メソッド
+def calc_eua(year, eu_rate, total_co2):
+
+    # EUAの算出
     eu_ets_rate = 0
     eua = 0
 
@@ -39,57 +86,59 @@ def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mg
             eu_ets_rate = 70
         else:
             eu_ets_rate = 100
-
         print(f"eu_ets_rate: {(eu_ets_rate)}")
-        if total_lng > 0:
-            lng_co2_factor =  float(LNG_info_list["emission_factor"]["S"])
-            co2_lng = total_lng * lng_co2_factor
-        if total_hfo > 0:
-            hfo_co2_factor =  float(HFO_info_list["emission_factor"]["S"])
-            co2_hfo = total_hfo * hfo_co2_factor
-        if total_lfo > 0:
-            lfo_co2_factor =  float(LFO_info_list["emission_factor"]["S"])
-            co2_lfo = total_lfo * lfo_co2_factor
-        if total_mdo > 0:
-            mdo_co2_factor =  float(MDO_info_list["emission_factor"]["S"])
-            co2_mdo = total_mdo * mdo_co2_factor
-        if total_mgo > 0:
-            mgo_co2_factor =  float(MGO_info_list["emission_factor"]["S"])
-            co2_mgo = total_mgo * mgo_co2_factor
 
-        # CO2の総排出量(MT)
-        total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
-        print(f"total_co2{type(total_co2)}: {total_co2}")
         eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
-        eua_formatted = Util.format_to_one_decimal(round(float(eua), 1))
-        print(f"eua_formatted{type(eua_formatted)}: {eua_formatted}")
-    return str(eua_formatted)
+        print(f"eua{type(eua)}: {eua}")
+    return eua
 
-def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
-    energy_lng = 0
-    energy_hfo = 0
-    energy_lfo = 0
-    energy_mdo = 0
-    energy_mgo = 0
+# エネルギーの総消費量を算出するメソッド
+def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
+    total_energy = 0
 
-    if total_lng > 0:
-        lng_lcv =  float(LNG_info_list["lcv"]["S"])
-        energy_lng += total_lng * lng_lcv
-    if total_hfo > 0:
-        hfo_lcv =  float(HFO_info_list["lcv"]["S"])
-        energy_hfo += total_hfo * hfo_lcv
-    if total_lfo > 0:
-        lfo_lcv =  float(LFO_info_list["lcv"]["S"])
-        energy_lfo += total_lfo * lfo_lcv
-    if total_mdo > 0:
-        mdo_lcv =  float(MDO_info_list["lcv"]["S"])
-        energy_mdo += total_mdo * mdo_lcv
-    if total_mgo > 0:
-        mgo_lcv =  float(MGO_info_list["lcv"]["S"])
-        energy_mgo += total_mgo * mgo_lcv
+    if lng_ods > 0:
+        lng_ods_lcv =  float(fuel_oil_type_list["LNG_ODS_info_list"]["lcv"]["S"])
+        total_energy += lng_ods * lng_ods_lcv
+    if lng_oms > 0:
+        lng_oms_lcv =  float(fuel_oil_type_list["LNG_OMS_info_list"]["lcv"]["S"])
+        total_energy += lng_oms * lng_oms_lcv
+    if lng_oss > 0:
+        lng_oss_lcv =  float(fuel_oil_type_list["LNG_OMS_info_list"]["lcv"]["S"])
+        total_energy += lng_oss * lng_oss_lcv
+    if hfo > 0:
+        hfo_lcv =  float(fuel_oil_type_list["HFO_info_list"]["lcv"]["S"])
+        total_energy += hfo * hfo_lcv
+    if lfo > 0:
+        lfo_lcv =  float(fuel_oil_type_list["LFO_info_list"]["lcv"]["S"])
+        total_energy += lfo * lfo_lcv
+    if mdo > 0:
+        mdo_lcv =  float(fuel_oil_type_list["MDO_info_list"]["lcv"]["S"])
+        total_energy += mdo * mdo_lcv
+    if mgo > 0:
+        mgo_lcv =  float(fuel_oil_type_list["MGO_info_list"]["lcv"]["S"])
+        total_energy += mgo * mgo_lcv
+    if lpg_p > 0:
+        lpg_p_lcv = float(fuel_oil_type_list["LPG_Propane_info_list"]["lcv"]["S"])
+        total_energy += lpg_p * lpg_p_lcv
+    if lpg_b > 0:
+        lpg_b_lcv = float(fuel_oil_type_list["LPG_Butane_info_list"]["lcv"]["S"])
+        total_energy += lpg_b * lpg_b_lcv
+    if nh3_ng > 0:
+        nh3_ng_lcv = float(fuel_oil_type_list["NH3_Natural_Gas_info_list"]["lcv"]["S"])
+        total_energy += nh3_ng * nh3_ng_lcv
+    if nh3_ef > 0:
+        nh3_ef_lcv = float(fuel_oil_type_list["NH3_eFuel_info_list"]["lcv"]["S"])
+        total_energy += nh3_ef * nh3_ef_lcv
+    if methanol_ng > 0:
+        methanol_ng_lcv = float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["lcv"]["S"])
+        total_energy += methanol_ng * methanol_ng_lcv
+    if h2_ng > 0:
+        h2_ng_lcv = float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["lcv"]["S"])
+        total_energy += h2_ng * h2_ng_lcv
 
-    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo) * float(eu_rate) / 100
-    return energy
+    return_energy = total_energy * float(eu_rate) / 100
+
+    return return_energy
 
 def calc_GHG_Max(year):
     year = int(year)
@@ -110,38 +159,73 @@ def calc_GHG_Max(year):
     print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
     return GHG_Max
 
-def calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+#実際のGHG強度を算出するメソッド
+def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
     sum_ghg = 0
     sum_foc = 0
 
-    if total_lng > 0:
-        lng_ghg_intensity =  float(LNG_info_list["ghg_intensity"]["S"])
-        sum_ghg += total_lng * lng_ghg_intensity
-        sum_foc += total_lng
-    if total_hfo > 0:
-        hfo_ghg_intensity =  float(HFO_info_list["ghg_intensity"]["S"])
-        sum_ghg += total_hfo * hfo_ghg_intensity
-        sum_foc += total_hfo
-    if total_lfo > 0:
-        lfo_ghg_intensity =  float(LFO_info_list["ghg_intensity"]["S"])
-        sum_ghg += total_lfo * lfo_ghg_intensity
-        sum_foc += total_lfo
-    if total_mdo > 0:
-        mdo_ghg_intensity =  float(MDO_info_list["ghg_intensity"]["S"])
-        sum_ghg += total_mdo * mdo_ghg_intensity
-        sum_foc += total_mdo
-    if total_mgo > 0:
-        mgo_ghg_intensity =  float(MGO_info_list["ghg_intensity"]["S"])
-        sum_ghg += total_mgo * mgo_ghg_intensity
-        sum_foc += total_mgo
+    if lng_ods > 0:
+        lng_ghg_ods_intensity =  float(fuel_oil_type_list["LNG_ODS_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += lng_ods * lng_ghg_ods_intensity
+        sum_foc += lng_ods
+    if lng_oms > 0:
+        lng_ghg_oms_intensity =  float(fuel_oil_type_list["LNG_OMS_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += lng_oms * lng_ghg_oms_intensity
+        sum_foc += lng_oms
+    if lng_oss > 0:
+        lng_ghg_oss_intensity =  float(fuel_oil_type_list["LNG_OSS_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += lng_oss * lng_ghg_oss_intensity
+        sum_foc += lng_oss
+    if hfo > 0:
+        hfo_ghg_intensity =  float(fuel_oil_type_list["HFO_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += hfo * hfo_ghg_intensity
+        sum_foc += hfo
+    if lfo > 0:
+        lfo_ghg_intensity =  float(fuel_oil_type_list["LFO_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += lfo * lfo_ghg_intensity
+        sum_foc += lfo
+    if mdo > 0:
+        mdo_ghg_intensity =  float(fuel_oil_type_list["MDO_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += mdo * mdo_ghg_intensity
+        sum_foc += mdo
+    if mgo > 0:
+        mgo_ghg_intensity =  float(fuel_oil_type_list["MGO_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += mgo * mgo_ghg_intensity
+        sum_foc += mgo
+    if lpg_p > 0:
+        lpg_p_ghg_intensity =  float(fuel_oil_type_list["LPG_Propane_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += lpg_p * lpg_p_ghg_intensity
+        sum_foc += lpg_p
+    if lpg_b > 0:
+        lpg_b_ghg_intensity =  float(fuel_oil_type_list["LPG_Butane_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += lpg_b * lpg_b_ghg_intensity
+        sum_foc += lpg_b
+    if nh3_ng > 0:
+        nh3_ng_ghg_intensity =  float(fuel_oil_type_list["NH3_Natural_Gas_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += nh3_ng * nh3_ng_ghg_intensity
+        sum_foc += nh3_ng
+    if nh3_ef > 0:
+        nh3_ef_ghg_intensity =  float(fuel_oil_type_list["NH3_eFuel_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += nh3_ef * nh3_ef_ghg_intensity
+        sum_foc += nh3_ef
+    if methanol_ng > 0:
+        methanol_ng_ghg_intensity =  float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += methanol_ng * methanol_ng_ghg_intensity
+        sum_foc += methanol_ng
+    if h2_ng > 0:
+        h2_ng_ghg_intensity =  float(fuel_oil_type_list["H2_Natural_Gas_info_list"]["ghg_intensity"]["S"])
+        sum_ghg += h2_ng * h2_ng_ghg_intensity
+        sum_foc += h2_ng
 
-    GHG_Actual = round(float(sum_ghg / sum_foc), 2)
+    GHG_Actual = 0
+    if sum_foc != 0:
+        GHG_Actual = round(float(sum_ghg / sum_foc), 2)
     print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual
 
-def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo):
+# コンプライアンスバランスを算出するメソッド
+def calc_cb(year_timestamp, energy, GHG_Actual):
     GHG_Max    = calc_GHG_Max(year_timestamp)
-    GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
     cb = (GHG_Max - GHG_Actual) * energy
     print(f"cb{type(cb)}: {cb}")
     cb_formatted = str(round(float(cb), 1))
@@ -175,24 +259,71 @@ def convertFuelOileStringToList(text):
 
     return cleaned_matches
 
+def make_fuel_oil_type_info_list():
+
+    # Ecoで使用する燃料の情報リスト
+    fuel_oil_info_list = {
+        "HFO_info_list": [],
+        "LFO_info_list": [],
+        "MDO_info_list": [],
+        "MGO_info_list": [],
+        "LNG_OMS_info_list": [],
+        "LNG_OSS_info_list": [],
+        "LNG_ODS_info_list": [],
+        "LPG_Butane_info_list": [],
+        "LPG_Puropane_info_list": [],
+        "H2_Ng_info_list"       : [],
+        "NH3_Ng_info_list"      : [],
+        "Methanol_Ng_info_list" : [],
+        "NH3_eFuel_info_list"   : []
+    }
+
+    # 燃料情報リストを取得し、データセットを作成する
+    fuel_oil_name_list = ["HFO", "LFO", "MDO", "MGO", "LNG(Otto Medium Speed)", "LNG(Otto Slow Speed)", "LNG(Otto Diesel Speed)", "LPG(Butane)", "LPG(Propane)", "H2(Natural gas)", "NH3(Natural gas)", "Methanol(Natural gas)", "NH3(e-fuel)"]
+    fuel_oil_type_info_list = []
+
+    for fuel_oil_name in fuel_oil_name_list:
+        fuel_oil_type_info_list.append(select.get_fuel_oil_type_by_oiletype(fuel_oil_name)[0])
+
+    for fuel_oil_type_info in fuel_oil_type_info_list:
+        name = fuel_oil_type_info["fuel_oil_type"]["S"]
+
+        # それぞれの
+        if name == "HFO":
+            fuel_oil_info_list["HFO_info_list"] = fuel_oil_type_info
+        elif name == "LFO":
+            fuel_oil_info_list["LFO_info_list"] = fuel_oil_type_info
+        elif name == "MGO":
+            fuel_oil_info_list["MDO_info_list"] = fuel_oil_type_info
+        elif name == "MGO":
+            fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info
+        elif name == "LNG(Otto Medium Speed)":        
+            fuel_oil_info_list["LNG_OMS_info_list"] = fuel_oil_type_info
+        elif name == "LNG(Otto Slow Speed)":
+            fuel_oil_info_list["LNG_OSS_info_list"] = fuel_oil_type_info
+        elif name == "LNG(Otto Diesel Speed)":
+            fuel_oil_info_list["LNG_ODS_info_list"] = fuel_oil_type_info
+        elif name == "LPG(Butane)":
+            fuel_oil_info_list["LPG_Butane_info_list"] = fuel_oil_type_info
+        elif name == "LPG(Propane)":
+            fuel_oil_info_list["LPG_Puropane_info_list"] = fuel_oil_type_info
+        elif name == "H2(Natural gas)":
+            fuel_oil_info_list["H2_Ng_info_list"] = fuel_oil_type_info
+        elif name == "NH3(Natural gas)":
+            fuel_oil_info_list["NH3_Ng_info_list"] = fuel_oil_type_info
+        elif name == "Methanol(Natural gas)":
+            fuel_oil_info_list["Methanol_Ng_info_list"] = fuel_oil_type_info
+        elif name == "NH3(e-fuel)":
+            fuel_oil_info_list["NH3_eFuel_info_list"] = fuel_oil_type_info
+
+    return fuel_oil_info_list, fuel_oil_name_list
+
 def lambda_handler(event, context):
     print(f"event{type(event)}: {event}")
-
-    global LNG_info_list
-    global HFO_info_list
-    global LFO_info_list
-    global MDO_info_list
-    global MGO_info_list
 
     foc = 0
     foc_str = ""
     leg_count = 0
-
-    total_lng = 0
-    total_hfo = 0
-    total_lfo = 0
-    total_mdo = 0
-    total_mgo = 0
     
     body = event['body']
     token = event['headers']['Authorization']
@@ -224,63 +355,7 @@ def lambda_handler(event, context):
     res_foc_formulas = select.get_foc_formulas(imo)
 
     # 燃料情報を取得
-    # fuel_oil_type_info_list = select.get_fuel_oil_type()
-    fuel_oil_type_info_list = [
-        {'fuel_oil_type_name': {'S': 'Marine Gas Oil'}, 'ghg_intensity': {'S': '90.8'}, 'fuel_oil_type': {'S': 'MGO'}, 'lcv': {'S': '0.0427'}, 'emission_factor': {'S': '3.206'}}, 
-        {'fuel_oil_type': {'S': 'LPG(Propane)'}, 'fuel_oil_type_name': {'S': 'Liquefied petroleum gas (Propane)'}, 'emission_factor': {'S': '3.000'}}, 
-        {'fuel_oil_type': {'S': 'Ethanol'}, 'fuel_oil_type_name': {'S': 'Ethanol'}, 'emission_factor': {'S': '1.913'}}, 
-        {'fuel_oil_type': {'S': 'Methanol'}, 'fuel_oil_type_name': {'S': 'Methanol'}, 'emission_factor': {'S': '1.375'}}, 
-        {'fuel_oil_type_name': {'S': 'Marine Diesel Oil'}, 'ghg_intensity': {'S': '90.8'}, 'fuel_oil_type': {'S': 'MDO'}, 'lcv': {'S': '0.0427'}, 'emission_factor': {'S': '3.206'}}, 
-        {'fuel_oil_type_name': {'S': 'Heavy fuel oil'}, 'ghg_intensity': {'S': '91.7'}, 'fuel_oil_type': {'S': 'HFO'}, 'lcv': {'S': '0.0405'}, 'emission_factor': {'S': '3.114'}}, 
-        {'fuel_oil_type': {'S': 'LPG(Butane)'}, 'fuel_oil_type_name': {'S': 'Liquefied petroleum gas (Butane)'}, 'emission_factor': {'S': '3.030'}}, 
-        {'fuel_oil_type_name': {'S': 'Liquefied natural gas'}, 'ghg_intensity': {'S': '89.2'}, 'fuel_oil_type': {'S': 'LNG'}, 'lcv': {'S': '0.0491'}, 'emission_factor': {'S': '2.750'}}, 
-        {'fuel_oil_type_name': {'S': 'Light fuel oil'}, 'ghg_intensity': {'S': '91.4'}, 'fuel_oil_type': {'S': 'LFO'}, 'lcv': {'S': '0.041'}, 'emission_factor': {'S': '3.151'}}
-    ]
-    for i in range(len(fuel_oil_type_info_list)):
-        name = fuel_oil_type_info_list[i]["fuel_oil_type"]["S"]
-        if  name == "LNG":
-            LNG_info_list = fuel_oil_type_info_list[i]
-        elif name == "HFO":
-            HFO_info_list = fuel_oil_type_info_list[i]
-        elif name == "LFO":
-            LFO_info_list = fuel_oil_type_info_list[i]
-        elif name == "MDO":
-            MDO_info_list = fuel_oil_type_info_list[i]
-        elif name == "MGO":
-            MGO_info_list = fuel_oil_type_info_list[i]
-
-    # edit_conditions_list = {
-    #     {
-    #         "imo"                   : "9876543",
-    #         "year_and_serial_number": "2024E1",
-    #         "operator"              : "NYK",
-    #         "departure_port"        : "Departute",
-    #         "departure_time"        : "2024/12/12 13:00",
-    #         "arrival_port"          : "Arrival",
-    #         "arrival_time"          : "2024/ 12/16 19:00",
-    #         "distance"              : "5000", 
-    #         "displacement"          : "Ballast",
-    #         "fuel"                  : {
-    #             {
-    #                 "fuel_type": "HFO",
-    #                 "fuel_rate": "60"
-    #             },
-    #             {
-    #                 "fuel_type": "LFO",
-    #                 "fuel_rate": "40" 
-    #             }
-    #         },
-    #         "eu_rate"               : "50"
-    #     }
-    # }
-    # res_foc_formulas = {
-    #     {
-    #         "imo"                : "9876543",
-    #         "me_ballast"         : ["0.013", "2.85", "0"],
-    #         "me_laden"           : ["0.018", "2.85", "0"],
-    #         "auxiliary_equipment": "8.2"
-    #     }
-    # }
+    fuel_oil_type_info_list, FuelOilList = make_fuel_oil_type_info_list()
 
     # 新規Simulationテーブル登録
     for item in edit_conditions_list:
@@ -342,23 +417,60 @@ def lambda_handler(event, context):
             for i in range(len(fuel)):
                 # focと割合から各種燃料消費量を算出する。
                 fuel_info = fuel[i].split(',')
-                fuel_name = fuel_info[0]
-                if  fuel_name == "LNG":
-                    total_lng = foc * (int(fuel_info[1]) / 100)
-                elif fuel_name == "HFO":
-                    total_hfo = foc * (int(fuel_info[1]) / 100)
-                elif fuel_name == "LFO":
-                    total_lfo = foc * (int(fuel_info[1]) / 100)
-                elif fuel_name == "MDO":
-                    total_mdo = foc * (int(fuel_info[1]) / 100)
-                elif fuel_name == "MGO":
-                    total_mgo = foc * (int(fuel_info[1]) / 100)
-            print(f"total_lng: {(total_lng)}, total_hfo: {(total_hfo)}, total_lfo: {(total_lfo)}, total_mdo: {(total_mdo)}, total_mgo: {(total_mgo)}")
+                fuel_type = fuel_info[0]
+                fuel_rate = int(fuel_info[1])
 
-            eua_str = calc_EUA(year_now, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
-            energy  = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
-            print(f"year_now:{year_now}, energy:{energy}, total_lng:{total_lng}, total_hfo:{total_hfo}, total_lfo:{total_lfo}, total_mdo:{total_mdo}, total_mgo:{total_mgo}")
-            cb_str  = calc_cb(year_now, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo)
+                simulation_leg_lng_oms = 0
+                simulation_leg_lng_oss = 0
+                simulation_leg_lng_ods = 0
+                simulation_leg_hfo = 0
+                simulation_leg_lfo = 0
+                simulation_leg_mdo = 0
+                simulation_leg_mgo = 0
+                simulation_leg_lpg_p = 0
+                simulation_leg_lpg_b = 0
+                simulation_leg_h2_ng = 0
+                simulation_leg_nh3_ng = 0
+                simulation_leg_methanol_ng = 0
+                simulation_leg_nh3_ef = 0
+
+                if  fuel_type == "LNG(Otto Medium Speed)":
+                    simulation_leg_lng_oms = foc * int(fuel_rate) / 100
+                elif  fuel_type == "LNG(Otto Slow Speed)":
+                    simulation_leg_lng_oss = foc * int(fuel_rate) / 100
+                elif  fuel_type == "LNG(Otto Diesel Speed)":
+                    simulation_leg_lng_ods = foc * int(fuel_rate) / 100
+                elif fuel_type == "HFO":
+                    simulation_leg_hfo = foc * int(fuel_rate) / 100
+                elif fuel_type == "LFO":
+                    simulation_leg_lfo = foc * int(fuel_rate) / 100
+                elif fuel_type == "MDO":
+                    simulation_leg_mdo = foc * int(fuel_rate) / 100
+                elif fuel_type == "MGO":
+                    simulation_leg_mgo = foc * int(fuel_rate) / 100
+                elif fuel_type == "LPG(Propane)":
+                    simulation_leg_lpg_p = foc * int(fuel_rate) / 100
+                elif fuel_type == "LPG(Butane)":
+                    simulation_leg_lpg_b = foc * int(fuel_rate) / 100
+                elif fuel_type == "H2(Natural gas)":
+                    simulation_leg_h2_ng = foc * int(fuel_rate) / 100
+                elif fuel_type == "NH3(Natural gas)":
+                    simulation_leg_nh3_ng = foc * int(fuel_rate) / 100
+                elif fuel_type == "Methanol(Natural gas)":
+                    simulation_leg_methanol_ng = foc * int(fuel_rate) / 100
+                elif fuel_type == "NH3(e-fuel)":
+                    simulation_leg_nh3_ef = foc * int(fuel_rate) / 100
+           
+            # シミュレーション部分で実際に排出したco2を算出する
+            simulation_leg_co2 = calc_co2(year_now, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+            # シミュレーション部分のEUAを算出する
+            simulation_leg_eua = calc_eua(year_now, eu_rate, simulation_leg_co2)
+            eua_str = str(Util.format_to_one_decimal(round(float(simulation_leg_eua), 1)))
+            
+            # CB算出
+            simulation_leg_GHG = calc_GHG_Actual(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+            simulation_energy  = calc_energy(eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+            cb_str  = calc_cb(year_now, simulation_energy, simulation_leg_GHG)
 
         else:
             foc_str = "-"

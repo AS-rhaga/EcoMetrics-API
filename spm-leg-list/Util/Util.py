@@ -1,8 +1,8 @@
 
 import ast
 import math
-from datetime import datetime
 import re
+from datetime import datetime
 
 def to_datetime(str_time):
 
@@ -14,22 +14,6 @@ def to_datetime(str_time):
         minute = int(str_time[14:16])
     )
     return dt_time
-
-# datetime型のstartとendの時間差を返却。30分以上の場合は繰り上がり。
-def calc_time_diff(start_time, end_time):
-
-    return_val = 0
-                        
-    time_difference = end_time - start_time
-    hours_difference = time_difference.total_seconds() / 3600
-
-    # 30分以上で繰り上げ
-    if hours_difference % 1 >= 0.5:
-        return_val = math.ceil(hours_difference)  # 繰り上げ
-    else:
-        return_val = math.floor(hours_difference)  # 切り捨て
-    
-    return return_val
 
 # datetime型のstartとendの時間差を返却。30分以上の場合は繰り上がり。
 def calc_time_diff(start_time, end_time):

@@ -6,14 +6,18 @@ from datetime import datetime
 import ast
 import os
 
+from Cii import cii_caluclate
+from EUA_CB import eua_cb_caluclate
 
 _dynamodb_client = boto3.client('dynamodb')
 _table_name_user            = os.environ['USER']
 _table_name_group           = os.environ['GROUP']
 _table_name_favorite        = os.environ['FAVORITE']
 _table_name_vessel_master   = os.environ['VESSEL_MASTER']
-#_table_name_vessel_alerm    = os.environ['VESSEL_ALERM']
+_table_name_vessel_type     = os.environ['VESSEL_TYPE']
 _table_name_vessel_alarm    = os.environ['VESSEL_ALARM']
+_table_name_noonreport      = os.environ['NOONREPORT']
+_table_name_lo_code_master  = os.environ['LO_CODE_MASTER']
 
 # Favoriteテーブルに登録
 def upsert_favorite(dataSet, retry_count: int=42) -> None:
@@ -124,7 +128,6 @@ def get_favorite(user_id):
     
     return data
     
-    
 def get_vessel_master(imo):
     data = []
     response = _dynamodb_client.query(
@@ -141,7 +144,23 @@ def get_vessel_master(imo):
     
     return data
 
-def get_vessel_alerm(imo, year):
+def get_vessel_type(vessel_type):
+    data = []
+    response = _dynamodb_client.query(
+        TableName=_table_name_vessel_type,
+        ExpressionAttributeNames={
+            '#type': 'type', 
+        },
+        ExpressionAttributeValues={
+            ':type_value': {'S': vessel_type},
+        },
+        KeyConditionExpression='#type = :type_value'
+    )
+    data = response['Items']
+    
+    return data
+
+def get_vessel_alarm(imo, year):
     data = []
     response = _dynamodb_client.query(
         TableName=_table_name_vessel_alarm,
@@ -154,6 +173,43 @@ def get_vessel_alerm(imo, year):
             ':value1': {'S': year}
         },
         KeyConditionExpression='#name0 = :value0 AND #name1 = :value1'
+    )
+    data = response['Items']
+    
+    return data
+
+# noonreportテーブルからimoをキーとしてtimestampが最新の１レコードを取得する
+def get_noonreport(imo):
+    data = []
+    response = _dynamodb_client.query(
+        TableName=_table_name_noonreport,
+        KeyConditionExpression='#partition_key = :partition_value',
+        ExpressionAttributeNames={
+            '#partition_key': 'imo',
+        },
+        ExpressionAttributeValues={
+            ':partition_value': {'S': imo},
+        },
+        ScanIndexForward=False,  # 降順にソート（最新の timestamp が先頭）
+        Limit=1  # 1件だけ取得
+    )
+    data = response['Items']
+    
+    return data
+
+def get_lo_code_master(lo_code):
+    data = []
+    response = _dynamodb_client.query(
+        TableName=_table_name_lo_code_master,
+        KeyConditionExpression='#lo_code = :lo_code_value',
+        ExpressionAttributeNames={
+            '#lo_code': 'lo_code',
+        },
+        ExpressionAttributeValues={
+            ':lo_code_value': {'S': lo_code},
+        },
+        ScanIndexForward=False,  # 降順にソート（最新の timestamp が先頭）
+        Limit=1  # 1件だけ取得
     )
     data = response['Items']
     
@@ -233,34 +289,10 @@ def lambda_handler(event, context):
         for res_group_item in res_group:
             if res_group_item['group_id']['S'] == gid:
                 imo_list = ast.literal_eval(res_group_item["imo_list"]["S"])
-                
-        # for res_group_item in res_group:
-        #     if res_group_item['group_id']['S'] in group_list:
-        #         imoList = ast.literal_eval(res_group_item["imo_list"]["S"])
-        #         for imo_item in imoList:
-        #             imo_list.append(imo_item)
-        
-        
-        # res = get_group(company_id)
-        # for res_item in res:
-        #     group_list.append(res_item["group_id"]["S"])
-        #     if res_item["group_id"]["S"] == gid:
-        #         imoList = ast.literal_eval(res_item["imo_list"]["S"])
-        #         for imo_item in imoList:
-        #             imo_list.append(imo_item)
                     
     else:
         favorite_check = "ok"
         imo_list = favorite_imo_list
-        
-        
-        # favorite_check = "ok"
-        # res = get_group(company_id)
-        # for res_item in res:
-        #     group_list.append(res_item["group_id"]["S"])
-        #     imoList = ast.literal_eval(res_item["imo_list"]["S"])
-        #     for imo_item in imoList:
-        #         imo_list.append(imo_item)
     
     imo_list = list(set(imo_list))
 
@@ -271,51 +303,76 @@ def lambda_handler(event, context):
     data_list = []
     group_imo_list = []
     for imo in imo_list:
-        res = get_vessel_alerm(imo, year)
-        res_vesselmaster = get_vessel_master(imo)
+        res_vessel_master = get_vessel_master(imo)
+        res_vessel_type = get_vessel_type(res_vessel_master[0]["VesselType"]["S"])
+        res_vessel_alarm = get_vessel_alarm(imo, year)
+        res_noonreport = get_noonreport(imo)
+        res_lo_code_master_departure = get_lo_code_master(res_noonreport[0]["port_code"]["S"])
+        # ↓noonreportにeta_port_codeが追加されたら使用可能。それまではいったん固定値JPYOSを設定
+        # res_lo_code_master_arrival = get_lo_code_master(res_noonreport[0]["eta_port_code"]["S"])
+        res_lo_code_master_arrival = get_lo_code_master("JPYOS")
+
+        # End of YearのCii算出
+        res_cii_data = cii_caluclate.calc_cii(imo, res_vessel_master, res_vessel_alarm)
+
+        # Year to Date、End of YearのEUA、CB算出
+        res_eua_cb_data = eua_cb_caluclate.calc_eua_cb(imo)        
         
-        favorite            = "default"
-        imo                 = res[0]["imo"]["S"]
-        VesselName          = res_vesselmaster[0]["VesselName"]["S"]
-        LatestUpdate        = res[0]["LatestUpdate"]["S"]
-        oneMonth            = res[0]["oneMonth"]["S"]
-        oneMonth_from       = res[0]["oneMonth_from"]["S"]
-        oneMonth_to         = res[0]["oneMonth_to"]["S"]
-        oneMonth_count      = res[0]["oneMonth_count"]["S"]
-        Januarytonow        = res[0]["Januarytonow"]["S"]
-        Januarytonow_from   = res[0]["Januarytonow_from"]["S"]
-        Januarytonow_to     = res[0]["Januarytonow_to"]["S"]
-        LastYear            = res[0]["LastYear"]["S"]
-        LastYear_from       = res[0]["LastYear_from"]["S"]
-        LastYear_to         = res[0]["LastYear_to"]["S"]
-        cp                  = float(res[0]["cp"]["S"])
-        cp_from             = res[0]["cp_from"]["S"]    
-        cp_to               = res[0]["cp_to"]["S"]
-        rf                  = float(res[0]["rf"]["S"])
-        rf_from             = res[0]["rf_from"]["S"]
-        rf_to               = res[0]["rf_to"]["S"]
+        favorite               = "default"
+        imo                    = res_vessel_master[0].get("imo", {}).get("S", "")
+        vesselName             = res_vessel_master[0].get("VesselName", {}).get("S", "")
+        grosstongue            = res_vessel_master[0].get("Grosstongue", {}).get("S", "")
+        vesselType             = res_vessel_type[0].get("type_name", {}).get("S", "")
+        latitude               = res_noonreport[0].get("lat", {}).get("S", "")
+        longitude              = res_noonreport[0].get("lng", {}).get("S", "")
+        latestUpdate           = res_noonreport[0].get("timestamp", {}).get("S", "")
+        beaufort               = res_noonreport[0].get("beaufort", {}).get("S", "")
+        windDirection          = res_noonreport[0].get("wind_direction", {}).get("S", "")
+        course                 = res_noonreport[0].get("course", {}).get("S", "")
+        portOfDeparture        = res_lo_code_master_departure[0].get("port_name", {}).get("S", "")
+        portOfArrival          = res_lo_code_master_arrival[0].get("port_name", {}).get("S", "")
+        actualTimeOfDeparture  = res_noonreport[0].get("start_local_date", {}).get("S", "")
+        estimatedTimeOfArrival = res_noonreport[0].get("eta_local_date", {}).get("S", "")
+        logSpeed               = res_noonreport[0].get("log_speed", {}).get("S", "")
+        meRPM                  = res_noonreport[0].get("me_rpm", {}).get("S", "")
+        meLoad                 = res_noonreport[0].get("me_load", {}).get("S", "")
+        foc                    = res_noonreport[0].get("total_foc", {}).get("S", "")
+        cpCurveAlarm           = float(res_vessel_alarm[0].get("cp", {}).get("S", ""))
+        ciiYearToDate          = res_vessel_alarm[0].get("Januarytonow", {}).get("S", "")
+        # 以下計算が必要。いったん空文字設定する
+        ciiEndOfYear           = res_cii_data["eoy_cii_score"]
+        euaYearToDate          = res_eua_cb_data["ytd_eua"]
+        euaEndOfYear           = res_eua_cb_data["eoy_eua"]
+        cbYearToDate           = res_eua_cb_data["ytd_cb"]
+        cbEndOfYear            = res_eua_cb_data["eoy_cb"]
         
         data = {
-            "imo"               : imo,
-            "favorite"          : favorite, 
-            "VesselName"        : VesselName, 
-            "LatestUpdate"      : LatestUpdate, 
-            "oneMonth"          : oneMonth, 
-            "oneMonth_from"     : oneMonth_from, 
-            "oneMonth_to"       : oneMonth_to,
-            "oneMonth_count"    : oneMonth_count,
-            "Januarytonow"      : Januarytonow, 
-            "Januarytonow_from" : Januarytonow_from, 
-            "Januarytonow_to"   : Januarytonow_to, 
-            "LastYear"          : LastYear, 
-            "LastYear_from"     : LastYear_from, 
-            "LastYear_to"       : LastYear_to, 
-            "cp"                : cp, 
-            "cp_from"           : cp_from, 
-            "cp_to"             : cp_to, 
-            "rf"                : rf, 
-            "rf_from"           : rf_from, 
-            "rf_to"             : rf_to, 
+            "imo"                    : imo,
+            "favorite"               : favorite, 
+            "vesselName"             : vesselName, 
+            "grosstongue"            : grosstongue, 
+            "vesselType"             : vesselType, 
+            "latitude"               : latitude, 
+            "longitude"              : longitude, 
+            "latestUpdate"           : latestUpdate, 
+            "beaufort"               : beaufort,
+            "windDirection"          : windDirection,
+            "course"                 : course, 
+            "portOfDeparture"        : portOfDeparture, 
+            "portOfArrival"          : portOfArrival, 
+            "actualTimeOfDeparture"  : actualTimeOfDeparture, 
+            "estimatedTimeOfArrival" : estimatedTimeOfArrival, 
+            "logSpeed"               : logSpeed, 
+            "meRPM"                  : meRPM, 
+            "meLoad"                 : meLoad, 
+            "foc"                    : foc, 
+            "cpCurveAlarm"           : cpCurveAlarm,
+            "ciiYearToDate"          : ciiYearToDate,
+            "ciiEndOfYear"           : ciiEndOfYear,
+            "euaYearToDate"          : euaYearToDate,
+            "euaEndOfYear"           : euaEndOfYear,
+            "cbYearToDate"           : cbYearToDate,
+            "cbEndOfYear"            : cbEndOfYear,
         }
         
         # お気に入り登録されているImoだけにお気に入り表示するための判定-------------------------------------------------------
@@ -323,18 +380,18 @@ def lambda_handler(event, context):
             if imo in favorite_imo_list:
                 data["favorite"] = "checked"
                 data_list.append(data)
-                group_imo_list.append({"imoNo":imo,"VesselName": VesselName})
+                group_imo_list.append({"imoNo":imo,"vesselName": vesselName})
         else:
             if imo in favorite_imo_list:
                 data["favorite"] = "checked"
             data_list.append(data)
-            group_imo_list.append({"imoNo":imo,"VesselName": VesselName})
+            group_imo_list.append({"imoNo":imo,"vesselName": vesselName})
     
     
     # ソート実行-------------------------------------------------------
-    new_group_imo_list = sorted(group_imo_list, key=lambda x: x['VesselName'])
+    new_group_imo_list = sorted(group_imo_list, key=lambda x: x['vesselName'])
     
-    new_data_list = sorted(data_list, key=lambda x: x['VesselName'])
+    new_data_list = sorted(data_list, key=lambda x: x['vesselName'])
        
     group_list = ast.literal_eval(group_id)
     # new_group_list = sorted(group_list)

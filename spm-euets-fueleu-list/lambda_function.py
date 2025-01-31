@@ -253,7 +253,7 @@ def lambda_handler(event, context):
     eoy_total_cb       = 0
     eoy_total_cb_cost  = 0
 
-    # fuel-oil-typeリストを取得（要修正⇒修正済み）
+    # fuel-oil-typeリストを取得
     fuel_oil_type_info_list = select.get_fuel_oil_type()
     for i in range(len(fuel_oil_type_info_list)):
         name = fuel_oil_type_info_list[i]["fuel_oil_type"]["S"]
@@ -304,70 +304,85 @@ def lambda_handler(event, context):
     dt_now_str = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
     year_now = dt_now_str[0:4]
 
-    # GHG上限値を算出する
-    GHG_Max    = calculate_function.calc_GHG_Max(year_now)
-
     # userテーブル取得
     res_user_table = select.get_user(para_user_id)[0]
-    gidList        = res_user_table["group_id"]["S"]
+    gidList        = ast.literal_eval(res_user_table["group_id"]["S"])
     company_id     = res_user_table["company_id"]["S"]
 
     # groupテーブル取得
     res_group = select.get_group(company_id, "admin")
-    eua_price = res_group["eua_price"]["S"] if "eua_prise" in res_group and res_group["eua_price"]["S"] != "" else 0
+    eua_price = res_group[0]["eua_price"]["S"] if "eua_price" in res_group[0] and res_group[0]["eua_price"]["S"] != "" else 0
 
     # 検索用imoリストの設定
     imo_list = []
 
-    if para_group != "admin":
-        imo_list = select.get_favolite_table(para_user_id)[0]["imo_list"]
+    # Imoリストを取得-------------------------------------------------------
+    if para_group == "Favorite":
+        # favoriteの場合、Favoriteテーブルからimoリストを取得
+        res_favorite = select.get_favorite(para_user_id)
+        imo_list = ast.literal_eval(res_favorite[0]["imo_list"]["S"])       
+                    
     else:
-        imo_list = select.get_group(company_id, "admin")[0]["imo_list"]
+        # 上記以外の場合（基本はALL（=admin）のはず）、Groupテーブル取得し、GIDに該当するimoリストを特定する。
+        res_group = select.get_group(company_id, para_group)
+        imo_list = ast.literal_eval(res_group[0]["imo_list"]["S"])  
+    
+    imo_list = list(set(imo_list))
+
+    print(imo_list)
 
     # ---------- imo_listでループ ----------
     for loop_imo in imo_list:
 
         count_total_vessels += 1
 
+        # VesselMaster取得
+        res_vessel_master = select.get_vessel_master(loop_imo)
+        
         # パラメーターの西暦が現在の西暦と一致する場合
         if para_year == year_now:
 
             # imo + operator毎の表示項目をまとめたデータセットを作成
-            dataset = make_ytd_record.make_recoed(eua_price, loop_imo, para_year, fuel_oil_type_list)
+            dataset = make_ytd_record.make_recoed(eua_price, loop_imo, para_year, fuel_oil_type_list, res_vessel_master[0])
 
-            # EUA、CBをytdとeoy毎に合計する
-            ytd_total_eua      += dataset["ytd_eua"]
-            ytd_total_eua_cost *= dataset["ytd_eua_cost"]
-            ytd_total_cb       += dataset["ytd_cb"]
-            ytd_total_cb_cost  += dataset["ytd_cb_cost"]
-            eoy_total_eua      += dataset["eoy_eua"]
-            eoy_total_eua_cost *= dataset["eoy_eua_cost"]
-            eoy_total_cb       += dataset["eoy_cb"]
-            eoy_total_cb_cost  += dataset["eoy_cb_cost"]
-
-            rows.append(dataset)
+            for data in dataset:
+                # EUA、CBをytdとeoy毎に合計する
+                ytd_total_eua      += float(data["ytd_eua"])
+                ytd_total_eua_cost += float(data["ytd_eua_cost"])
+                ytd_total_cb       += float(data["ytd_cb"])
+                ytd_total_cb_cost  += float(data["ytd_cb_cost"])
+                eoy_total_eua      += float(data["eoy_eua"])
+                eoy_total_eua_cost += float(data["eoy_eua_cost"])
+                eoy_total_cb       += float(data["eoy_cb"])
+                eoy_total_cb_cost  += float(data["eoy_cb_cost"])
+                rows.append(data)
 
         # パラメーターの西暦が過去の場合
         else:
             # imo + operator毎の表示項目をまとめたデータセットを作成
-            dataset = make_ytd_record.make_recoed_past(eua_price, loop_imo, para_year, fuel_oil_type_list)
+            dataset = make_ytd_record.make_recoed_past(eua_price, loop_imo, para_year, fuel_oil_type_list, res_vessel_master[0])
 
-            # EUA、CBをytdとeoy毎に合計する（Year to Dateは全てゼロ）
-            eoy_total_eua      += dataset["eoy_eua"]
-            eoy_total_eua_cost *= dataset["eoy_eua_cost"]
-            eoy_total_cb       += dataset["eoy_cb"]
-            eoy_total_cb_cost  += dataset["eoy_cb_cost"]
+            for data in dataset:
+                # EUA、CBをytdとeoy毎に合計する（Year to Dateは全てゼロ）
+                eoy_total_eua      += float(data["eoy_eua"])
+                eoy_total_eua_cost += float(data["eoy_eua_cost"])
+                eoy_total_cb       += float(data["eoy_cb"])
+                eoy_total_cb_cost  += float(data["eoy_cb_cost"])
+                rows.append(data)
 
     # ---------- imo_listでのループ終了 ----------
+
+    # VesselNameでソート
+    new_rows = sorted(rows, key=lambda x: x['vessel_name'])
 
     total_list = {
         "ytd_total_eua"     : ytd_total_eua,
         "ytd_total_eua_cost": ytd_total_eua_cost,
-        "ytd_total_cb"      : ytd_total_cb,
+        "ytd_total_cb"      : round(ytd_total_cb, 1),
         "ytd_total_cb_cost" : ytd_total_cb_cost,
         "eoy_total_eua"     : eoy_total_eua,
         "eoy_total_eua_cost": eoy_total_eua_cost,
-        "eoy_total_cb"      : eoy_total_cb,
+        "eoy_total_cb"      : round(eoy_total_cb, 1),
         "eoy_total_cb_cost" : eoy_total_cb_cost
     }
 
@@ -381,7 +396,8 @@ def lambda_handler(event, context):
         "imoList"      : imo_list,
         "total_vessels": count_total_vessels,
         "total_list"   : total_list,
-        "rows"         : rows
+        "eua_price"    : eua_price,
+        "rows"         : new_rows
     }
 
     datas = json.dumps(datas)
