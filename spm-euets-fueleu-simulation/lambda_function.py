@@ -498,7 +498,7 @@ def lambda_handler(event, context):
             print(f"to_thisLeg_energy:{to_thisLeg_energy}, to_thisLeg_GHG:{to_thisLeg_GHG}, to_thisLeg_cb:{to_thisLeg_cb}")
 
             # CBList_YeartoDateにEUAをセット
-            CBList_YeartoDate.append([i + 1, float(to_thisLeg_cb)])
+            CBList_YeartoDate.append([i + 1, float(to_thisLeg_cb) / 1000000])
 
             # Y軸設定用の変数に値を設定
             max_eua = leg_eua if max_eua < leg_eua else max_eua
@@ -707,10 +707,10 @@ def lambda_handler(event, context):
                     year_to_leg_energy  = total_energy
                     year_to_leg_cb  = calc_cb(now_year, year_to_leg_energy, year_to_leg_GHG)
                     # CBList_YeartoDateに通年CBをセット
-                    CBList_Simulation.append([this_year_leg_count + i + 1, float(year_to_leg_cb)])
+                    CBList_Simulation.append([this_year_leg_count + i + 1, float(year_to_leg_cb) / 1000000])
 
                     # CB Costの算出
-                    if float(simulation_leg_cb) >= 0:
+                    if float(year_to_leg_cb) >= 0:
                         total_cb_cost = 0
                     else:
                         # ペナルティーファクターを調べる
@@ -743,7 +743,7 @@ def lambda_handler(event, context):
 
                 # Voyage Planのシミュレーション用データ
                 str_eua = str(round(simulation_leg_eua, 1))
-                str_cb  = str(round(float(simulation_leg_cb), 1))
+                str_cb  = str(round(float(simulation_leg_cb) / 1000000, 1))
 
                 simulation_data = {
                     "departure_port" : res_simulation[i]["departure_port"]["S"], 
@@ -991,10 +991,10 @@ def lambda_handler(event, context):
                     year_to_leg_energy  = total_energy
                     year_to_leg_cb  = calc_cb(now_year, year_to_leg_energy, year_to_leg_GHG)
                     # CBList_Simulationに通年CBをセット
-                    CBList_Simulation.append([this_year_leg_count + 1, float(year_to_leg_cb)])
+                    CBList_Simulation.append([this_year_leg_count + 1, float(year_to_leg_cb) / 1000000])
 
                     # CB Costの算出
-                    if float(simulation_leg_cb) >= 0:
+                    if float(year_to_leg_cb) >= 0:
                         total_cb_cost = 0
                     else:
                         # ペナルティーファクターを調べる
@@ -1027,7 +1027,7 @@ def lambda_handler(event, context):
 
                 # Speed Planのシミュレーション用データ
                 str_eua = str(round(simulation_leg_eua, 1))
-                str_cb  = str(round(float(simulation_leg_cb), 1))
+                str_cb  = str(round(float(simulation_leg_cb) / 1000000, 1))
 
                 simulation_data = {
                     "time_to_endofyear"            : str(round(time_to_end_of_year)),
@@ -1113,7 +1113,7 @@ def lambda_handler(event, context):
         str_co2      = str(round(total_co2))      if total_co2      != "" else ""
         str_eua      = str(round(total_eua, 1))      if total_eua      != "" else ""
         str_eua_cost = str(round(round(total_eua, 1) * eua_price)) if total_eua != "" else ""
-        str_cb       = str(round(total_cb, 1))       if total_cb       != "" else ""
+        str_cb       = str(round(total_cb / 1000000, 1))       if total_cb       != "" else ""
         str_cb_cost  = str(round(total_cb_cost))  if total_cb_cost  != "" else ""
 
         SimulationResultTotal = {
@@ -1150,7 +1150,7 @@ def lambda_handler(event, context):
 
             if i == (len(EUAList_YeartoDate) - 1):
                 # 実績値の最終要素の場合、Simulationの先頭要素にも同じX軸で設定する。（実績の最後とSimulationの最初を重ねるため）
-                graph_data_cb_simulation = { "name": tmp_ytd_XAxis, "y": CBList_Simulation[0][1]}
+                graph_data_cb_simulation = { "name": tmp_ytd_XAxis, "y": CBList_Simulation[0][1] / 1000000}
                 CBList_Simulation[0] = graph_data_cb_simulation
 
         
@@ -1201,7 +1201,7 @@ def lambda_handler(event, context):
         "SimulationResultTotal"             : SimulationResultTotal,
         "XAxisList"                         : XAxisList,
         "EUA_YAXIS"                         :{"max": round(max_eua, 0) , "tickInterval": eua_tickInterval },
-        "CB_YAXIS"                          :{"max": round(max_cb, 0) ,"min": round(min_cb, 0) , "tickInterval":cb_tickInterval  }
+        "CB_YAXIS"                          :{"max": round(max_cb / 1000000, 0) ,"min": round(min_cb / 1000000, 0) , "tickInterval":cb_tickInterval / 1000000  }
     }
 
     datas = json.dumps(datas)
