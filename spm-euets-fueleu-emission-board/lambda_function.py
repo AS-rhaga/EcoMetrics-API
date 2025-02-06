@@ -609,7 +609,7 @@ def lambda_handler(event, context):
             datarow = {
                 "serial_no"     : voyage_count,
                 "state"         : "",
-                "operator"      : display_voyage["operater"]["S"],
+                "operator"      : display_voyage["operator"]["S"],
                 "departure_port": display_voyage["departure_port"]["S"],
                 "departure_time": display_voyage["departure_time"]["S"],
                 "arrival_port"  : display_voyage["arrival_port"]["S"],
