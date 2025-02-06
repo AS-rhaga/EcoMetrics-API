@@ -202,6 +202,11 @@ def calc_cb(year_timestamp, energy, GHG_Actual):
 def lambda_handler(event, context):
     print(f"event{type(event)}: {event}")
 
+    # 返却用リスト
+    gidList    = []
+    imoList    = []
+    rows       = []
+
     dt_now = datetime.now()
     now_year = str(dt_now.year)
     str_now = dt_now.strftime('%Y-%m-%dT%H:%M')
@@ -212,9 +217,40 @@ def lambda_handler(event, context):
 
     # パラメーターを取得
     para_user_id = queryStringParameters["user_id"]
-    para_group   = queryStringParameters["group"]
     para_year    = queryStringParameters["year"]
+
+    # userテーブル取得
+    res_user_table = select.get_user(para_user_id)[0]
+    gidList        = ast.literal_eval(res_user_table["group_id"]["S"])
+    company_id     = res_user_table["company_id"]["S"]
+
+    # 初回利用ログイン時 or ログイン時初期表示 or 画面遷移を判定---------------------------------------------
+    if "init" in queryStringParameters:
+        para_group = gidList[0]
+    else:
+        para_group = queryStringParameters['group']
+
+    # groupテーブル取得
+    res_group = select.get_group(company_id, "admin")
+    eua_price = res_group[0]["eua_price"]["S"] if "eua_price" in res_group[0] and res_group[0]["eua_price"]["S"] != "" else 0
+
+    # 検索用imoリストの設定
+    imo_list = []
+
+    # Imoリストを取得-------------------------------------------------------
+    if para_group == "Favorite":
+        # favoriteの場合、Favoriteテーブルからimoリストを取得
+        res_favorite = select.get_favorite(para_user_id)
+        imo_list = ast.literal_eval(res_favorite[0]["imo_list"]["S"])       
+                    
+    else:
+        # 上記以外の場合（基本はALL（=admin）のはず）、Groupテーブル取得し、GIDに該当するimoリストを特定する。
+        res_group = select.get_group(company_id, para_group)
+        imo_list = ast.literal_eval(res_group[0]["imo_list"]["S"])  
     
+    imo_list = list(set(imo_list))
+    print(imo_list)
+
     # 燃料の情報リスト
     global LNG_ODS_info_list
     global LNG_OMS_info_list
@@ -229,11 +265,6 @@ def lambda_handler(event, context):
     global NH3_eFuel_info_list
     global Methanol_Natural_Gas_info_list
     global H2_Natural_Gas_info_list
-
-    # 返却用リスト
-    gidList    = []
-    imoList    = []
-    rows       = []
 
     # 取得したリスト
     res_simulation_voyage_list = []
@@ -304,33 +335,6 @@ def lambda_handler(event, context):
     dt_now_str = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
     year_now = dt_now_str[0:4]
 
-    # userテーブル取得
-    res_user_table = select.get_user(para_user_id)[0]
-    gidList        = ast.literal_eval(res_user_table["group_id"]["S"])
-    company_id     = res_user_table["company_id"]["S"]
-
-    # groupテーブル取得
-    res_group = select.get_group(company_id, "admin")
-    eua_price = res_group[0]["eua_price"]["S"] if "eua_price" in res_group[0] and res_group[0]["eua_price"]["S"] != "" else 0
-
-    # 検索用imoリストの設定
-    imo_list = []
-
-    # Imoリストを取得-------------------------------------------------------
-    if para_group == "Favorite":
-        # favoriteの場合、Favoriteテーブルからimoリストを取得
-        res_favorite = select.get_favorite(para_user_id)
-        imo_list = ast.literal_eval(res_favorite[0]["imo_list"]["S"])       
-                    
-    else:
-        # 上記以外の場合（基本はALL（=admin）のはず）、Groupテーブル取得し、GIDに該当するimoリストを特定する。
-        res_group = select.get_group(company_id, para_group)
-        imo_list = ast.literal_eval(res_group[0]["imo_list"]["S"])  
-    
-    imo_list = list(set(imo_list))
-
-    print(imo_list)
-
     # ---------- imo_listでループ ----------
     for loop_imo in imo_list:
 
@@ -370,10 +374,13 @@ def lambda_handler(event, context):
                 eoy_total_cb_cost  += float(data["eoy_cb_cost"])
                 rows.append(data)
 
+        imoList.append({"imoNo":loop_imo,"VesselName": res_vessel_master[0]["VesselName"]["S"]})
+
     # ---------- imo_listでのループ終了 ----------
 
     # VesselNameでソート
     new_rows = sorted(rows, key=lambda x: x['vessel_name'])
+    new_imoList = sorted(imoList, key=lambda x: x['VesselName'])
 
     total_list = {
         "ytd_total_eua"     : ytd_total_eua,
@@ -393,7 +400,7 @@ def lambda_handler(event, context):
         "company_id"   : company_id,
         "gid"          : para_group,
         "gidList"      : gidList,
-        "imoList"      : imo_list,
+        "imoList"      : new_imoList,
         "total_vessels": count_total_vessels,
         "total_list"   : total_list,
         "eua_price"    : eua_price,

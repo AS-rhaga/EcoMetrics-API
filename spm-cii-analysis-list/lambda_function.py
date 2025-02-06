@@ -225,8 +225,13 @@ def lambda_handler(event, context):
     res_user = select.get_user(user_id)
     group_id      = res_user[0]["group_id"]["S"]
     company_id    = res_user[0]["company_id"]["S"]
-        
-    gid = queryStringParameters['group']    
+
+    # 初回利用ログイン時 or ログイン時初期表示 or 画面遷移を判定---------------------------------------------
+    if "init" in queryStringParameters:
+        gid = ast.literal_eval(group_id)[0]
+    else:
+        gid = queryStringParameters['group']        
+  
     imo_list = []
     
     # Imoリストを取得-------------------------------------------------------
@@ -238,10 +243,6 @@ def lambda_handler(event, context):
     else:
         # 上記以外の場合（基本はALL（=admin）のはず）、Groupテーブル取得し、GIDに該当するimoリストを特定する。
         res_group = select.get_group(company_id)
-
-        if gid == "ALL":
-            # ALLの場合はadminに読み替え
-            gid = "admin"
 
         for res_group_item in res_group:
             if res_group_item['group_id']['S'] == gid:
