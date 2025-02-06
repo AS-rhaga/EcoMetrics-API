@@ -43,8 +43,7 @@ def get_pooling_table(company_and_year):
         response = __dynamodb_client.query(
             TableName=__table_name_pooling_table,
             ExpressionAttributeNames={
-                '#name0': 'imo',
-                '#name1': 'timestamp',
+                '#name0': 'company_and_year'
             },
             ExpressionAttributeValues={
                 ':value0': {'S': company_and_year}
@@ -64,7 +63,7 @@ def get_year_total(imo, year_and_ope):
         TableName=__table_name_year_total,
         ExpressionAttributeNames={
             '#name0': 'imo',
-            '#name1': 'company_and_year'
+            '#name1': 'year_and_ope'
         },
         ExpressionAttributeValues={
             ':value0': {'S': imo},
@@ -80,7 +79,7 @@ def get_year_total(imo, year_and_ope):
             TableName=__table_name_year_total,
             ExpressionAttributeNames={
                 '#name0': 'imo',
-                '#name1': 'company_and_year'
+                '#name1': 'year_and_ope'
             },
             ExpressionAttributeValues={
                 ':value0': {'S': imo},
@@ -116,7 +115,7 @@ def get_year_total_by_year(imo, year):
             TableName=__table_name_year_total,
             ExpressionAttributeNames={
                 '#name0': 'imo',
-                '#name1': 'company_and_year'
+                '#name1': 'year_and_ope'
             },
             ExpressionAttributeValues={
                 ':value0': {'S': imo},

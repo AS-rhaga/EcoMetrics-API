@@ -177,6 +177,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         print(f"penalty_factor:{penalty_factor}")
         print(f"consecutive_years:{consecutive_years}")
 
+        cost = 0
         if total_cb < 0:
             cost = abs(total_cb) * 2400 * penalty_factor / (GHG_Actual * 41000)
 

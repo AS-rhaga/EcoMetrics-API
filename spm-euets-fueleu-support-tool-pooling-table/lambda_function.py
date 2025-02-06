@@ -57,7 +57,7 @@ def lambda_handler(event, context):
     res_pooling_group = select.get_pooling_table(company_and_year)
 
     # 各imoのyearテーブルのbanking項目の数値を再計算して上書き更新
-    year_total.calc_banking(res_pooling_group, year_now)
+    year_total.calc_banking(res_pooling_group, year_now, company_id)
 
     result = {
         "result": "Pooling Group TBL registration completed."

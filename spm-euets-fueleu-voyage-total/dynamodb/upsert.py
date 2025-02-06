@@ -39,6 +39,7 @@ def upsert_voyage_total(data, retry_count: int=42) -> None:
                     "total_mdo"      : { "S": data["total_mdo"] },
                     "total_mgo"      : { "S": data["total_mgo"] },
                     "total_foc"      : { "S": data["total_foc"] },
+                    "total_energy"   : { "S": data["total_energy"]},
                     "eua"            : { "S": data["eua"] },
                     "cb"             : { "S": data["cb"] },
                     "timestamp"      : { "S": data["timestamp"] }

@@ -45,7 +45,7 @@ def upsert_pooling_table(data, retry_count:int=42) -> None:
         retry_count -= 1
         sleep(0.5)
 
-def upsert_year_total(data, banking_cb, retry_count: int=42) -> None:
+def upsert_year_total(data, banking_cb, pooling_group, retry_count: int=42) -> None:
 
     while retry_count:
         try:
@@ -53,22 +53,23 @@ def upsert_year_total(data, banking_cb, retry_count: int=42) -> None:
                 TableName=_table_name_year_total,
                 Item={
                     # キー項目
-                    "imo"         : { "S": data["imo"] },
-                    "year_and_ope": { "S": data["year_and_ope"] },
+                    "imo"         : { "S": data["imo"]["S"] },
+                    "year_and_ope": { "S": data["year_and_ope"]["S"] },
                     
                     # バリュー項目(borrowing以外)
-                    "distance"    : { "S": data["distance"] },
-                    "total_lng"   : { "S": data["total_lng"] },
-                    "total_hfo"   : { "S": data["total_hfo"] },
-                    "total_lfo"   : { "S": data["total_lfo"] },
-                    "total_mdo"   : { "S": data["total_mdo"] },
-                    "total_mgo"   : { "S": data["total_mgo"] },
-                    "total_foc"   : { "S": data["total_foc"] },
-                    "eua"         : { "S": data["eua"] },
-                    "cb"          : { "S": data["cb"] },
-                    "banking"     : { "S": banking_cb },
-                    "fine_flag"   : { "S": data["fine_flag"] },
-                    "timestamp"   : { "S": data["timestamp"] }
+                    "distance"    : { "S": data["distance"]["S"] },
+                    "total_lng"   : { "S": data["total_lng"]["S"] },
+                    "total_hfo"   : { "S": data["total_hfo"]["S"] },
+                    "total_lfo"   : { "S": data["total_lfo"]["S"] },
+                    "total_mdo"   : { "S": data["total_mdo"]["S"] },
+                    "total_mgo"   : { "S": data["total_mgo"]["S"] },
+                    "total_foc"   : { "S": data["total_foc"]["S"] },
+                    "eua"         : { "S": data["eua"]["S"] },
+                    "cb"          : { "S": data["cb"]["S"] },
+                    "banking"     : { "S": str(banking_cb) },
+                    "fine_flag"   : { "S": data["fine_flag"]["S"] },
+                    "pooling_group": { "S": pooling_group },
+                    "timestamp"   : { "S": data["timestamp"]["S"] }
                 },
 
                 ReturnValues="NONE",

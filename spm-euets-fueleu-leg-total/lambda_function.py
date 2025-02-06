@@ -32,7 +32,7 @@ def make_fuel_oil_type_info_list():
             fuel_oil_info_list["HFO_info_list"] = fuel_oil_type_info
         elif name == "LFO":
             fuel_oil_info_list["LFO_info_list"] = fuel_oil_type_info
-        elif name == "MGO":
+        elif name == "MDO":
             fuel_oil_info_list["MDO_info_list"] = fuel_oil_type_info
         elif name == "MGO":
             fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info
@@ -86,9 +86,10 @@ def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mg
         total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
         print(f"total_co2{type(total_co2)}: {total_co2}")
         eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
-        eua_formatted = Util.format_to_one_decimal(round(float(eua), 1))
-        print(f"eua_formatted{type(eua_formatted)}: {eua_formatted}")
-    return str(eua_formatted)
+    #     eua_formatted = Util.format_to_one_decimal(round(float(eua), 1))
+    #     print(f"eua_formatted{type(eua_formatted)}: {eua_formatted}")
+    # return str(eua_formatted)
+    return eua
 
 def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     energy_lng = 0
@@ -272,7 +273,7 @@ def main(imo, timestamp):
         local_date = res_np[i]["local_date"]["S"]
         state = res_np[i]["state"]["S"] if 'state' in res_np[i] and res_np[i]["state"]["S"] != "" else keep_state
         distance = Util.format_to_one_decimal(round(float(res_np[i]["log_distance"]["S"]), 1)) if 'log_distance' in res_np[i] and res_np[i]["log_distance"]["S"] != "" else 0.0
-        displacement = Util.format_to_one_decimal(round(float(res_np[i]["displacement"]["S"]), 1)) if 'displacement' in res_np[i] and res_np[i]["log_distance"]["S"] != "" else 0
+        displacement = Util.format_to_one_decimal(round(float(res_np[i]["displacement"]["S"]), 1)) if 'displacement' in res_np[i] and res_np[i]["displacement"]["S"] != "" else 0
         me_bog  = Util.format_to_one_decimal(round(float(res_np[i]["me_bog"]["S"]), 1))  if 'me_bog'  in res_np[i] and res_np[i]["me_bog"]["S"]  != "" else 0.0
         me_hfo  = Util.format_to_one_decimal(round(float(res_np[i]["me_hfo"]["S"]), 1))  if 'me_hfo'  in res_np[i] and res_np[i]["me_hfo"]["S"]  != "" else 0.0
         me_lsfo = Util.format_to_one_decimal(round(float(res_np[i]["me_lsfo"]["S"]), 1)) if 'me_lsfo' in res_np[i] and res_np[i]["me_lsfo"]["S"] != "" else 0.0
@@ -280,7 +281,7 @@ def main(imo, timestamp):
         me_lsgo = Util.format_to_one_decimal(round(float(res_np[i]["me_lsgo"]["S"]), 1)) if 'me_lsgo' in res_np[i] and res_np[i]["me_lsgo"]["S"] != "" else 0.0
         dg_bog  = Util.format_to_one_decimal(round(float(res_np[i]["dg_bog"]["S"]), 1))  if 'dg_bog'  in res_np[i] and res_np[i]["dg_bog"]["S"]  != "" else 0.0
         dg_hfo  = Util.format_to_one_decimal(round(float(res_np[i]["dg_hfo"]["S"]), 1))  if 'dg_hfo'  in res_np[i] and res_np[i]["dg_hfo"]["S"]  != "" else 0.0
-        dg_lsfo = Util.format_to_one_decimal(round(float(res_np[i]["dg_foc"]["S"]), 1))  if 'dg_foc'  in res_np[i] and res_np[i]["dg_foc"]["S"]  != "" else 0.0
+        dg_lsfo = Util.format_to_one_decimal(round(float(res_np[i]["ge_foc"]["S"]), 1))  if 'ge_foc'  in res_np[i] and res_np[i]["ge_foc"]["S"]  != "" else 0.0
         dg_do   = Util.format_to_one_decimal(round(float(res_np[i]["dg_do"]["S"]), 1))   if 'dg_do'   in res_np[i] and res_np[i]["dg_do"]["S"]   != "" else 0.0
         dg_lsgo = Util.format_to_one_decimal(round(float(res_np[i]["dg_lsgo"]["S"]), 1)) if 'dg_lsgo' in res_np[i] and res_np[i]["dg_lsgo"]["S"] != "" else 0.0
         boiler_hfo  = Util.format_to_one_decimal(round(float(res_np[i]["boiler_hfo"]["S"]), 1))  if 'boiler_hfo'  in res_np[i] and res_np[i]["boiler_hfo"]["S"]  != "" else 0.0
@@ -291,7 +292,7 @@ def main(imo, timestamp):
         igg_lsgo    = Util.format_to_one_decimal(round(float(res_np[i]["igg_lsgo"]["S"]), 1)) if 'igg_lsgo' in res_np[i] and res_np[i]["igg_lsgo"]["S"] != "" else 0.0
         gcu_bog     = Util.format_to_one_decimal(round(float(res_np[i]["gcu_bog"]["S"]), 1))  if 'gcu_bog'  in res_np[i] and res_np[i]["gcu_bog"]["S"]  != "" else 0.0
         total_foc   = Util.format_to_one_decimal(round(float(res_np[i]["total_foc"]["S"]), 1))  if 'total_foc' in res_np[i] and res_np[i]["total_foc"]["S"]  != "" else 0.0
-        eta_local_date = res_np[i]["eta_local_date"]["S"]   if 'eta_local_date'  in res_np[i] and res_np[i]["total_foc"]["S"]      != "" else ""
+        eta_local_date = res_np[i]["eta_local_date"]["S"]   if 'eta_local_date'  in res_np[i] and res_np[i]["eta_local_date"]["S"]      != "" else ""
         port_code      = res_np[i]["port_code"]["S"]        if 'port_code'       in res_np[i] and res_np[i]["port_code"]["S"]      != "" else ""
         eta_port_code  = res_np[i]["eta_port_code"]["S"]    if 'eta_port_code'   in res_np[i] and res_np[i]["eta_port_code"]["S"]  != "" else ""
         course         = Util.format_to_one_decimal(round(float(res_np[i]["course"]["S"]), 1))  if 'course' in res_np[i] and res_np[i]["course"]["S"]  != "" else ""
@@ -301,7 +302,13 @@ def main(imo, timestamp):
         me_rpm         = Util.format_to_one_decimal(round(float(res_np[i]["me_rpm"]["S"]), 1))  if 'me_rpm' in res_np[i] and res_np[i]["me_rpm"]["S"]  != "" else ""
         me_load        = Util.format_to_one_decimal(round(float(res_np[i]["me_load"]["S"]), 1))  if 'me_load' in res_np[i] and res_np[i]["me_load"]["S"]  != "" else ""
 
-        # print(f"total_foc[{type(total_foc)}]: {total_foc}")
+        # local_timeを変換
+        print(f"local_date(befort):{(local_date)}")
+        # datetimeオブジェクトに変換
+        dt = datetime.strptime(local_date, "%Y/%m/%d %H:%M")
+        # フォーマットを適用して再度文字列化
+        formatted_date = dt.strftime("%Y/%m/%d %H:%M")
+        print(f"local_date(after):{(formatted_date)}")
 
         # 最初のNoonReport
         if i == 0:
@@ -312,15 +319,20 @@ def main(imo, timestamp):
             last_year_leg_list = select.get_leg_total(imo, last_year)
             # print(f"last_year_leg_list[{type(last_year_leg_list)}]: {last_year_leg_list}")
 
-            last_year_leg_list_sorted = sorted(last_year_leg_list, key=lambda x:x["leg_no"]["S"], reverse=True)
-            # print(f"last_year_leg_list_sorted[{type(last_year_leg_list_sorted)}]: {last_year_leg_list_sorted}")
+            # 昨年のleg-totalレコードが存在する場合
+            if last_year_leg_list:
+                last_year_leg_list_sorted = sorted(last_year_leg_list, key=lambda x:x["leg_no"]["S"], reverse=True)
+                # print(f"last_year_leg_list_sorted[{type(last_year_leg_list_sorted)}]: {last_year_leg_list_sorted}")
 
-            eu_rate = last_year_leg_list_sorted[0]["eu_rate"]["S"] if 'eu_rate' in last_year_leg_list_sorted[0] and last_year_leg_list_sorted[0]["eu_rate"]["S"]  != "" else 0
+                eu_rate = last_year_leg_list_sorted[0]["eu_rate"]["S"] if 'eu_rate' in last_year_leg_list_sorted[0] and last_year_leg_list_sorted[0]["eu_rate"]["S"]  != "" else 0
+            # 昨年のleg-totalレコードが存在しない場合
+            else:
+                eu_rate = check_eu_rate(port_code, eta_port_code)
             print(f"eu_rate[{type(eu_rate)}]: {eu_rate}")
             
             # 航海中の場合、出発港を確認する
             print(f"state[{type(state)}]: {state}")
-            if state == "AT SEA":
+            if state == "AT SEA" and last_year_leg_list:
                 departure_port = last_year_leg_list_sorted[0]["arrival_port"]["S"]
             else:
                 departure_port = check_port_name(port_code)
@@ -373,7 +385,7 @@ def main(imo, timestamp):
                 print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
                 #EUA, CBを算出
                 leg_eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
-                print(f"EUA[{type(eua)}]: {eua}")
+                print(f"leg_eua[{type(leg_eua)}]: {leg_eua}")
                 energy     = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"energy[{type(energy)}]: {energy}")
                 leg_cb         = calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
@@ -407,7 +419,7 @@ def main(imo, timestamp):
                     "departure_port": departure_port,
                     "departure_time": departure_time,
                     "arrival_port": arrival_port,
-                    "arrival_time": local_date,
+                    "arrival_time": formatted_date,
                     "eu_rate": eu_rate,
                     "displacement": avg_displacement,
                     "leg_type": leg_type,
@@ -438,7 +450,7 @@ def main(imo, timestamp):
                 # データをセット(各leg初回だけ)
                 print("新規legのデータを作成")
                 departure_port = check_port_name(port_code)
-                departure_time   = local_date
+                departure_time   = formatted_date
                 leg_type         = "Port" if state == "IN PORT" else "Sailing"
 
                 # 停泊中の場合、出発地点と到着地は同じ
@@ -452,7 +464,7 @@ def main(imo, timestamp):
                 noonreport_count = 0
 
                 # データをセット(毎回)
-                arrival_time          = local_date
+                arrival_time          = formatted_date
                 sum_displacement     += displacement
                 noonreport_count     += 1
                 latest_course         = str(course)
@@ -532,7 +544,7 @@ def main(imo, timestamp):
             # 航海に出発した場合この時点で海上なので、port_codeを参照できない
             if state != "IN PORT":
                 port_code = keep_port_code
-                arrival_time = local_date
+                arrival_time = formatted_date
             arrival_port     = check_port_name(port_code)
             print(f"arrival_port_name: {(arrival_port)}")
 
@@ -590,25 +602,12 @@ def lambda_handler(event,context):
         print(f"imo: {imo}, timestamp: {timestamp}")
         main(imo, timestamp)
 
-        lambda_function_name1 = "spm-euets-fueleu-year-total"
+        # lambda_function_name1 = "spm-euets-fueleu-year-total"
         lambda_function_name2 = "spm-euets-fueleu-voyage-total"
         payload = {
             "imo" : imo,
             "timestamp" : timestamp
         }
-
-        try:
-            client = boto3.client('lambda')
-            client.invoke(
-                FunctionName = lambda_function_name1,
-                InvocationType = 'Event',
-                LogType = 'Tail',
-                Payload = json.dumps(payload)
-            )
-            print(f"message{type(payload)}: {payload} is sent.")
-        except Exception as e:
-            print(f"Couldn't invoke function : {lambda_function_name1}")
-            print(json.dumps(str(e)))
 
         try:
             client = boto3.client('lambda')

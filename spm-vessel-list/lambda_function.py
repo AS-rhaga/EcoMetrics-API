@@ -46,7 +46,7 @@ def make_fuel_oil_type_info_list():
             fuel_oil_info_list["HFO_info_list"] = fuel_oil_type_info
         elif name == "LFO":
             fuel_oil_info_list["LFO_info_list"] = fuel_oil_type_info
-        elif name == "MGO":
+        elif name == "MDO":
             fuel_oil_info_list["MDO_info_list"] = fuel_oil_type_info
         elif name == "MGO":
             fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info

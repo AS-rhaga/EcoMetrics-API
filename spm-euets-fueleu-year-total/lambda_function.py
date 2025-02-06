@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from dynamodb import select, upsert
 import boto3
+import ast
 
 from Util import Util
 
@@ -34,7 +35,7 @@ def make_fuel_oil_type_info_list():
             fuel_oil_info_list["HFO_info_list"] = fuel_oil_type_info
         elif name == "LFO":
             fuel_oil_info_list["LFO_info_list"] = fuel_oil_type_info
-        elif name == "MGO":
+        elif name == "MDO":
             fuel_oil_info_list["MDO_info_list"] = fuel_oil_type_info
         elif name == "MGO":
             fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info
@@ -133,17 +134,8 @@ def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, 
 
 def main(imo, timestamp):
 
-    operator_list = []
-    year_total_distance = 0
-    year_total_lng      = 0
-    year_total_hfo      = 0
-    year_total_lfo      = 0
-    year_total_mdo      = 0
-    year_total_mgo      = 0
-    year_total_foc      = 0
-    year_total_eua      = 0
-    year_total_energy   = 0
-    year_total_cb       = 0
+    operator_list       = []
+    operator_total_list = []
 
     year_and_ope    = ""
     total_lng       = 0
@@ -184,172 +176,234 @@ def main(imo, timestamp):
     # Fuel-Oil-Typeリストを取得する
     fuel_oil_type_info_list = make_fuel_oil_type_info_list()
 
-    # leg-totalデータ取得
-    res_leg = select.get_leg_total(imo, year_timestamp)
+    # leg-totalデータ取得 →Voyage-totalを取得
+    res_voyage = select.get_voyage_total(imo, year_timestamp)
     # print(f"res_leg[{type(res_leg)}]: {res_leg}")
 
-    for i in range(len(res_leg)):
+    for i in range(len(res_voyage)):
 
-        print(f"{(i+1)}leg目を処理")
+        print(f"{(i+1)}voyage目を処理")
 
-        # leg-totalの各項目を取得
-        departure_time = res_leg[i]["departure_time"]["S"]
-        eu_rate        = res_leg[i]["eu_rate"]["S"]
-        displacement   = res_leg[i]["eu_rate"]["S"]
-        distance       = Util.format_to_one_decimal(round(float(res_leg[i]["distance"]["S"]), 1))
-        total_lng      = Util.format_to_one_decimal(round(float(res_leg[i]["total_lng"]["S"]), 1))
-        total_hfo      = Util.format_to_one_decimal(round(float(res_leg[i]["total_hfo"]["S"]), 1))
-        total_lfo      = Util.format_to_one_decimal(round(float(res_leg[i]["total_lfo"]["S"]), 1))
-        total_mdo      = Util.format_to_one_decimal(round(float(res_leg[i]["total_mdo"]["S"]), 1))
-        total_mgo      = Util.format_to_one_decimal(round(float(res_leg[i]["total_mgo"]["S"]), 1))
-        total_foc      = Util.format_to_one_decimal(round(float(res_leg[i]["total_foc"]["S"]), 1))
-        eua            = Util.format_to_one_decimal(round(float(res_leg[i]["eua"]["S"]), 1))
-        leg_timestamp  = res_leg[i]["timestamp"]["S"]
-        print(f"departure_time[{type(departure_time)}]: {departure_time}")
+        # voyage-totalの各項目を取得
+        operator       = res_voyage[i]["operator"]["S"]
+        distance       = Util.format_to_one_decimal(round(float(res_voyage[i]["distance"]["S"]), 1))
+        total_lng      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_lng"]["S"]), 1))
+        total_hfo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_hfo"]["S"]), 1))
+        total_lfo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_lfo"]["S"]), 1))
+        total_mdo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_mdo"]["S"]), 1))
+        total_mgo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_mgo"]["S"]), 1))
+        total_foc      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_foc"]["S"]), 1))
+        total_energy   = float(res_voyage[i]["total_energy"]["S"])
+        eua            = float(res_voyage[i]["eua"]["S"])
 
-        dt_timestamp_date_from = datetime(year = int(departure_time[0:4]), month = int(departure_time[5:7]), day = int(departure_time[8:10]) + 1, hour = 00, minute = 00, second = 00, microsecond = 000000)
-        dt_timestamp_date_from = dt_timestamp_date_from.strftime('%Y-%m-%dT%H:%M:%SZ')
-        dt_timestamp_date_to   = datetime(year = int(departure_time[0:4]), month = int(departure_time[5:7]), day = int(departure_time[8:10]) + 2, hour = 23, minute = 59, second = 59, microsecond = 999999)
-        dt_timestamp_date_to   = dt_timestamp_date_to.strftime('%Y-%m-%dT%H:%M:%SZ')
-        print(f"date_from: {(dt_timestamp_date_from)}, date_to: {(dt_timestamp_date_to)}")
-
-        nr = select.get_noonreport(imo, dt_timestamp_date_from, dt_timestamp_date_to)
-        operator = nr[0]["operator"]["S"] if 'operator' in nr[0] and nr[0]["operator"]["S"] != "" else "NYK"
+        # dt_timestamp_date_from = datetime(year = int(departure_time[0:4]), month = int(departure_time[5:7]), day = int(departure_time[8:10]) + 1, hour = 00, minute = 00, second = 00, microsecond = 000000)
+        # dt_timestamp_date_from = dt_timestamp_date_from.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # dt_timestamp_date_to   = datetime(year = int(departure_time[0:4]), month = int(departure_time[5:7]), day = int(departure_time[8:10]) + 2, hour = 23, minute = 59, second = 59, microsecond = 999999)
+        # dt_timestamp_date_to   = dt_timestamp_date_to.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # print(f"date_from: {(dt_timestamp_date_from)}, date_to: {(dt_timestamp_date_to)}")
 
         # opeリストを作成する
         if operator in operator_list:
 
-            # 【残】どのオペレーターのリストに足し合わせるかを振り分ける
+            # 燃料消費量を足し合わせるグループを探す
+            list_index = 0
+            for operator_total in operator_total_list:
+                    
+                if operator_total["operator"] == operator:
+                    print(f"ループ({(list_index+1)})  operator_total_list[{(list_index)}]:{(operator_total_list[list_index])}")
 
-            energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
-            year_total_energy += energy
-            year_total_distance     += distance
-            year_total_lng          += total_lng
-            year_total_hfo          += total_hfo
-            year_total_lfo          += total_lfo
-            year_total_mdo          += total_mdo
-            year_total_mgo          += total_mgo
-            year_total_foc          += total_foc
-            year_total_eua          += eua
+                    # 合計値（加算前）を取得する。
+                    bk_operator_total_distance = operator_total["year_total_distance"]
+                    bk_operator_total_lng      = operator_total["year_total_lng"]
+                    bk_operator_total_hfo      = operator_total["year_total_hfo"]
+                    bk_operator_total_lfo      = operator_total["year_total_lfo"]
+                    bk_operator_total_mdo      = operator_total["year_total_mdo"]
+                    bk_operator_total_mgo      = operator_total["year_total_mgo"]
+                    bk_operator_total_energy   = operator_total["year_total_energy"]
+                    bk_operator_total_eua      = operator_total["year_total_eua"]
+
+                    # プーリンググループの合計値を加算した値に書き換える。
+                    operator_total["year_total_distance"] = bk_operator_total_distance + distance
+                    operator_total["year_total_lng"]      = bk_operator_total_lng + total_lng
+                    operator_total["year_total_hfo"]      = bk_operator_total_hfo + total_hfo
+                    operator_total["year_total_lfo"]      = bk_operator_total_lfo + total_lfo
+                    operator_total["year_total_mdo"]      = bk_operator_total_mdo + total_mdo
+                    operator_total["year_total_mgo"]      = bk_operator_total_mgo + total_mgo
+                    operator_total["year_total_energy"]   = bk_operator_total_energy + total_energy
+                    operator_total["year_total_eua"]      = bk_operator_total_eua + eua
+
+                    # リストを更新する。
+                    operator_total_list[list_index] = operator_total
+                    print(f"加算後のoperator_total_list[{type(operator_total_list)}]: {operator_total_list}")
+
+
+                list_index += 1
 
         # opeリストに追加、新規データセットを作成する
         else:
             operator_list.append(operator)
             print(f"operator_list[{type(operator_list)}]: {operator_list}")
 
-            energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
-            year_total_energy += energy
-            year_total_distance     += distance
-            year_total_lng          += total_lng
-            year_total_hfo          += total_hfo
-            year_total_lfo          += total_lfo
-            year_total_mdo          += total_mdo
-            year_total_mgo          += total_mgo
-            year_total_foc          += total_foc
-            year_total_eua          += eua
+            data_list = {
+                "operator"           : operator,
+                "year_total_distance": distance,
+                "year_total_lng"     : total_lng,
+                "year_total_hfo"     : total_hfo,
+                "year_total_lfo"     : total_lfo,
+                "year_total_mdo"     : total_mdo,
+                "year_total_mgo"     : total_mgo,
+                "year_total_energy"  : total_energy,
+                "year_total_eua"     : eua
+            }
+            operator_total_list.append(data_list)
+            print(f"追加後のoperator_total_list[{type(operator_total_list)}]: {operator_total_list}")
 
-    # print(f"total_data[{type(total_data)}]: {total_data}")
+    # 以下、合計値データセットでオペレーター分ループ
+    for operator_total in operator_total_list:
 
-    # CBの算出
-    year_total_cb     = calc_cb(year_timestamp, year_total_energy, year_total_lng, year_total_hfo, year_total_lfo, year_total_mdo, year_total_mgo, fuel_oil_type_info_list)
-    print(f"year_total_cb[{type(year_total_cb)}]: {year_total_cb}")
+        # オペレーター毎の合計値を取得する
+        operator                = operator_total["operator"]
+        operator_total_distance = operator_total["year_total_distance"]
+        operator_total_lng      = operator_total["year_total_lng"]
+        operator_total_hfo      = operator_total["year_total_hfo"]
+        operator_total_lfo      = operator_total["year_total_lfo"]
+        operator_total_mdo      = operator_total["year_total_mdo"]
+        operator_total_mgo      = operator_total["year_total_mgo"]
+        operator_total_energy   = operator_total["year_total_energy"]
+        operator_total_eua      = operator_total["year_total_eua"]
 
-    year_and_ope = year_timestamp + operator
+        # CBの算出
+        operator_total_cb     = calc_cb(year_timestamp, operator_total_energy, operator_total_lng, operator_total_hfo, operator_total_lfo, operator_total_mdo, operator_total_mgo, fuel_oil_type_info_list)
+        print(f"year_total_cb[{type(operator_total_cb)}]: {operator_total_cb}")
 
-    # 去年分のyearレコードを取得する
-    last_year_and_ope = str(int(year_timestamp) - 1) + operator
-    last_year_record = select.get_year_total(imo, last_year_and_ope)
-    print(f"last_year_record: {(last_year_record)}")
+        year_and_ope = year_timestamp + operator
 
-    if len(last_year_record) > 0:
-        last_year_borrowing_cb = last_year_record[0]["borrowing"]["S"]
-        last_year_banking_cb   = last_year_record[0]["banking"]["S"]
+        # 去年分のyearレコードを取得する
+        last_year_and_ope = str(int(year_timestamp) - 1) + operator
+        last_year_record = select.get_year_total(imo, last_year_and_ope)
+        print(f"last_year_record: {(last_year_record)}")
 
-        if last_year_borrowing_cb > 0:
-            if year_total_cb - last_year_borrowing_cb * 1.1 > 0:
-                banking = year_total_cb - last_year_borrowing_cb * 1.1
-            else:
-                banking = 0
-        
-        elif last_year_banking_cb > 0:
-            if last_year_banking_cb + year_total_cb > 0:
-                banking = last_year_banking_cb + year_total_cb
-            else:
-                banking = 0
-        elif year_total_cb > 0:
-            banking = year_total_cb
-        else:
-            banking = 0
+        last_year_borrowing_cb = 0
+        last_year_banking_cb   = 0
+        if len(last_year_record) > 0:
+            last_year_borrowing_cb = float(last_year_record[0]["borrowing"]["S"]) if "borrowing" in last_year_record[0] and last_year_record[0]["borrowing"]["S"] != "" else 0.0
+            last_year_banking_cb   = float(last_year_record[0]["banking"]["S"]) if "banking" in last_year_record[0] and last_year_record[0]["banking"]["S"] != "" else 0.0
 
-    # プーリンググループを取得する
-    vessl_master = select.get_vesselmaster(imo)
-    company_id =vessl_master[0]["Owner"]["S"]
-    print(f"vessel_company_id: {(company_id)}")
-    company_and_year = company_id + year_timestamp
-    pooling_record = select.get_pooling_table(company_and_year)
-
-    total_cb_plus = 0
-    total_cb      = 0
-    
-    if len(pooling_record)> 0:
-        for i in range(len(pooling_record)):
-            imo_list = pooling_record[0]["imo_list"]["S"]
-            # 各プーリンググループの中にimoがある場合
-            if imo in imo_list:
-                for j in range(len(imo_list)):
-                    loop_imo = imo_list[j]
-                    loop_year_list = select.get_get_year_total(loop_imo, year_and_ope)
-                    loop_cb = Util.format_to_one_decimal(round(float(loop_year_list[0]["cb"]["S"]), 1)) if 'cb' in loop_year_list[0] and loop_year_list[0]["cb"]["S"] != "" else 0.0
-
-                    if loop_cb > 0:
-                        total_cb_plus += loop_cb
-                    
-                    total_cb += loop_cb
-
-                # プーリンググループ内の合計CBがマイナスの場合、船単体も罰金対象とする（実際にはならない）
-                if total_cb < 0:
+            if last_year_borrowing_cb > 0:
+                if operator_total_cb - last_year_borrowing_cb * 1.1 > 0:
+                    banking = operator_total_cb - last_year_borrowing_cb * 1.1
+                else:
+                    banking = 0
                     fine_flag = "1"
-                # プーリンググループ内の合計CBがプラスの場合、プラス分を按分する
-                elif total_cb > 0:
-                    banking = total_cb * year_total_cb / total_cb_plus
             
-            elif year_total_cb + last_year_banking_cb - last_year_borrowing_cb * 1.1 > 0:
+            elif last_year_banking_cb > 0:
+                if last_year_banking_cb + operator_total_cb > 0:
+                    banking = last_year_banking_cb + operator_total_cb
+                else:
+                    banking = 0
+                    fine_flag = "1"
+
+            elif operator_total_cb > 0:
+                banking = operator_total_cb
+            else:
+                banking = 0
                 fine_flag = "1"
-    else:
-        if year_total_cb < 0:
-            fine_flag = "1"
 
-    # 更新用データセットを設定
-    year_total_distance = str(round(float(year_total_distance), 0))
-    year_total_lng      = str(round(float(year_total_lng), 1))
-    year_total_hfo      = str(round(float(year_total_hfo), 1))
-    year_total_lfo      = str(round(float(year_total_lfo), 1))
-    year_total_mdo      = str(round(float(year_total_mdo), 1))
-    year_total_mgo      = str(round(float(year_total_mgo), 1))
-    year_total_foc      = str(round(float(year_total_foc), 1))
-    year_total_eua      = str(round(float(year_total_eua), 1))
-    year_total_cb       = str(round(float(year_total_cb * 10**(-6)), 2))   # g→tonに変換。×10^(-6)
-    banking             = str(round(float(banking), 1))
+        # 更新前のyear-totalレコードを取得し、既存のborrowingを保持する
+        bk_str_borrowing = ""
+        bk_year_total = select.get_year_total(imo, year_and_ope)
 
-    dataset = {
-        "imo": imo,
-        "year_and_ope": year_and_ope,
-        "distance":  year_total_distance,
-        "total_lng": year_total_lng,
-        "total_hfo": year_total_hfo,
-        "total_lfo": year_total_lfo,
-        "total_mdo": year_total_mdo,
-        "total_mgo": year_total_mgo,
-        "total_foc": year_total_foc,
-        "eua": year_total_eua,
-        "cb": year_total_cb,
-        "banking": banking,
-        # "borrowing": borrowing,
-        "fine_flag": fine_flag,
-        "timestamp": dt_now_str
-    }
-    print(f"dataset[{type(dataset)}]: {dataset}")
-    upsert.upsert_year_total(dataset)
+        if bk_year_total:
+            bk_str_borrowing = bk_year_total[0]["borrowing"]["S"] if "borrowing" in bk_year_total[0] and bk_year_total[0]["borrowing"]["S"] != "" else "0.0"
+            print(f"bk_str_borrowing:{(bk_str_borrowing)}")
+
+            # プーリンググループを取得する
+            bk_pooling_info = bk_year_total[0]["pooling_group"]["S"] if "pooling_group" in bk_year_total[0] and bk_year_total[0]["pooling_group"]["S"] != "" else ""
+            print(f"bk_pooling_info{type(bk_pooling_info)}:{(bk_pooling_info)}")
+            if bk_pooling_info != "":
+                bk_pooling_info_list = bk_pooling_info.split(", ")
+                print(f"bk_pooling_info_list{type(bk_pooling_info_list)}:{(bk_pooling_info_list)}")
+                company_id = bk_pooling_info_list[0]
+                group_name = bk_pooling_info_list[1]
+
+                print(f"company_id: {(company_id)}")
+                company_and_year = year_timestamp + company_id
+                pooling_record = select.get_pooling_table(company_and_year, group_name)[0]
+                print(f"pooling_record:{(pooling_record)}")
+
+                total_cb_plus = 0
+                total_cb      = 0
+                
+                if len(pooling_record)> 0:
+                    imo_list = ast.literal_eval(pooling_record["imo_list"]["S"])
+                    imo_list = list(set(imo_list))
+
+                    # プーリンググループの中にimoがある場合
+                    if imo in imo_list:
+                        for j in range(len(imo_list)):
+                            loop_imo = imo_list[j]
+                            print(f"loop_imo:{(loop_imo)}, ")
+                            loop_year_list = select.get_year_total_by_year(loop_imo, year_now)
+                            for loop_year_record in loop_year_list:
+                                loop_cb = float(loop_year_record["cb"]["S"]) if 'cb' in loop_year_record and loop_year_record["cb"]["S"] != "" else 0.0
+                                print(f"loop_cb:{(loop_cb)}")
+
+                                if loop_cb > 0:
+                                    total_cb_plus += loop_cb
+                                
+                                total_cb += loop_cb
+
+                        # プーリンググループ内の合計CBがマイナスの場合、船単体も罰金対象とする（実際にはならない）
+                        if total_cb < 0:
+                            fine_flag = "1"
+                        # プーリンググループ内の合計CBがプラスの場合、プラス分を按分する
+                        elif total_cb > 0:
+                            banking = total_cb * operator_total_cb / total_cb_plus
+                    
+                    # プーリンググループの中にimoがない（プーリンググループから外されている）場合
+                    else:
+                        bk_pooling_info = ""
+                        if operator_total_cb + last_year_banking_cb - last_year_borrowing_cb * 1.1 > 0:
+                            fine_flag = "1"
+
+                # プーリンググループが取得できない（そのグループがなくなっている）場合
+                else:
+                    bk_pooling_info = ""
+
+        # 更新用データセットを設定
+        operator_total_foc      = (operator_total_lng + operator_total_hfo + operator_total_lfo +operator_total_mdo + operator_total_mgo)
+
+        operator_total_distance = str(round(float(operator_total_distance), 0))
+        operator_total_lng      = str(round(float(operator_total_lng), 1))
+        operator_total_hfo      = str(round(float(operator_total_hfo), 1))
+        operator_total_lfo      = str(round(float(operator_total_lfo), 1))
+        operator_total_mdo      = str(round(float(operator_total_mdo), 1))
+        operator_total_mgo      = str(round(float(operator_total_mgo), 1))
+        operator_total_foc      = str(round(float(operator_total_foc), 1))
+        operator_total_eua      = str(round(float(operator_total_eua), 1))
+        operator_total_cb       = str(float(operator_total_cb))
+        banking                 = str(round(float(banking), 1))
+
+        dataset = {
+            "imo"         : imo,
+            "year_and_ope": year_and_ope,
+            "distance"    : operator_total_distance,
+            "total_lng"   : operator_total_lng,
+            "total_hfo"   : operator_total_hfo,
+            "total_lfo"   : operator_total_lfo,
+            "total_mdo"   : operator_total_mdo,
+            "total_mgo"   : operator_total_mgo,
+            "total_foc"   : operator_total_foc,
+            "eua"         : operator_total_eua,
+            "cb"          : operator_total_cb,
+            "banking"     : banking,
+            "borrowing"   : bk_str_borrowing,
+            "fine_flag"   : fine_flag,
+            "pooling_group": bk_pooling_info,
+            "timestamp"   : dt_now_str
+        }
+        print(f"dataset[{type(dataset)}]: {dataset}")
+        upsert.upsert_year_total(dataset)
         
 def lambda_handler(event,context):
     message = event
