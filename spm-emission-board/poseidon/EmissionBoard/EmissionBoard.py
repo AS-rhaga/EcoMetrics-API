@@ -979,7 +979,7 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
                 "Avg_LOG_Speed"         : Avg_LOG_Speed,
                 "Avg_LOAD"              : Avg_LOAD,
                 "Avg_RPM"               : Avg_RPM,
-                "Avg_Displacement"      : Avg_Displacement,
+                "Avg_Displacement"      : round(Avg_Displacement),
                 "Avg_Beaufort"          : Avg_Beaufort,
             }
             VoyageInformationUnit.append(VoyageInfo)
@@ -1159,7 +1159,7 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
                 "Avg_LOG_Speed"             : Avg_LOG_SpeedAll,
                 "Avg_LOAD"                  : Avg_LOADAll,
                 "Avg_RPM"                   : Avg_RPMAll,
-                "Avg_Displacement"          : Avg_DisplacementAll,
+                "Avg_Displacement"          : round(Avg_DisplacementAll),
                 "Avg_Beaufort"              : Avg_BeaufortAll,
             }
             VoyageInformation.append(VoyageInfoAll)

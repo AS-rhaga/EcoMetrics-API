@@ -312,6 +312,13 @@ def lambda_handler(event, context):
             
             # Log Speed
             log_speed = float(res["log_speed"]["S"]) if 'log_speed' in res and res["log_speed"]["S"] != "" else ""
+
+            # me_foc
+            me_foc = float(res["me_foc"]["S"]) if 'me_foc' in res and res["me_foc"]["S"] != "" else ""
+            # displacement
+            displacement = float(res["displacement"]["S"]) if 'displacement' in res and res["displacement"]["S"] != "" else ""
+            # me_load
+            me_load = float(res["me_load"]["S"]) if 'me_load' in res and res["me_load"]["S"] != "" else ""
             
             # CO2,foc
             total_foc = ""
@@ -333,13 +340,13 @@ def lambda_handler(event, context):
                 oneMonth_co2_value += co2 if co2 != "" else 0
                 
                 # 5~23knotの場合だけをフィルタする
-                if log_speed != "" and total_foc != "" and 5 <= log_speed and log_speed <= 23:
+                if log_speed != "" and me_foc != "" and total_foc != "" and displacement != "" and me_load != "" and 5 <= log_speed and log_speed <= 23:
                     oneMonth_count += 1
                     foc_cp = cp_curve["alpha"] * pow(log_speed, cp_curve["a"]) + cp_curve["C"]
-                    cp_count += 1 if foc_cp < total_foc else 0
+                    cp_count += 1 if foc_cp < me_foc else 0
                     
                     foc_rf = rf_curve["alpha"] * pow(log_speed, rf_curve["a"]) + rf_curve["C"]
-                    rf_count += 1 if foc_rf < total_foc else 0
+                    rf_count += 1 if foc_rf < me_foc else 0
             
             # This Year
             if dt_January_from <= timstamp and timstamp <= dt_January_to:
