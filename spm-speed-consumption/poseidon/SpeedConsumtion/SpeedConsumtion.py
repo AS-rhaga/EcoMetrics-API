@@ -94,7 +94,7 @@ def create_tendency_spcon_curve(SPEED_LIST, FOC_LIST, DISPLACEMENT_LIST, B_Disp)
     # MTI/NYK計算式------------------------------------------------------------------------------------------------------------------------------------
     # スピコンカーブ(船速V,燃料消費量FOCの関係)は、FOC=α(a×V^A+C) で表現する。
     # ここでαは経年劣化係数（船齢に応じて1.00~1.10程度）、Aは通常３や2.8といった値をとる。Cの値は通常0とする。
-    A = 2.85
+    A = 3.00
     C = 0
     alpha = 1.0
     B = 0.4
@@ -343,7 +343,7 @@ def data_formatting(imo, response, fromDisp, toDisp, BallastLaden, fromLogSpeed,
                             "log_speed"         : log_speed,
                             "me_rpm"            : me_rpm,
                             "distance"          : og_distance,
-                            "displacement"      : displacement,
+                            "displacement"      : round(displacement_float),
                             "wind_direction"    : wind_direction,
                             "wind_speed"        : wind_speed,
                             "wave_direction"    : wave_direction,

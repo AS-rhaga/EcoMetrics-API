@@ -86,12 +86,9 @@ def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mg
         total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
         print(f"total_co2{type(total_co2)}: {total_co2}")
         eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
-    #     eua_formatted = Util.format_to_one_decimal(round(float(eua), 1))
-    #     print(f"eua_formatted{type(eua_formatted)}: {eua_formatted}")
-    # return str(eua_formatted)
     return eua
 
-def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
+def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     energy_lng = 0
     energy_hfo = 0
     energy_lfo = 0
@@ -114,7 +111,7 @@ def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, 
         mgo_lcv =  float(fuel_oil_info_list["MGO_info_list"]["lcv"]["S"])
         energy_mgo += total_mgo * mgo_lcv
 
-    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo) * float(eu_rate) / 100
+    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo)
     return energy
 
 def calc_GHG_Max(year):
@@ -175,8 +172,6 @@ def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, 
         GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
         cb = (GHG_Max - GHG_Actual) * energy
         print(f"cb{type(cb)}: {cb}")
-        # cb_formatted = str(round(float(cb), 1))
-        # print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
     return cb
 
 def check_eu_rate(port_code, eta_port_code):
@@ -265,6 +260,7 @@ def main(imo, timestamp):
     # print(f"fuel_oil_type_info_list[{type(fuel_oil_type_info_list)}]: {fuel_oil_type_info_list}")
 
     # NoonReportのレコード数分回す
+    print(f"len(res_np):{(len(res_np))}")
     for i in range(len(res_np)):
 
         print(f"NoonReportカウント: {(i)}")
@@ -334,7 +330,9 @@ def main(imo, timestamp):
             print(f"state[{type(state)}]: {state}")
             if state == "AT SEA" and last_year_leg_list:
                 departure_port = last_year_leg_list_sorted[0]["arrival_port"]["S"]
+                print(f"last_year_leg_list_sorted[0]: {(last_year_leg_list_sorted[0])}")
             else:
+                print(f"port_code:{(port_code)}")
                 departure_port = check_port_name(port_code)
             print(f"departure_port[{type(departure_port)}]: {departure_port}")
 
@@ -383,10 +381,19 @@ def main(imo, timestamp):
             else:
                 print("Leg終了、登録処理開始")
                 print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
+                
+                # 各種燃料消費量にEU Rateを考慮する
+                total_lng = total_lng * float(eu_rate) / 100
+                total_hfo = total_hfo * float(eu_rate) / 100
+                total_lfo = total_lfo * float(eu_rate) / 100
+                total_mdo = total_mdo * float(eu_rate) / 100
+                total_mgo = total_mgo * float(eu_rate) / 100
+                total_total_foc = total_total_foc * float(eu_rate) / 100
+                
                 #EUA, CBを算出
                 leg_eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"leg_eua[{type(leg_eua)}]: {leg_eua}")
-                energy     = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+                energy     = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"energy[{type(energy)}]: {energy}")
                 leg_cb         = calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"CB[{type(cb)}]: {cb}")
@@ -398,19 +405,20 @@ def main(imo, timestamp):
                 # 航海に出発した場合この時点で海上なので、port_codeを参照できない
                 if state != "IN PORT":
                     port_code = keep_port_code
+                print(f"port_code: {(port_code)}")
                 arrival_port     = check_port_name(port_code)
                 print(f"arrival_port_name: {(arrival_port)}")
 
-                avg_displacement = str(round(float(sum_displacement / noonreport_count), 0))
-                total_distance   = str(round(float(total_distance), 0))
-                total_lng        = str(round(float(total_lng), 1))
-                total_hfo        = str(round(float(total_hfo), 1))
-                total_lfo        = str(round(float(total_lfo), 1))
-                total_mdo        = str(round(float(total_mdo), 1))
-                total_mgo        = str(round(float(total_mgo), 1))
-                total_total_foc  = str(round(float(total_total_foc), 1))
-                leg_eua          = str(round(float(leg_eua), 2))
-                leg_cb           = str(round(float(leg_cb * 10**(-6)), 2))   # g→tonに変換。×10^(-6)
+                avg_displacement = str(float(sum_displacement / noonreport_count))
+                total_distance   = str(float(total_distance))
+                total_lng        = str(float(total_lng))
+                total_hfo        = str(float(total_hfo))
+                total_lfo        = str(float(total_lfo))
+                total_mdo        = str(float(total_mdo))
+                total_mgo        = str(float(total_mgo))
+                total_total_foc  = str(float(total_total_foc))
+                leg_eua          = str(float(leg_eua))
+                leg_cb           = str(float(leg_cb))
                 eu_rate          = str(eu_rate)
 
                 dataset = {
@@ -529,10 +537,19 @@ def main(imo, timestamp):
 
             print("NoonReport最終レコード。Leg終了、登録処理開始")
             print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
+
+            # 各種燃料消費量にEU Rateを考慮する
+            total_lng = total_lng * float(eu_rate) / 100
+            total_hfo = total_hfo * float(eu_rate) / 100
+            total_lfo = total_lfo * float(eu_rate) / 100
+            total_mdo = total_mdo * float(eu_rate) / 100
+            total_mgo = total_mgo * float(eu_rate) / 100
+            total_total_foc = total_total_foc * float(eu_rate) / 100
+
             #EUA, CBを算出
             leg_eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             print(f"EUA[{type(eua)}]: {eua}")
-            energy     = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+            energy     = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             print(f"energy[{type(energy)}]: {energy}")
             leg_cb         = calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             print(f"Leg_CB[{type(leg_cb)}]: {leg_cb}")
@@ -548,16 +565,16 @@ def main(imo, timestamp):
             arrival_port     = check_port_name(port_code)
             print(f"arrival_port_name: {(arrival_port)}")
 
-            avg_displacement = str(round(float(sum_displacement / noonreport_count), 0))
-            total_distance   = str(round(float(total_distance), 0))
-            total_lng        = str(round(float(total_lng), 1))
-            total_hfo        = str(round(float(total_hfo), 1))
-            total_lfo        = str(round(float(total_lfo), 1))
-            total_mdo        = str(round(float(total_mdo), 1))
-            total_mgo        = str(round(float(total_mgo), 1))
-            total_total_foc  = str(round(float(total_total_foc), 1))
-            leg_eua          = str(round(float(leg_eua), 1))
-            leg_cb           = str(round(float(leg_cb * 10**(-6))))   # g→tonに変換。×10^(-6)
+            avg_displacement = str(float(sum_displacement / noonreport_count))
+            total_distance   = str(float(total_distance))
+            total_lng        = str(float(total_lng))
+            total_hfo        = str(float(total_hfo))
+            total_lfo        = str(float(total_lfo))
+            total_mdo        = str(float(total_mdo))
+            total_mgo        = str(float(total_mgo))
+            total_total_foc  = str(float(total_total_foc))
+            leg_eua          = str(float(leg_eua))
+            leg_cb           = str(float(leg_cb))
             eu_rate          = str(eu_rate)
 
             dataset = {

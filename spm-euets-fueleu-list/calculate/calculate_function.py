@@ -136,7 +136,7 @@ def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b,
 
 
 # エネルギーの総消費量を算出するメソッド
-def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
+def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
     total_energy = 0
 
     if lng_ods > 0:
@@ -179,7 +179,7 @@ def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, l
         h2_ng_lcv = float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["lcv"]["S"])
         total_energy += h2_ng * h2_ng_lcv
 
-    return_energy = total_energy * float(eu_rate) / 100
+    return_energy = total_energy
 
     return return_energy
 
@@ -194,21 +194,11 @@ def calc_cb(year_timestamp, energy, GHG_Actual):
     return cb_formatted
 
 # CO2排出量の算出メソッド
-def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_info_list):
+def calc_co2(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_info_list):
 
     # EUAの算出
     co2_total   = 0
-    eu_ets_rate = 0
 
-    # EU-ETS対象割合を確認
-    if year == "2024":
-        eu_ets_rate = 40
-    elif year == "2025":
-        eu_ets_rate = 70
-    else:
-        eu_ets_rate = 100
-
-    print(f"eu_ets_rate: {(eu_ets_rate)}")
     if lng_ods > 0:
         lng_ods_co2_factor =  float(fuel_oil_type_info_list["LNG_ODS_info_list"]["emission_factor"]["S"])
         co2_total += lng_ods * lng_ods_co2_factor
@@ -252,26 +242,21 @@ def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, 
     return co2_total
 
 # EUAの算出メソッド
-def calc_eua(year, eu_rate, total_co2):
+def calc_eua(year, total_co2):
 
     # EUAの算出
     eu_ets_rate = 0
     eua = 0
 
-    # EU Rateの確認
-    if eu_rate == 0:
-        # EU外航海は対象外なのでゼロ
-        total_co2 = 0
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
     else:
-        # EU-ETS対象割合を確認
-        if year == "2024":
-            eu_ets_rate = 40
-        elif year == "2025":
-            eu_ets_rate = 70
-        else:
-            eu_ets_rate = 100
-        print(f"eu_ets_rate: {(eu_ets_rate)}")
+        eu_ets_rate = 100
+    print(f"eu_ets_rate: {(eu_ets_rate)}")
 
-        eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
-        print(f"eua{type(eua)}: {eua}")
+    eua       = total_co2 * float(eu_ets_rate) / 100
+    print(f"eua{type(eua)}: {eua}")
     return eua

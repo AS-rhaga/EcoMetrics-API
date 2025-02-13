@@ -104,24 +104,24 @@ def lambda_handler(event,context):
         print("imo: {}, appdb: {}, timestamp: {}, event_type: {}".format(imo,company_db,timestamp, event_type))
         main(imo,timestamp,company_db, event_type)
 
-        # lambda_function_name1 = "spm-euets-fueleu-leg-total"
-        # payload = {
-        #     "imo" : imo,
-        #     "timestamp" : timestamp
-        # }
+        lambda_function_name1 = "spm-euets-fueleu-leg-total"
+        payload = {
+            "imo" : imo,
+            "timestamp" : timestamp
+        }
 
-        # try:
-        #     client = boto3.client('lambda')
-        #     client.invoke(
-        #         FunctionName = lambda_function_name1,
-        #         InvocationType = 'Event',
-        #         LogType = 'Tail',
-        #         Payload = json.dumps(payload)
-        #     )
-        #     print(f"message{type(payload)}: {payload} is sent.")
-        # except Exception as e:
-        #     print(f"Couldn't invoke function : {lambda_function_name1}")
-        #     print(json.dumps(str(e)))
+        try:
+            client = boto3.client('lambda')
+            client.invoke(
+                FunctionName = lambda_function_name1,
+                InvocationType = 'Event',
+                LogType = 'Tail',
+                Payload = json.dumps(payload)
+            )
+            print(f"message{type(payload)}: {payload} is sent.")
+        except Exception as e:
+            print(f"Couldn't invoke function : {lambda_function_name1}")
+            print(json.dumps(str(e)))
 
     except Exception as e:
         print(f"e: {str(e)}")

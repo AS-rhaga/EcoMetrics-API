@@ -219,12 +219,16 @@ def calc_foc_using_foc_formulas(foc_formulas, displacement, log_speed, total_tim
         # Laden用の計算パラメータを取得し、FOCを算出
         calc_param_list = ast.literal_eval(foc_formulas["me_laden"]["S"])
 
+    # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+    auxiliary_equipment = float(foc_formulas["auxiliary_equipment"]["S"])
+    print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
     alpah = calc_param_list[0]
     a = calc_param_list[1]
     c = calc_param_list[2]
 
     # 1日あたりのFOC算出（**は指数）
-    foc_per_day = alpah * log_speed ** a + c
+    foc_per_day = alpah * log_speed ** a + c + auxiliary_equipment
     # 1時間あたりのFOC算出
     foc_per_hour = foc_per_day / 24
     # 総FOCを算出

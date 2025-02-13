@@ -135,7 +135,7 @@ def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b,
     return GHG_Actual
 
 # エネルギーの総消費量を算出するメソッド
-def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
+def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
     total_energy = 0
 
 
@@ -179,7 +179,7 @@ def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, l
         h2_ng_lcv =  float(fuel_oil_type_list["H2_Ng_info_list"]["lcv"]["S"])
         total_energy += h2_ng * h2_ng_lcv
 
-    return_energy = total_energy * float(eu_rate) / 100
+    return_energy = total_energy
 
     return return_energy
 
@@ -188,7 +188,5 @@ def calc_cb(year_timestamp, energy, GHG_Actual):
     GHG_Max    = calc_GHG_Max(year_timestamp)
     cb = (GHG_Max - GHG_Actual) * energy
     print(f"cb{type(cb)}: {cb}")
-    cb_formatted = str(round(float(cb), 1))
-    print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
 
-    return cb_formatted
+    return cb

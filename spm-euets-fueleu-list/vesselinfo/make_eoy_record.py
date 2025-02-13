@@ -108,12 +108,16 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
         # 各項目を取得
         displacement           = voyage_plan_list[i]["dispracement"]["S"]
         leg_distance        = float(voyage_plan_list[i]["distance"]["S"]) * leg_rate
-        leg_eu_rate                = int(voyage_plan_list[i]["eu_rate"]["S"])
+        leg_eu_rate         = float(voyage_plan_list[i]["eu_rate"]["S"])
 
         # log_speedを算出
         leg_log_speed = leg_distance / leg_total_time
 
         if res_foc_formulas:
+
+            # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+            auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+            print(f"auxiliary_equipment: {(auxiliary_equipment)}")
 
             # Ballast、Ladenどちらか判断して、FOCを算出
             if displacement == "Ballast":
@@ -122,19 +126,19 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
                 ballast_alpha = calc_balast_param_list[0]
                 ballast_a = calc_balast_param_list[1]
                 ballast_c = calc_balast_param_list[2]
-                simulation_foc_per_day = ballast_alpha * leg_log_speed ** ballast_a + ballast_c
+                simulation_foc_per_day = ballast_alpha * leg_log_speed ** ballast_a + ballast_c + auxiliary_equipment
             else:
                 # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
                 calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
                 laden_alpha = calc_laden_param_list[0]
                 laden_a = calc_laden_param_list[1]
                 laden_c = calc_laden_param_list[2]
-                simulation_foc_per_day = laden_alpha * leg_log_speed ** laden_a + laden_c
+                simulation_foc_per_day = laden_alpha * leg_log_speed ** laden_a + laden_c + auxiliary_equipment
 
             # 1時間あたりのFOC算出
             simulation_foc_per_hour = simulation_foc_per_day / 24
             # Leg内総FOCを算出
-            simulation_leg_foc = simulation_foc_per_hour * leg_total_time
+            simulation_leg_foc = simulation_foc_per_hour * leg_total_time * leg_eu_rate / 100
 
             # 燃料別消費量を算出する
             fuel_list = Util.convertFuelOileStringToList(voyage_plan_list[i]["fuel"]["S"])  
@@ -199,12 +203,12 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
                     total_h2_ng         += simulation_leg_h2_ng
 
             # シミュレーション部分で実際に排出したco2を算出する
-            simulation_leg_co2 = calculate_function.calc_co2(now_year, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+            simulation_leg_co2 = calculate_function.calc_co2(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
             # シミュレーション部分のEUAを算出する
-            simulation_leg_eua = calculate_function.calc_eua(now_year, leg_eu_rate, simulation_leg_co2)
+            simulation_leg_eua = calculate_function.calc_eua(now_year, simulation_leg_co2)
 
             # シミュレーション部分のエネルギー総消費量を算出する
-            simulation_energy  = calculate_function.calc_energy(leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+            simulation_energy  = calculate_function.calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
             total_energy      += simulation_energy
 
             # 合計用変数に加算する
@@ -308,18 +312,22 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
 
     if res_foc_formulas: 
 
+        # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+        auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+        print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
         # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
         calc_balast_param_list = ast.literal_eval(res_foc_formulas[0]["me_ballast"]["S"])
         ballast_alpha = calc_balast_param_list[0]
         ballast_a = calc_balast_param_list[1]
         ballast_c = calc_balast_param_list[2]
-        ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c
+        ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c + auxiliary_equipment
         # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
         calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
         laden_alpha = calc_laden_param_list[0]
         laden_a = calc_laden_param_list[1]
         laden_c = calc_laden_param_list[2]
-        laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c
+        laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c + auxiliary_equipment
 
         # 1時間あたりのFOC算出
         ballast_foc_per_hour = ballast_foc_per_day / 24
@@ -328,7 +336,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         ballast_foc = ballast_foc_per_hour * ballast_sailing_time
         laden_foc = laden_foc_per_hour * ballast_sailing_time
         # Leg内総FOCを算出
-        simulation_leg_foc = ballast_foc + laden_foc
+        simulation_leg_foc = (ballast_foc + laden_foc) * leg_eu_rate / 100
         
         # 燃料別消費量を算出する
         fuel_list = Util.convertFuelOileStringToList(speed_plan[0]["fuel"]["S"]) 
@@ -392,13 +400,13 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
                 simulation_leg_h2_ng = simulation_leg_foc * int(fuel_rate) / 100
                 total_h2_ng         += simulation_leg_h2_ng
 
-        simulation_leg_co2 = calculate_function.calc_co2(now_year, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+        simulation_leg_co2 = calculate_function.calc_co2(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
 
         # シミュレーション部分のEUAを算出する
-        simulation_leg_eua = calculate_function.calc_eua(now_year, leg_eu_rate, simulation_leg_co2)
+        simulation_leg_eua = calculate_function.calc_eua(now_year, simulation_leg_co2)
 
         # シミュレーション部分のエネルギー総消費量を算出する
-        simulation_energy  = calculate_function.calc_energy(leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+        simulation_energy  = calculate_function.calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
         total_energy      += simulation_energy
 
         # 合計用変数に加算する

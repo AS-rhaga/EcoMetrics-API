@@ -73,7 +73,7 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
     ytd_lfo    = 0
     ytd_mdo    = 0
     ytd_mgo    = 0
-    # ytd_energy = 0
+    energy     = 0
 
     # 今年分のyear-totalレコード分ループ
     for rec in thisyear_year_total_list:
@@ -130,8 +130,8 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         last_year = 0
         if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"])
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"] if "borrowing" in last_year_rec else "0")
+            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
+            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
 
             if last_year_borrowing > 0:
                 last_year = last_year_borrowing * (-1.1)
@@ -148,22 +148,21 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         lfo       = float(rec["total_lfo"]["S"])
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
+        foc       = float(rec["total_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"])
-        borrowing = float(rec["borrowing"]["S"] if "borrowing" in last_year_rec else "0")
+        banking   = float(rec["banking"]["S"]) if "banking" in rec and rec["banking"]["S"] != "" else 0
+        borrowing = float(rec["borrowing"]["S"]) if "borrowing"in rec and rec["borrowing"]["S"] != "" else 0
 
         # EUAからEUA costを算出する
         eua_cost  = eua * float(eua_price)
 
-        # CBから消費量エネルギー（EU Rate考慮済）を算出する
-        GHG_Max    = calculate_function.calc_GHG_Max(year)
+        # 消費量エネルギー（EU Rate考慮済）を算出する
         GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-        energy          = cb / (GHG_Max - GHG_Actual)
+        energy     = calculate_function.calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
 
         # 必要な計算を行う
-        foc             = lng + hfo + lfo + mdo + mgo
         total_cb        = cb + borrowing + banking + last_year
         penalty_factor  = (consecutive_years) / 10 + 1
         print(f"penalty_factor:{penalty_factor}")
@@ -237,13 +236,13 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
                 "ytd_foc"            : round(ytd_dataset["foc"]),
                 "ytd_eua"            : round(ytd_dataset["eua"]),
                 "ytd_eua_cost"       : round(ytd_dataset["eua"] * float(eua_price)),
-                "ytd_cb"             : round(ytd_dataset["cb"], 1),
+                "ytd_cb"             : round(ytd_dataset["cb"] / 1000000, 1),
                 "ytd_cb_cost"        : round(ytd_dataset["cb_cost"]),
                 "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
                 "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
                 "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-                "eoy_eua_cost"       : round(round(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
-                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]), 1),
+                "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
+                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
                 "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
             }
             record_data_list.append(dataset)
@@ -260,13 +259,13 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
                 "ytd_foc"            : round(ytd_dataset["foc"]),
                 "ytd_eua"            : round(ytd_dataset["eua"]),
                 "ytd_eua_cost"       : round(ytd_dataset["eua"] * float(eua_price)),
-                "ytd_cb"             : round(ytd_dataset["cb"], 1),
+                "ytd_cb"             : round(ytd_dataset["cb"] / 1000000, 1),
                 "ytd_cb_cost"        : round(ytd_dataset["cb_cost"]),
                 "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
                 "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
                 "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-                "eoy_eua_cost"       : round(round(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
-                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]), 1),
+                "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
+                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
                 "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
             }
             record_data_list.append(dataset)
@@ -282,13 +281,13 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
                 "ytd_foc"            : round(ytd_dataset["foc"]),
                 "ytd_eua"            : round(ytd_dataset["eua"]),
                 "ytd_eua_cost"       : round(ytd_dataset["eua"] * float(eua_price)),
-                "ytd_cb"             : round(ytd_dataset["cb"], 1),
+                "ytd_cb"             : round(ytd_dataset["cb"] / 1000000, 1),
                 "ytd_cb_cost"        : round(ytd_dataset["cb_cost"]),
                 "eoy_distance"       : round(ytd_dataset["distance"]),
                 "eoy_foc"            : round(ytd_dataset["foc"]),
                 "eoy_eua"            : round(ytd_dataset["eua"]),
-                "eoy_eua_cost"       : round(round(ytd_dataset["eua"]) * float(eua_price)),
-                "eoy_cb"             : round(float(ytd_dataset["cb"]), 1),
+                "eoy_eua_cost"       : round(float(ytd_dataset["eua"]) * float(eua_price)),
+                "eoy_cb"             : round(float(ytd_dataset["cb"]) / 1000000, 1),
                 "eoy_cb_cost"        : round(ytd_dataset["cb_cost"])
             }
             record_data_list.append(dataset)
@@ -321,8 +320,8 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
             "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
             "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
             "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-            "eoy_eua_cost"       : round(round(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
-            "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]), 1),
+            "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
+            "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
             "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
         }
         record_data_list.append(dataset)
@@ -346,8 +345,8 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
             "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
             "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
             "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-            "eoy_eua_cost"       : round(round(eoy_vessel_data["eoy_eua"], 1) * float(eua_price)),
-            "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]), 1),
+            "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
+            "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
             "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
         }
         record_data_list.append(dataset)
@@ -459,8 +458,8 @@ def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         last_year = 0
         if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"])
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"] if "borrowing" in last_year_rec else "0")
+            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
+            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
 
             if last_year_borrowing > 0:
                 last_year += last_year_borrowing * (-1.1)
@@ -479,22 +478,18 @@ def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         lfo       = float(rec["total_lfo"]["S"])
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
+        foc       = float(rec["total_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"])
-        borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec else "0")
+        banking   = float(rec["banking"]["S"]) if "banking" in rec and rec["banking"]["S"] != "" else 0
+        borrowing = float(rec["borrowing"]["S"]) if "borrowing" in rec and rec["borrowing"]["S"] != "" else 0
 
         # EUAからEUA costを算出する
         eua_cost  = round(eua, 1) * float(eua_price)
 
-        # CBから消費量エネルギー（EU Rate考慮済）を算出する
-        GHG_Max    = calculate_function.calc_GHG_Max(year)
-        GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-        energy          = cb / (GHG_Max - GHG_Actual)
-
         # 必要な計算を行う
-        foc             = lng + hfo + lfo + mdo + mgo
+        GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
         total_cb        = cb + borrowing + banking + last_year
         penalty_factor  = (consecutive_years) / 10 + 1
 
@@ -517,7 +512,7 @@ def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
             "eoy_foc"            : str(round(foc)),
             "eoy_eua"            : str(round(eua)),
             "eoy_eua_cost"       : str(round(eua_cost)),
-            "eoy_cb"             : str(round(total_cb, 1)),
+            "eoy_cb"             : str(round(total_cb / 1000000, 1)),
             "eoy_cb_cost"        : str(round(cb_cost))
         }
         record_data_list.append(dataset)

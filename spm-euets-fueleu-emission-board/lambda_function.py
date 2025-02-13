@@ -30,23 +30,47 @@ def make_fuel_list(display_leg):
     mgo = float(display_leg["total_mgo"]["S"])
     foc = float(display_leg["total_foc"]["S"])
 
-    if lng > 0:
-        lng_rate = str(round(lng / foc * 100))
-        fuel_list.append(["LNG", lng_rate])
-    if hfo > 0:
-        hfo_rate = str(round(hfo / foc * 100))
-        fuel_list.append(["HFO", hfo_rate])
-    if lfo > 0:
-        lfo_rate = str(round(lfo / foc * 100))
-        fuel_list.append(["LFO", lfo_rate])
-    if mdo > 0:
-        mdo_rate = str(round(mdo / foc * 100))
-        fuel_list.append(["MDO", mdo_rate])
-    if mgo > 0:
-        mgo_rate = str(round(mgo / foc * 100))
-        fuel_list.append(["MGO", mgo_rate])
+    if foc > 0:
+        if lng > 0:
+            lng_rate = str(round(lng / foc * 100))
+            fuel_list.append(["LNG", lng_rate])
+        if hfo > 0:
+            hfo_rate = str(round(hfo / foc * 100))
+            fuel_list.append(["HFO", hfo_rate])
+        if lfo > 0:
+            lfo_rate = str(round(lfo / foc * 100))
+            fuel_list.append(["LFO", lfo_rate])
+        if mdo > 0:
+            mdo_rate = str(round(mdo / foc * 100))
+            fuel_list.append(["MDO", mdo_rate])
+        if mgo > 0:
+            mgo_rate = str(round(mgo / foc * 100))
+            fuel_list.append(["MGO", mgo_rate])
     
     return fuel_list
+
+# 燃料消費で実際に排出されたco2(MT)
+def calc_co2_Actual(lng, hfo, lfo, mdo, mgo, fuel_oil_type_list):
+
+    sum_co2 = 0
+
+    if lng > 0:
+        lng_emission_factor =  float(fuel_oil_type_list["LNG_info_list"]["emission_factor"]["S"])
+        sum_co2 += lng * lng_emission_factor
+    if hfo > 0:
+        hfo_emission_factor =  float(fuel_oil_type_list["HFO_info_list"]["emission_factor"]["S"])
+        sum_co2 += hfo * hfo_emission_factor
+    if lfo > 0:
+        lfo_emission_factor =  float(fuel_oil_type_list["LFO_info_list"]["emission_factor"]["S"])
+        sum_co2 += lfo * lfo_emission_factor
+    if mdo > 0:
+        mdo_emission_factor =  float(fuel_oil_type_list["MDO_info_list"]["emission_factor"]["S"])
+        sum_co2 += mdo * mdo_emission_factor
+    if mgo > 0:
+        mgo_emission_factor =  float(fuel_oil_type_list["MGO_info_list"]["emission_factor"]["S"])
+        sum_co2 += mgo * mgo_emission_factor
+
+    return sum_co2
 
 #実際のGHG強度を算出するメソッド
 def calc_GHG_Actual(lng, hfo, lfo, mdo, mgo, fuel_oil_type_list):
@@ -79,6 +103,69 @@ def calc_GHG_Actual(lng, hfo, lfo, mdo, mgo, fuel_oil_type_list):
         GHG_Actual = round(float(sum_ghg / sum_foc), 2)
     print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual
+
+def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
+    energy_lng = 0
+    energy_hfo = 0
+    energy_lfo = 0
+    energy_mdo = 0
+    energy_mgo = 0
+
+    if total_lng > 0:
+        lng_lcv =  float(fuel_oil_info_list["LNG_OMS_info_list"]["lcv"]["S"])
+        energy_lng += total_lng * lng_lcv
+    if total_hfo > 0:
+        hfo_lcv =  float(fuel_oil_info_list["HFO_info_list"]["lcv"]["S"])
+        energy_hfo += total_hfo * hfo_lcv
+    if total_lfo > 0:
+        lfo_lcv =  float(fuel_oil_info_list["LFO_info_list"]["lcv"]["S"])
+        energy_lfo += total_lfo * lfo_lcv
+    if total_mdo > 0:
+        mdo_lcv =  float(fuel_oil_info_list["MDO_info_list"]["lcv"]["S"])
+        energy_mdo += total_mdo * mdo_lcv
+    if total_mgo > 0:
+        mgo_lcv =  float(fuel_oil_info_list["MGO_info_list"]["lcv"]["S"])
+        energy_mgo += total_mgo * mgo_lcv
+
+    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo)
+    return energy
+
+def calc_GHG_Max(year):
+    year = int(year)
+    if year <= 2029:
+        target_rate = 2
+    elif year <= 2034:
+        target_rate = 6
+    elif year <= 2039:
+        target_rate = 14.5
+    elif year <= 2044:
+        target_rate = 31
+    elif year <= 2049:
+        target_rate = 62
+    else:
+        target_rate = 80
+
+    GHG_Max = round(float(91.16 * (100 - float(target_rate)) / 100), 2)
+    print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
+    return GHG_Max
+
+# CBとCB Costを返す
+def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
+    GHG_Max    = calc_GHG_Max(year_timestamp)
+    cb      = 0
+    cb_cost = 0
+
+    # ゼロ割防止のため、燃料消費量がゼロでない場合のみ計算する
+    if total_lng + total_hfo + total_lfo + total_mdo + total_mgo > 0:
+
+        GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+        cb = (GHG_Max - GHG_Actual) * energy
+        print(f"cb{type(cb)}: {cb}")
+
+        if cb < 0:
+            cb_cost = abs(cb) / GHG_Actual * 24000 / 410000
+
+    return cb, cb_cost
 
 # datetime型のstartとendの時間差を返却。30分以上の場合は繰り上がり。
 def calc_time_diff(start_time, end_time):
@@ -200,6 +287,9 @@ def lambda_handler(event, context):
     if unit == "Leg":
 
         res_leg_list = []
+        from_to_leg_cb = 0
+        from_to_leg_cb_cost = 0
+
         # 検索範囲が年を跨ぐ場合、何年分のデータが必要かを確認
         year_range = int(year_to) - int(year_from)
         
@@ -208,6 +298,15 @@ def lambda_handler(event, context):
 
             for i in range(len(leg_total_list)):
                 res_leg_list.append(leg_total_list[i])
+
+        # EU Rateがゼロのレコードを除いたリストを作成する
+        res_leg = []
+        for leg_info in res_leg_list:
+            leg_eu_rate = leg_info["eu_rate"]["S"]
+            if leg_eu_rate != "0":
+                res_leg.append(leg_info)
+        print(f"len(res_leg): {len(res_leg)}")
+        res_leg_list = res_leg
         
         # 必要な年数分のLegリストでループ
         for res in res_leg_list:
@@ -315,19 +414,30 @@ def lambda_handler(event, context):
         total_cb       = 0
         total_cb_cost  = 0
 
+        # CB折れ線グラフ用
+        from_to_leg_lng = 0
+        from_to_leg_hfo = 0
+        from_to_leg_lfo = 0
+        from_to_leg_mdo = 0
+        from_to_leg_mgo = 0
+
         # 画面表示用に整形
         for display_leg in display_leg_list_sorted:
 
-            # GHG強度算出
+            # 各legの燃料消費量
             tmp_total_lng = float(display_leg["total_lng"]["S"])
             tmp_total_hfo = float(display_leg["total_hfo"]["S"])
             tmp_total_lfo = float(display_leg["total_lfo"]["S"])
             tmp_total_mdo = float(display_leg["total_mdo"]["S"])
             tmp_total_mgo = float(display_leg["total_mgo"]["S"])
 
+            # GHG強度算出
             tmpGHGActual = calc_GHG_Actual(tmp_total_lng, tmp_total_hfo, tmp_total_lfo, tmp_total_mdo, tmp_total_mgo, fuel_oil_info_list)
+            
+            # EU関連対象の燃料消費で実際に排出されたco2(MT)
+            tmp_co2_Actual = calc_co2_Actual(tmp_total_lng, tmp_total_hfo, tmp_total_lfo, tmp_total_mdo, tmp_total_mgo, fuel_oil_info_list)
 
-            # CBコスト算出
+            # CBコスト取得
             tmp_cb = float(display_leg["cb"]["S"])
 
             if tmp_cb >= 0:
@@ -350,11 +460,17 @@ def lambda_handler(event, context):
 
             # 各種合計値に加算
             total_foc      += float(display_leg["total_foc"]["S"])
-            total_GHG      += tmpGHGActual
+            total_GHG      += tmp_co2_Actual
             total_distance += float(display_leg["distance"]["S"]) if display_leg["distance"]["S"] != "" else 0
             total_eua      += float(display_leg["eua"]["S"])
             total_cb       += tmp_cb
             total_cb_cost  += tmp_total_cb_cost
+
+            from_to_leg_lng += tmp_total_lng
+            from_to_leg_hfo += tmp_total_hfo
+            from_to_leg_lfo += tmp_total_lfo
+            from_to_leg_mdo += tmp_total_mdo
+            from_to_leg_mgo += tmp_total_mgo
 
             # 通番を設定する
             leg_count      += 1
@@ -386,22 +502,25 @@ def lambda_handler(event, context):
                 "displacement"  : str(round(float(display_leg["displacement"]["S"]))) if display_leg["displacement"]["S"] != "" else "",
                 "distance"      : str(round(float(display_leg["distance"]["S"]))) if display_leg["distance"]["S"] != "" else "",
                 "fuel"          : fuel_list,
-                "foc"           : display_leg["total_foc"]["S"],
-                "eua"           : display_leg["eua"]["S"],
-                "cb"            : display_leg["cb"]["S"]
+                "foc"           : str(round(float(display_leg["total_foc"]["S"]), 1)),
+                "eua"           : str(round(float(display_leg["eua"]["S"]))),
+                "cb"            : str(round(float(display_leg["cb"]["S"]) / 1000000, 1))
             }
             VoyageInformationList.append(datarow)
             
             # EUA, CBのグラフ用データを作成
             eua_data = [leg_count, float(display_leg["eua"]["S"])]
             EUAList.append(eua_data)
-            cb_data  = [leg_count, float(display_leg["cb"]["S"])]
+
+            from_to_leg_energy = calc_energy(from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
+            from_to_leg_cb, from_to_leg_cb_cost = calc_cb(int(year_from), from_to_leg_energy, from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
+            cb_data  = [leg_count, from_to_leg_cb / 1000000]
             CBList.append(cb_data)
 
             # Y軸設定用にMax値、Min値を取得
             max_eua = float(display_leg["eua"]["S"]) if max_eua < float(display_leg["eua"]["S"]) else max_eua
-            max_cb = float(display_leg["cb"]["S"]) if max_cb < float(display_leg["cb"]["S"]) else max_cb
-            min_cb = float(display_leg["cb"]["S"]) if min_cb > float(display_leg["cb"]["S"]) else min_cb
+            max_cb = from_to_leg_cb if max_cb < from_to_leg_cb else max_cb
+            min_cb = from_to_leg_cb if min_cb > from_to_leg_cb else min_cb
 
             # 各LEGの開始時刻（timestamp）のリストを作成する。
             # timestamp_departure_time = pd.Timestamp(display_leg["departure_time"]["S"])
@@ -425,14 +544,17 @@ def lambda_handler(event, context):
             "distance": round(total_distance),
             "eua"     : round(total_eua),
             "eua_cost": round(total_eua * eua_price),
-            "cb"      : round(total_cb, 1),
-            "cb_cost" : round(total_cb_cost, 1)
+            "cb"      : round(from_to_leg_cb / 1000000, 1),
+            "cb_cost" : round(from_to_leg_cb_cost)
         }
 
 
     # Voyage単位で表示する場合
     else:
         res_voyage_list = []
+        from_to_voyage_cb      = 0
+        from_to_voyage_cb_cost = 0
+
         # 検索範囲が年を跨ぐ場合、何年分のデータが必要かを確認
         year_range = int(year_to) - int(year_from)
         
@@ -512,27 +634,28 @@ def lambda_handler(event, context):
 
             res_noonreport_list = select.get_noonreport(imo, departure_time, arrival_time)
             record_data = voyage.make_voyage_data(imo, year_from, year_to, res_noonreport_list, fuel_oil_info_list, recalc_res)
-            resord_data_ = {
-                "imo"           : {"S": record_data["imo"]},
-                "voyage_no"     : {"S": record_data["voyage_no"]},
-                "operater"      : {"S": record_data["operator"]},
-                "departure_port": {"S": record_data["departure_port"]},
-                "departure_time": {"S": record_data["departure_time"]},
-                "arrival_port"  : {"S": record_data["arrival_port"]},
-                "arrival_time"  : {"S": record_data["arrival_time"]},
-                "dispracement"  : {"S": record_data["displacement"]},
-                "distance"      : {"S": record_data["distance"]},
-                "total_lng"     : {"S": record_data["total_lng"]},
-                "total_hfo"     : {"S": record_data["total_hfo"]},
-                "total_lfo"     : {"S": record_data["total_lfo"]},
-                "total_mdo"     : {"S": record_data["total_mdo"]},
-                "total_mgo"     : {"S": record_data["total_mgo"]},
-                "total_foc"     : {"S": record_data["total_foc"]},
-                "eua"           : {"S": record_data["eua"]},
-                "cb"            : {"S": record_data["cb"]},
-                "cb_cost"       : {"S": record_data["cb_cost"]}
-            }
-            display_voyage_list.append(resord_data_)
+            if len(record_data) > 0:
+                resord_data_ = {
+                    "imo"           : {"S": record_data["imo"]},
+                    "voyage_no"     : {"S": record_data["voyage_no"]},
+                    "operator"      : {"S": record_data["operator"]},
+                    "departure_port": {"S": record_data["departure_port"]},
+                    "departure_time": {"S": record_data["departure_time"]},
+                    "arrival_port"  : {"S": record_data["arrival_port"]},
+                    "arrival_time"  : {"S": record_data["arrival_time"]},
+                    "dispracement"  : {"S": record_data["displacement"]},
+                    "distance"      : {"S": record_data["distance"]},
+                    "total_lng"     : {"S": record_data["total_lng"]},
+                    "total_hfo"     : {"S": record_data["total_hfo"]},
+                    "total_lfo"     : {"S": record_data["total_lfo"]},
+                    "total_mdo"     : {"S": record_data["total_mdo"]},
+                    "total_mgo"     : {"S": record_data["total_mgo"]},
+                    "total_foc"     : {"S": record_data["total_foc"]},
+                    "eua"           : {"S": record_data["eua"]},
+                    "cb"            : {"S": record_data["cb"]},
+                    "cb_cost"       : {"S": record_data["cb_cost"]}
+                }
+                display_voyage_list.append(resord_data_)
 
         # 航海開始時刻でソートする
         display_voyage_list_sorted = sorted(display_voyage_list, key=lambda x:x["departure_time"]["S"])
@@ -546,6 +669,13 @@ def lambda_handler(event, context):
         total_cb       = 0
         total_cb_cost  = 0
 
+        # CB折れ線グラフ用
+        from_to_voyage_lng = 0
+        from_to_voyage_hfo = 0
+        from_to_voyage_lfo = 0
+        from_to_voyage_mdo = 0
+        from_to_voyage_mgo = 0
+
         # 画面表示用に整形
         for display_voyage in display_voyage_list_sorted:
 
@@ -557,6 +687,9 @@ def lambda_handler(event, context):
             tmp_total_mgo = float(display_voyage["total_mgo"]["S"])
 
             tmpGHGActual = calc_GHG_Actual(tmp_total_lng, tmp_total_hfo, tmp_total_lfo, tmp_total_mdo, tmp_total_mgo, fuel_oil_info_list)
+
+            # EU関連対象の燃料消費で実際に排出されたco2(MT)
+            tmp_co2_Actual = calc_co2_Actual(tmp_total_lng, tmp_total_hfo, tmp_total_lfo, tmp_total_mdo, tmp_total_mgo, fuel_oil_info_list)
 
             # CBコスト算出
             tmp_cb = float(display_voyage["cb"]["S"])
@@ -583,11 +716,17 @@ def lambda_handler(event, context):
 
             # 各種合計値に加算
             total_foc      += float(display_voyage["total_foc"]["S"])
-            total_GHG      += tmpGHGActual
+            total_GHG      += tmp_co2_Actual
             total_distance += float(display_voyage["distance"]["S"]) if display_voyage["distance"]["S"] != "" else 0
             total_eua      += float(display_voyage["eua"]["S"])
             total_cb       += tmp_cb
             total_cb_cost  += tmp_total_cb_cost
+
+            from_to_voyage_lng += tmp_total_lng
+            from_to_voyage_hfo += tmp_total_hfo
+            from_to_voyage_lfo += tmp_total_lfo
+            from_to_voyage_mdo += tmp_total_mdo
+            from_to_voyage_mgo += tmp_total_mgo
 
             # 通番を設定する
             voyage_count      += 1
@@ -618,22 +757,25 @@ def lambda_handler(event, context):
                 "displacement"  : str(round(float(display_voyage["dispracement"]["S"]))) if display_voyage["dispracement"]["S"] != "" else "",
                 "distance"      : str(round(float(display_voyage["distance"]["S"]))) if display_voyage["distance"]["S"] != "" else "",
                 "fuel"          : fuel_list,
-                "foc"           : display_voyage["total_foc"]["S"],
-                "eua"           : display_voyage["eua"]["S"],
-                "cb"            : display_voyage["cb"]["S"]
+                "foc"           : str(round(float(display_voyage["total_foc"]["S"]), 1)),
+                "eua"           : str(round(float(display_voyage["eua"]["S"]))),
+                "cb"            : str(round(float(display_voyage["cb"]["S"]) / 1000000, 1))
             }
             VoyageInformationList.append(datarow)
             
             # EUA, CBのグラフ用データを作成
             eua_data = [voyage_count, float(display_voyage["eua"]["S"])]
             EUAList.append(eua_data)
-            cb_data  = [voyage_count, float(display_voyage["cb"]["S"])]
+
+            from_to_voyage_energy = calc_energy(from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
+            from_to_voyage_cb, from_to_voyage_cb_cost = calc_cb(int(year_from), from_to_voyage_energy, from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
+            cb_data  = [voyage_count, from_to_voyage_cb / 1000000]
             CBList.append(cb_data)
 
             # Y軸設定用にMax値、Min値を取得
             max_eua = float(display_voyage["eua"]["S"]) if max_eua < float(display_voyage["eua"]["S"]) else max_eua
-            max_cb = float(display_voyage["cb"]["S"]) if max_cb < float(display_voyage["cb"]["S"]) else max_cb
-            min_cb = float(display_voyage["cb"]["S"]) if min_cb > float(display_voyage["cb"]["S"]) else min_cb
+            max_cb = from_to_voyage_cb if max_cb < from_to_voyage_cb else max_cb
+            min_cb = from_to_voyage_cb if min_cb > from_to_voyage_cb else min_cb
 
             # 各VOYAGEの開始時刻（timestamp）のリストを作成する。
             # timestamp_departure_time = pd.Timestamp(display_voyage["departure_time"]["S"])
@@ -658,14 +800,18 @@ def lambda_handler(event, context):
             "distance": round(total_distance),
             "eua"     : round(total_eua),
             "eua_cost": round(total_eua * eua_price),
-            "cb"      : round(total_cb, 1),
-            "cb_cost" : round(total_cb_cost, 1)
+            "cb"      : round(from_to_voyage_cb / 1000000, 1),
+            "cb_cost" : round(from_to_voyage_cb_cost)
         }
 
     # その他のグラフデータ取得（CII EmissionBoardから流用）
     print(f"unit_timestamp_list:{unit_timestamp_list}")
     response = select.get_noonreport(imo, Timestamp_from, Timestamp_to)
     data = EmissionBoard.util_EmissionBoard_main(imo, Timestamp_from, Timestamp_to, response, unit_timestamp_list, unit)
+
+    # CB_YAXISの桁数を調整する
+    max_cb = max_cb / 1000000
+    min_cb = min_cb / 1000000
 
     datas = {
         "VESSELMASTER"                     : data["VESSELMASTER"],

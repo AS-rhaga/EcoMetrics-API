@@ -68,32 +68,27 @@ def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, 
     return co2_total
 
 # EUAの算出メソッド
-def calc_eua(year, eu_rate, total_co2):
+def calc_eua(year, total_co2):
 
     # EUAの算出
     eu_ets_rate = 0
     eua = 0
 
-    # EU Rateの確認
-    if eu_rate == 0:
-        # EU外航海は対象外なのでゼロ
-        total_co2 = 0
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
     else:
-        # EU-ETS対象割合を確認
-        if year == "2024":
-            eu_ets_rate = 40
-        elif year == "2025":
-            eu_ets_rate = 70
-        else:
-            eu_ets_rate = 100
-        print(f"eu_ets_rate: {(eu_ets_rate)}")
+        eu_ets_rate = 100
+    print(f"eu_ets_rate: {(eu_ets_rate)}")
 
-        eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
-        print(f"eua{type(eua)}: {eua}")
+    eua       = total_co2 * float(eu_ets_rate) / 100
+    print(f"eua{type(eua)}: {eua}")
     return eua
 
 # エネルギーの総消費量を算出するメソッド
-def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
+def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
     total_energy = 0
 
     if lng_ods > 0:
@@ -136,7 +131,7 @@ def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, l
         h2_ng_lcv = float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["lcv"]["S"])
         total_energy += h2_ng * h2_ng_lcv
 
-    return_energy = total_energy * float(eu_rate) / 100
+    return_energy = total_energy
 
     return return_energy
 
@@ -228,9 +223,7 @@ def calc_cb(year_timestamp, energy, GHG_Actual):
     GHG_Max    = calc_GHG_Max(year_timestamp)
     cb = (GHG_Max - GHG_Actual) * energy
     print(f"cb{type(cb)}: {cb}")
-    cb_formatted = str(round(float(cb), 1))
-    print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
-    return cb_formatted
+    return cb
 
 # datetime型のstartとendの時間差を返却。30分以上の場合は繰り上がり。
 def calc_time_diff(start_time, end_time):
@@ -293,7 +286,7 @@ def make_fuel_oil_type_info_list():
             fuel_oil_info_list["HFO_info_list"] = fuel_oil_type_info
         elif name == "LFO":
             fuel_oil_info_list["LFO_info_list"] = fuel_oil_type_info
-        elif name == "MGO":
+        elif name == "MDO":
             fuel_oil_info_list["MDO_info_list"] = fuel_oil_type_info
         elif name == "MGO":
             fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info
@@ -363,7 +356,7 @@ def lambda_handler(event, context):
         leg_count += 1
 
         # EU Rate 取得
-        eu_rate       = item["eu_rate"]
+        eu_rate       = int(item["eu_rate"])
 
         # 以下でitem内に無い項目を算出する。
 
@@ -386,6 +379,11 @@ def lambda_handler(event, context):
 
         # "foc", "eua" を算出する。（FOC Formulasが取得出来なかった場合は計算しない）
         if res_foc_formulas:
+
+            # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+            auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+            print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
             # FOC算出時にBallast/Ladenどちらの式を使うかを判定
             if item["dispracement"] == "Ballast":
                 # Ballast用の計算パラメータを取得し、FOCを算出
@@ -401,11 +399,11 @@ def lambda_handler(event, context):
             c = calc_param_list[2]
 
             # 1日あたりのFOC算出（**は指数）
-            foc_per_day = alpah * log_speed ** a + c
+            foc_per_day = alpah * log_speed ** a + c + auxiliary_equipment
             # 1時間あたりのFOC算出
             foc_per_hour = foc_per_day / 24
             # 総FOCを算出
-            foc = foc_per_hour * total_time
+            foc = foc_per_hour * total_time * eu_rate / 100
             foc_str = str(round(foc, 1))
             print(f"foc: {(foc)}")
 
@@ -464,13 +462,13 @@ def lambda_handler(event, context):
             # シミュレーション部分で実際に排出したco2を算出する
             simulation_leg_co2 = calc_co2(year_now, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
             # シミュレーション部分のEUAを算出する
-            simulation_leg_eua = calc_eua(year_now, eu_rate, simulation_leg_co2)
-            eua_str = str(Util.format_to_one_decimal(round(float(simulation_leg_eua), 1)))
+            simulation_leg_eua = calc_eua(year_now, simulation_leg_co2)
+            eua_str = str(float(simulation_leg_eua))
             
             # CB算出
             simulation_leg_GHG = calc_GHG_Actual(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
-            simulation_energy  = calc_energy(eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
-            cb_str  = calc_cb(year_now, simulation_energy, simulation_leg_GHG)
+            simulation_energy  = calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+            cb_str  = str(calc_cb(year_now, simulation_energy, simulation_leg_GHG))
 
         else:
             foc_str = "-"
@@ -548,8 +546,8 @@ def lambda_handler(event, context):
             "displacement"   : res_item["dispracement"]["S"],
             "log_speed"      : res_item["log_speed"]["S"],
             "foc"            : res_item["foc"]["S"],
-            "eua"            : res_item["eua"]["S"],
-            "cb"             : res_item["cb"]["S"]
+            "eua"            : str(round(float(res_item["eua"]["S"]), 1)),
+            "cb"             : str(round(float(res_item["cb"]["S"]) / 1000000, 1))
         }
 
         data_list.append(data)

@@ -106,6 +106,10 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
 
         if res_foc_formulas:
 
+            # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+            auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+            print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
             # Ballast、Ladenどちらか判断して、FOCを算出
             if displacement == "Ballast":
                 # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
@@ -113,19 +117,19 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
                 ballast_alpha = calc_balast_param_list[0]
                 ballast_a = calc_balast_param_list[1]
                 ballast_c = calc_balast_param_list[2]
-                simulation_foc_per_day = ballast_alpha * leg_log_speed ** ballast_a + ballast_c
+                simulation_foc_per_day = ballast_alpha * leg_log_speed ** ballast_a + ballast_c + auxiliary_equipment
             else:
                 # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
                 calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
                 laden_alpha = calc_laden_param_list[0]
                 laden_a = calc_laden_param_list[1]
                 laden_c = calc_laden_param_list[2]
-                simulation_foc_per_day = laden_alpha * leg_log_speed ** laden_a + laden_c
+                simulation_foc_per_day = laden_alpha * leg_log_speed ** laden_a + laden_c + auxiliary_equipment
 
             # 1時間あたりのFOC算出
             simulation_foc_per_hour = simulation_foc_per_day / 24
             # Leg内総FOCを算出
-            simulation_leg_foc = simulation_foc_per_hour * leg_total_time
+            simulation_leg_foc = simulation_foc_per_hour * leg_total_time * leg_eu_rate / 100
 
             # 燃料別消費量を算出する
             fuel_list = Util.convertFuelOileStringToList(voyage_plan_list[i]["fuel"]["S"])  
@@ -190,7 +194,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
                     total_h2_ng         += simulation_leg_h2_ng
 
             # シミュレーション部分のエネルギー総消費量を算出する
-            simulation_energy  = calculate_function.calc_energy(leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+            simulation_energy  = calculate_function.calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
             total_energy      += simulation_energy
 
             # 合計用変数に加算する
@@ -214,13 +218,13 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
         "imo"            : imo,
         "vessel_name"    : vessel_name,
         "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else voyage_plan_list[0]["operator"]["S"],
-        "distance"       : total_distance,
+        "distance"       : round(total_distance),
         "foc"            : round(total_foc),
         "end_of_year"    : round(float(total_cb) / 1000000, 1),
         "last_year"      : round(last_year / 1000000, 1),
         "borrowing_limit": round(borrowing_limit / 1000000),
-        "borrowing"      : round(float(thisyear_year_total["borrowing"]["S"]) / 1000000, 1) if thisyear_year_total and "borrowing" in thisyear_year_total else 0,
-        "banking"        : float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total else 0,
+        "borrowing"      : round(float(thisyear_year_total["borrowing"]["S"]) / 1000000, 1) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0,
+        "banking"        : float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0,
         "total"          : round((float(total_cb) + last_year) / 1000000, 1),
         "penalty_factor" : penalty_factor,
         "cost"        : round(eoy_cb_cost, 0)
@@ -394,7 +398,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
                 total_h2_ng         += simulation_leg_h2_ng
 
         # シミュレーション部分のエネルギー総消費量を算出する
-        simulation_energy  = calculate_function.calc_energy(leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+        simulation_energy  = calculate_function.calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
         total_energy      += simulation_energy
 
         # 合計用変数に加算する
@@ -419,14 +423,14 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
     dataset = {
         "imo"            : imo,
         "vessel_name"    : vessel_name,
-        "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50],
-        "distance"       : total_distance,
+        "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else speed_plan[0]["operator"]["S"],
+        "distance"       : round(total_distance),
         "foc"            : round(total_foc),
         "end_of_year"    : round(float(total_cb) / 1000000, 1),
         "last_year"      : round(last_year / 1000000, 1),
         "borrowing_limit": round(borrowing_limit / 1000000, 1),
-        "borrowing"      : round(float(thisyear_year_total["borrowing"]["S"]) / 1000000, 1) if "borrowing" in thisyear_year_total else 0,
-        "banking"        : float(thisyear_year_total["banking"]["S"] if "banking" in thisyear_year_total else 0),
+        "borrowing"      : round(float(thisyear_year_total["borrowing"]["S"]) / 1000000, 1) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0,
+        "banking"        : float(thisyear_year_total["banking"]["S"] if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0),
         "total"          : round((float(total_cb) + last_year) / 1000000, 1),
         "penalty_factor" : penalty_factor,
         "cost"        : round(eoy_cb_cost)

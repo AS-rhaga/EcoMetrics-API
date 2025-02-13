@@ -127,8 +127,6 @@ def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, 
         GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
         cb = (GHG_Max - GHG_Actual) * energy
         print(f"cb{type(cb)}: {cb}")
-        # cb_formatted = round(float(cb), 1)
-        # print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
 
     return cb
 
@@ -186,13 +184,13 @@ def main(imo, timestamp):
 
         # voyage-totalの各項目を取得
         operator       = res_voyage[i]["operator"]["S"]
-        distance       = Util.format_to_one_decimal(round(float(res_voyage[i]["distance"]["S"]), 1))
-        total_lng      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_lng"]["S"]), 1))
-        total_hfo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_hfo"]["S"]), 1))
-        total_lfo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_lfo"]["S"]), 1))
-        total_mdo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_mdo"]["S"]), 1))
-        total_mgo      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_mgo"]["S"]), 1))
-        total_foc      = Util.format_to_one_decimal(round(float(res_voyage[i]["total_foc"]["S"]), 1))
+        distance       = float(res_voyage[i]["distance"]["S"])
+        total_lng      = float(res_voyage[i]["total_lng"]["S"])
+        total_hfo      = float(res_voyage[i]["total_hfo"]["S"])
+        total_lfo      = float(res_voyage[i]["total_lfo"]["S"])
+        total_mdo      = float(res_voyage[i]["total_mdo"]["S"])
+        total_mgo      = float(res_voyage[i]["total_mgo"]["S"])
+        total_foc      = float(res_voyage[i]["total_foc"]["S"])
         total_energy   = float(res_voyage[i]["total_energy"]["S"])
         eua            = float(res_voyage[i]["eua"]["S"])
 
@@ -219,6 +217,7 @@ def main(imo, timestamp):
                     bk_operator_total_lfo      = operator_total["year_total_lfo"]
                     bk_operator_total_mdo      = operator_total["year_total_mdo"]
                     bk_operator_total_mgo      = operator_total["year_total_mgo"]
+                    bk_operator_total_foc      = operator_total["year_total_foc"]
                     bk_operator_total_energy   = operator_total["year_total_energy"]
                     bk_operator_total_eua      = operator_total["year_total_eua"]
 
@@ -229,6 +228,7 @@ def main(imo, timestamp):
                     operator_total["year_total_lfo"]      = bk_operator_total_lfo + total_lfo
                     operator_total["year_total_mdo"]      = bk_operator_total_mdo + total_mdo
                     operator_total["year_total_mgo"]      = bk_operator_total_mgo + total_mgo
+                    operator_total["year_total_foc"]      = bk_operator_total_foc + total_foc
                     operator_total["year_total_energy"]   = bk_operator_total_energy + total_energy
                     operator_total["year_total_eua"]      = bk_operator_total_eua + eua
 
@@ -252,6 +252,7 @@ def main(imo, timestamp):
                 "year_total_lfo"     : total_lfo,
                 "year_total_mdo"     : total_mdo,
                 "year_total_mgo"     : total_mgo,
+                "year_total_foc"     : total_foc,
                 "year_total_energy"  : total_energy,
                 "year_total_eua"     : eua
             }
@@ -269,6 +270,7 @@ def main(imo, timestamp):
         operator_total_lfo      = operator_total["year_total_lfo"]
         operator_total_mdo      = operator_total["year_total_mdo"]
         operator_total_mgo      = operator_total["year_total_mgo"]
+        operator_total_foc      = operator_total["year_total_foc"]
         operator_total_energy   = operator_total["year_total_energy"]
         operator_total_eua      = operator_total["year_total_eua"]
 
@@ -312,7 +314,9 @@ def main(imo, timestamp):
         # 更新前のyear-totalレコードを取得し、既存のborrowingを保持する
         bk_str_borrowing = ""
         bk_year_total = select.get_year_total(imo, year_and_ope)
+        print(f"bk_year_total:{(bk_year_total)}")
 
+        bk_pooling_info = ""
         if bk_year_total:
             bk_str_borrowing = bk_year_total[0]["borrowing"]["S"] if "borrowing" in bk_year_total[0] and bk_year_total[0]["borrowing"]["S"] != "" else "0.0"
             print(f"bk_str_borrowing:{(bk_str_borrowing)}")
@@ -370,19 +374,16 @@ def main(imo, timestamp):
                 else:
                     bk_pooling_info = ""
 
-        # 更新用データセットを設定
-        operator_total_foc      = (operator_total_lng + operator_total_hfo + operator_total_lfo +operator_total_mdo + operator_total_mgo)
-
-        operator_total_distance = str(round(float(operator_total_distance), 0))
-        operator_total_lng      = str(round(float(operator_total_lng), 1))
-        operator_total_hfo      = str(round(float(operator_total_hfo), 1))
-        operator_total_lfo      = str(round(float(operator_total_lfo), 1))
-        operator_total_mdo      = str(round(float(operator_total_mdo), 1))
-        operator_total_mgo      = str(round(float(operator_total_mgo), 1))
-        operator_total_foc      = str(round(float(operator_total_foc), 1))
-        operator_total_eua      = str(round(float(operator_total_eua), 1))
+        operator_total_distance = str(float(operator_total_distance))
+        operator_total_lng      = str(float(operator_total_lng))
+        operator_total_hfo      = str(float(operator_total_hfo))
+        operator_total_lfo      = str(float(operator_total_lfo))
+        operator_total_mdo      = str(float(operator_total_mdo))
+        operator_total_mgo      = str(float(operator_total_mgo))
+        operator_total_foc      = str(float(operator_total_foc))
+        operator_total_eua      = str(float(operator_total_eua))
         operator_total_cb       = str(float(operator_total_cb))
-        banking                 = str(round(float(banking), 1))
+        banking                 = str(float(banking))
 
         dataset = {
             "imo"         : imo,
@@ -413,6 +414,7 @@ def lambda_handler(event,context):
         timestamp = message["timestamp"]
         print(f"imo: {imo}, timestamp: {timestamp}")
         main(imo, timestamp)
+        print("Upserting eco-euets-fueleu-year-total is succeeded.")
 
     except Exception as e:
         return {

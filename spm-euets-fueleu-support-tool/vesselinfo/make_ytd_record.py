@@ -139,8 +139,8 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         last_year = 0
         if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"])
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"] if "borrowing" in last_year_rec else "0")
+            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
+            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
 
             if last_year_borrowing > 0:
                 last_year = last_year_borrowing * (-1.1)
@@ -159,10 +159,11 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         lfo       = float(rec["total_lfo"]["S"])
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
+        foc       = float(rec["total_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"])
-        borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec else "0")
+        banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
+        borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec and rec["borrowing"]["S"] != "" else "0")
 
         # CBから消費量エネルギー（EU Rate考慮済）を算出する
         GHG_Max    = calculate_function.calc_GHG_Max(year)
@@ -170,7 +171,6 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         energy          = cb / (GHG_Max - GHG_Actual)
 
         # 必要な計算を行う
-        foc             = lng + hfo + lfo + mdo + mgo
         total_cb        = cb + borrowing + banking + last_year
         borrowing_limit = calculate_function.calc_borrowing_limit(thisYear_borrowing, year, energy)
         penalty_factor  = (consecutive_years) / 10 + 1
@@ -185,7 +185,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             "imo"            : imo,
             "vessel_name"    : vessel_name,
             "operator"       : operator,
-            "distance"       : distance,
+            "distance"       : round(distance),
             "foc"            : round(foc),
             "year_to_date"   : round(cb / 1000000, 1),     # 修正。実際のCBを表示するべき
             "last_year"      : round(last_year / 1000000, 1),
@@ -294,7 +294,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
                 "imo"                : imo,
                 "vessel_name"        : vessel_name,
                 "operator"           : operator,
-                "distance"           : distance,
+                "distance"           : round(distance),
                 "foc"                : round(foc),
                 "end_of_year"        : round(cb / 1000000, 1),
                 "last_year"          : round(last_year / 1000000, 1),
@@ -317,7 +317,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
     
     # 実測データ無しvoyage-plan
     if len(ytd_not_exist_voyage_list) > 0:
-        eoy_grouped_vessel_data, total_fuel_list = make_eoy_record.make_voyage_plans_data(imo, vessel_name, None, ytd_not_exist_voyage_list, res_foc_formulas, fuel_oil_type_info_list, penalty_factor, last_year, energy)
+        eoy_grouped_vessel_data, total_fuel_list = make_eoy_record.make_voyage_plans_data(imo, vessel_name, None, ytd_not_exist_voyage_list, res_foc_formulas, fuel_oil_type_info_list, penalty_factor, last_year, 0)
         eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
 
         print(f"実測データ無しvoyage-planのtotal_fuel_list:{(total_fuel_list)}")
@@ -358,7 +358,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
 
     # 実測データ無しspeed-plan
     elif len(ytd_not_exist_speed_list) > 0:
-        eoy_grouped_vessel_data, total_fuel_list = make_eoy_record.make_speed_plans_data(imo, vessel_name, year, rec, ytd_not_exist_speed_list, res_foc_formulas, fuel_oil_type_info_list, penalty_factor, last_year, energy)
+        eoy_grouped_vessel_data, total_fuel_list = make_eoy_record.make_speed_plans_data(imo, vessel_name, year, None, ytd_not_exist_speed_list, res_foc_formulas, fuel_oil_type_info_list, penalty_factor, last_year, 0)
         eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
 
         # End of Yearの燃料消費量Total値に合算
@@ -525,8 +525,8 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         last_year = 0
         if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"])
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"] if "borrowing" in last_year_rec else "0")
+            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
+            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
 
 
             if last_year_borrowing > 0:
@@ -544,6 +544,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         lfo       = float(rec["total_lfo"]["S"])
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
+        foc       = float(rec["total_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         cb        = float(rec["cb"]["S"])
         banking   = float(rec["banking"]["S"])
@@ -563,7 +564,6 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         total_energy += energy
 
         # 必要な計算を行う
-        foc             = lng + hfo + lfo + mdo + mgo
         total_cb        = cb + borrowing + banking + last_year
         penalty_factor  = (consecutive_years) / 10 + 1
 
@@ -579,7 +579,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
             "imo"                : imo,
             "vessel_name"        : vessel_name,
             "operator"           : operator,
-            "distance"           : distance,
+            "distance"           : round(distance),
             "foc"                : round(foc),
             "end_of_year"        : round(total_cb / 1000000, 1),
             "last_year"          : round(last_year / 1000000, 1),

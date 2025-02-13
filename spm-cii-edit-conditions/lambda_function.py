@@ -101,6 +101,11 @@ def lambda_handler(event, context):
 
         # FOC算出（FOC Formulasが取得出来なかった場合は計算しない）
         if res_foc_formulas:
+
+            # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+            auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+            print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
             # FOC算出時にBallast/Ladenどちらの式を使うかを判定
             if res_item["dispracement"]["S"] == "Ballast":
                 # Ballast用の計算パラメータを取得し、FOCを算出
@@ -116,7 +121,7 @@ def lambda_handler(event, context):
             c = calc_param_list[2]
 
             # 1日あたりのFOC算出（**は指数）
-            foc_per_day = alpah * log_speed ** a + c
+            foc_per_day = alpah * log_speed ** a + c + auxiliary_equipment
             # 1時間あたりのFOC算出
             foc_per_hour = foc_per_day / 24
             # 総FOCを算出

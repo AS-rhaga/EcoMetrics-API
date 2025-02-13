@@ -4,7 +4,49 @@ from dynamodb import select
 
 from Util import Util
 
-def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
+def calc_EUA(year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
+
+    # EUAの算出
+    co2_lng = 0
+    co2_hfo = 0
+    co2_lfo = 0
+    co2_mdo = 0
+    co2_mgo = 0
+    eu_ets_rate = 0
+    eua = 0
+
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
+    else:
+        eu_ets_rate = 100
+
+    print(f"eu_ets_rate: {(eu_ets_rate)}")
+    if total_lng > 0:
+        lng_co2_factor =  float(fuel_oil_info_list["LNG_info_list"]["emission_factor"]["S"])
+        co2_lng = total_lng * lng_co2_factor
+    if total_hfo > 0:
+        hfo_co2_factor =  float(fuel_oil_info_list["HFO_info_list"]["emission_factor"]["S"])
+        co2_hfo = total_hfo * hfo_co2_factor
+    if total_lfo > 0:
+        lfo_co2_factor =  float(fuel_oil_info_list["LFO_info_list"]["emission_factor"]["S"])
+        co2_lfo = total_lfo * lfo_co2_factor
+    if total_mdo > 0:
+        mdo_co2_factor =  float(fuel_oil_info_list["MDO_info_list"]["emission_factor"]["S"])
+        co2_mdo = total_mdo * mdo_co2_factor
+    if total_mgo > 0:
+        mgo_co2_factor =  float(fuel_oil_info_list["MGO_info_list"]["emission_factor"]["S"])
+        co2_mgo = total_mgo * mgo_co2_factor
+
+    # CO2の総排出量(MT)
+    total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
+    print(f"total_co2{type(total_co2)}: {total_co2}")
+    eua       = total_co2 * float(eu_ets_rate) / 100
+    return str(eua)
+
+def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     energy_lng = 0
     energy_hfo = 0
     energy_lfo = 0
@@ -27,7 +69,7 @@ def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, 
         mgo_lcv =  float(fuel_oil_info_list["MGO_info_list"]["lcv"]["S"])
         energy_mgo += total_mgo * mgo_lcv
 
-    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo) * float(eu_rate) / 100
+    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo)
     return energy
 
 def calc_GHG_Max(year):
@@ -85,9 +127,7 @@ def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, 
     GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
     cb = (GHG_Max - GHG_Actual) * energy
     print(f"cb{type(cb)}: {cb}")
-    cb_formatted = round(float(cb), 1)
-    print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
-    return cb_formatted
+    return cb
 
 def check_port_name(port_code):
     port_record = select.get_port_record(port_code)
@@ -186,7 +226,16 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
     voyage_count              = 0
 
     # leg-totalデータ取得
-    res_leg = select.get_leg_total(imo, Timestamp_to[0:4])
+    res_leg_list = select.get_leg_total(imo, Timestamp_to[0:4])
+
+    # EU Rateがゼロのレコードを除いたリストを作成する
+    res_leg = []
+    for leg in res_leg_list:
+        leg_eu_rate = leg["eu_rate"]["S"]
+        if leg_eu_rate != "0":
+            res_leg.append(leg)
+    print(f"len(res_leg): {len(res_leg)}")
+    # print(f"res_np[{type(res_leg)}]: {res_leg}")
 
     voyage_departure_time = voyage_info["departure_time"]["S"]
     voyage_arrival_time = voyage_info["arrival_time"]["S"]
@@ -203,17 +252,15 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
         departure_time = res_leg[j]["departure_time"]["S"]
         departure_year = departure_time[0:4]
         arrival_time   = res_leg[j]["arrival_time"]["S"]
-        eu_rate        = res_leg[j]["eu_rate"]["S"]
-        displacement   = Util.format_to_one_decimal(round(float(res_leg[j]["displacement"]["S"] if 'displacement' in res_leg[j] and res_leg[j]["displacement"]["S"] != "" else 0), 1))
-        distance       = Util.format_to_one_decimal(round(float(res_leg[j]["distance"]["S"] if 'distance' in res_leg[j] and res_leg[j]["distance"]["S"] != "" else 0), 1))
-        total_lng      = Util.format_to_one_decimal(round(float(res_leg[j]["total_lng"]["S"]), 1))
-        total_hfo      = Util.format_to_one_decimal(round(float(res_leg[j]["total_hfo"]["S"]), 1))
-        total_lfo      = Util.format_to_one_decimal(round(float(res_leg[j]["total_lfo"]["S"]), 1))
-        total_mdo      = Util.format_to_one_decimal(round(float(res_leg[j]["total_mdo"]["S"]), 1))
-        total_mgo      = Util.format_to_one_decimal(round(float(res_leg[j]["total_mgo"]["S"]), 1))
-        total_foc      = Util.format_to_one_decimal(round(float(res_leg[j]["total_foc"]["S"]), 1))
-        eua            = Util.format_to_one_decimal(round(float(res_leg[j]["eua"]["S"]), 1))
-        # print(f"total_foc[{type(total_foc)}]: {total_foc}")
+        displacement   = float(res_leg[j]["displacement"]["S"] if 'displacement' in res_leg[j] and res_leg[j]["displacement"]["S"] != "" else 0)
+        distance       = float(res_leg[j]["distance"]["S"] if 'distance' in res_leg[j] and res_leg[j]["distance"]["S"] != "" else 0)
+        total_lng      = float(res_leg[j]["total_lng"]["S"])
+        total_hfo      = float(res_leg[j]["total_hfo"]["S"])
+        total_lfo      = float(res_leg[j]["total_lfo"]["S"])
+        total_mdo      = float(res_leg[j]["total_mdo"]["S"])
+        total_mgo      = float(res_leg[j]["total_mgo"]["S"])
+        total_foc      = float(res_leg[j]["total_foc"]["S"])
+        eua            = float(res_leg[j]["eua"]["S"])
 
         # 各legがこのvoyageに関わっているかを確認する。
         print(f"voyage_departure_time: {(voyage_departure_time)}, voyage_arrival_time: {(voyage_arrival_time)}")
@@ -224,6 +271,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
             if arrival_time <= voyage_arrival_time:
                 print("このlegはvoyageの中で完結している")
                 print(f"departure_time: {(departure_time)}")
+                energy = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
                 voyage_total_distance     += distance
                 voyage_total_lng          += total_lng
                 voyage_total_hfo          += total_hfo
@@ -234,9 +282,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 voyage_total_displacement += displacement
                 voyage_count_displacement += 1
                 voyage_total_eua          += eua
-
-                energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
-                voyage_total_energy += energy
+                voyage_total_energy       += energy
 
             elif voyage_arrival_time <= departure_time:
                 print("このlegはvoyageの期間外")
@@ -250,7 +296,8 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
 
                 distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list)
                 print(f"distance: {(distance)}, displacement: {(displacement)}, total_lng: {(total_lng)}, total_hfo: {(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo: {(total_mdo)}, total_mgo: {(total_mgo)}, total_foc: {(total_foc)}")
-                energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+                voyage_eua = calc_EUA(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+                voyage_energy = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
                 voyage_total_distance     += distance
                 voyage_total_lng          += total_lng
                 voyage_total_hfo          += total_hfo
@@ -260,8 +307,8 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 voyage_total_foc          += total_foc
                 voyage_total_displacement += displacement
                 voyage_count_displacement += 1
-                voyage_total_eua          += eua
-                voyage_total_energy       += energy
+                voyage_total_eua          += voyage_eua
+                voyage_total_energy       += voyage_energy
 
         # legの途中からこのvoyage
         elif voyage_departure_time < arrival_time:
@@ -273,7 +320,8 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
 
             distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list)
             print(f"distance: {(distance)}, displacement: {(displacement)}, total_lng: {(total_lng)}, total_hfo: {(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo: {(total_mdo)}, total_mgo: {(total_mgo)}, total_foc: {(total_foc)}")
-            energy = calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+            voyage_eua = calc_EUA(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+            voyage_energy = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
             voyage_total_distance     += distance
             voyage_total_lng          += total_lng
             voyage_total_hfo          += total_hfo
@@ -283,8 +331,8 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
             voyage_total_foc          += total_foc
             voyage_total_displacement += displacement
             voyage_count_displacement += 1
-            voyage_total_eua          += eua
-            voyage_total_energy       += energy
+            voyage_total_eua          += voyage_eua
+            voyage_total_energy       += voyage_energy
 
             print(f"voyage_total_distance: {(voyage_total_distance)}, voyage_total_hfo: {(voyage_total_hfo)}, total_foc: {(voyage_total_foc)}")
 
@@ -294,50 +342,52 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
     # voyageの合計値からCB, CBを算出する。
     print(f"voyage_total_distance: {(voyage_total_distance)}, voyage_total_hfo: {(voyage_total_hfo)}, total_foc: {(voyage_total_foc)}")
     print(f"voyage_total_eua{type(voyage_total_eua)}: {voyage_total_eua}")
-    voyage_total_cb = calc_cb(departure_year, voyage_total_energy, voyage_total_lng, voyage_total_hfo, voyage_total_lfo, voyage_total_mdo, voyage_total_mgo, fuel_oil_info_list)
+    
+    dataset = []
+    if voyage_count_displacement > 0:
+        voyage_total_cb = calc_cb(departure_year, voyage_total_energy, voyage_total_lng, voyage_total_hfo, voyage_total_lfo, voyage_total_mdo, voyage_total_mgo, fuel_oil_info_list)
 
-    # コストが必要なので算出する
-    voyage_total_GHG = calc_GHG_Actual(voyage_total_lng, voyage_total_hfo, voyage_total_lfo, voyage_total_mdo, voyage_total_mgo, fuel_oil_info_list)
-    voyage_total_cb_cost = 0
-    if voyage_total_cb < 0:
-        voyage_total_cb_cost = abs(voyage_total_cb) * 2400 / (voyage_total_GHG * 41000)
-    voyage_displacement = voyage_total_displacement / voyage_count_displacement
+        # コストが必要なので算出する
+        voyage_total_GHG = calc_GHG_Actual(voyage_total_lng, voyage_total_hfo, voyage_total_lfo, voyage_total_mdo, voyage_total_mgo, fuel_oil_info_list)
+        voyage_total_cb_cost = 0
+        if voyage_total_cb < 0:
+            voyage_total_cb_cost = abs(voyage_total_cb) * 2400 / (voyage_total_GHG * 41000)
+        voyage_displacement = voyage_total_displacement / voyage_count_displacement
 
-    voyage_displacement   = str(round(float(voyage_displacement), 0))
-    voyage_total_distance = str(round(float(voyage_total_distance), 0))
-    voyage_total_lng      = str(round(float(voyage_total_lng), 1))
-    voyage_total_hfo      = str(round(float(voyage_total_hfo), 1))
-    voyage_total_lfo      = str(round(float(voyage_total_lfo), 1))
-    voyage_total_mdo      = str(round(float(voyage_total_mdo), 1))
-    voyage_total_mgo      = str(round(float(voyage_total_mgo), 1))
-    voyage_total_foc      = str(round(float(voyage_total_foc), 1))
-    voyage_total_eua      = str(round(float(voyage_total_eua), 1))
-    voyage_total_cb       = str(round(float(voyage_total_cb), 1))
-    voyage_total_cb_cost  = str(round(float(voyage_total_cb_cost), 0))
+        voyage_displacement   = str(float(voyage_displacement))
+        voyage_total_distance = str(float(voyage_total_distance))
+        voyage_total_lng      = str(float(voyage_total_lng))
+        voyage_total_hfo      = str(float(voyage_total_hfo))
+        voyage_total_lfo      = str(float(voyage_total_lfo))
+        voyage_total_mdo      = str(float(voyage_total_mdo))
+        voyage_total_mgo      = str(float(voyage_total_mgo))
+        voyage_total_foc      = str(float(voyage_total_foc))
+        voyage_total_eua      = str(float(voyage_total_eua))
+        voyage_total_cb       = str(float(voyage_total_cb),)
+        voyage_total_cb_cost  = str(float(voyage_total_cb_cost))
 
-    dataset = {
-        "imo"           : imo,
-        "voyage_no"     : "",
-        "departure_port": voyage_info["departure_port"]["S"],
-        "departure_time": voyage_info["departure_time"]["S"],
-        "arrival_port"  : voyage_info["arrival_port"]["S"],
-        "arrival_time"  : voyage_info["arrival_time"]["S"],
-        # "eu_rate"       : "", # voyage_eu_rate
-        "displacement"  : voyage_displacement,
-        "operator"      : voyage_info["operater"]["S"],
-        "distance"      : voyage_total_distance,
-        "total_lng"     : voyage_total_lng,
-        "total_hfo"     : voyage_total_hfo,
-        "total_lfo"     : voyage_total_lfo,
-        "total_mdo"     : voyage_total_mdo,
-        "total_mgo"     : voyage_total_mgo,
-        "total_foc"     : voyage_total_foc,
-        "GHG_Actual"    : voyage_total_GHG,
-        "eua"           : voyage_total_eua,
-        "cb"            : voyage_total_cb,
-        "cb_cost"       : voyage_total_cb_cost
-    }
-    # print(f"dataset[{type(dataset)}]: {dataset}")
+        dataset = {
+            "imo"           : imo,
+            "voyage_no"     : "",
+            "departure_port": voyage_info["departure_port"]["S"],
+            "departure_time": voyage_info["departure_time"]["S"],
+            "arrival_port"  : voyage_info["arrival_port"]["S"],
+            "arrival_time"  : voyage_info["arrival_time"]["S"],
+            "displacement"  : voyage_displacement,
+            "operator"      : voyage_info["operator"]["S"],
+            "distance"      : voyage_total_distance,
+            "total_lng"     : voyage_total_lng,
+            "total_hfo"     : voyage_total_hfo,
+            "total_lfo"     : voyage_total_lfo,
+            "total_mdo"     : voyage_total_mdo,
+            "total_mgo"     : voyage_total_mgo,
+            "total_foc"     : voyage_total_foc,
+            "GHG_Actual"    : voyage_total_GHG,
+            "eua"           : voyage_total_eua,
+            "cb"            : voyage_total_cb,
+            "cb_cost"       : voyage_total_cb_cost
+        }
+        # print(f"dataset[{type(dataset)}]: {dataset}")
 
     return dataset
 
