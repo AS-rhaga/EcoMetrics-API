@@ -77,8 +77,7 @@ def sum_year_total(imo, year, GHG_Max, ytd_distance, res_foc_formulas, fuel_oil_
             co2 = eua / (eu_ets_rate / 100)
 
             # CBから使用したエネルギー量を逆算する
-            GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
-            energy     = cb / (GHG_Max - GHG_Actual)
+            energy     = calculate_function.calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
             
             # Year to Dateの合計用変数に加算
             ytd_lng    += lng

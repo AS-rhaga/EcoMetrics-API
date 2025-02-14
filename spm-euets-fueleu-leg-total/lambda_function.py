@@ -41,7 +41,7 @@ def make_fuel_oil_type_info_list():
 
     return fuel_oil_info_list
 
-def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
+def calc_EUA(year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
 
     # EUAの算出
     co2_lng = 0
@@ -52,40 +52,35 @@ def calc_EUA(year, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mg
     eu_ets_rate = 0
     eua = 0
 
-    # EU Rateの確認
-    if eu_rate == 0:
-        # EU外航海は対象外なのでゼロ
-        total_co2 = 0
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
     else:
-        # EU-ETS対象割合を確認
-        if year == "2024":
-            eu_ets_rate = 40
-        elif year == "2025":
-            eu_ets_rate = 70
-        else:
-            eu_ets_rate = 100
+        eu_ets_rate = 100
 
-        print(f"eu_ets_rate: {(eu_ets_rate)}")
-        if total_lng > 0:
-            lng_co2_factor =  float(fuel_oil_info_list["LNG_OMS_info_list"]["emission_factor"]["S"])
-            co2_lng = total_lng * lng_co2_factor
-        if total_hfo > 0:
-            hfo_co2_factor =  float(fuel_oil_info_list["HFO_info_list"]["emission_factor"]["S"])
-            co2_hfo = total_hfo * hfo_co2_factor
-        if total_lfo > 0:
-            lfo_co2_factor =  float(fuel_oil_info_list["LFO_info_list"]["emission_factor"]["S"])
-            co2_lfo = total_lfo * lfo_co2_factor
-        if total_mdo > 0:
-            mdo_co2_factor =  float(fuel_oil_info_list["MDO_info_list"]["emission_factor"]["S"])
-            co2_mdo = total_mdo * mdo_co2_factor
-        if total_mgo > 0:
-            mgo_co2_factor =  float(fuel_oil_info_list["MGO_info_list"]["emission_factor"]["S"])
-            co2_mgo = total_mgo * mgo_co2_factor
+    print(f"eu_ets_rate: {(eu_ets_rate)}")
+    if total_lng > 0:
+        lng_co2_factor =  float(fuel_oil_info_list["LNG_OMS_info_list"]["emission_factor"]["S"])
+        co2_lng = total_lng * lng_co2_factor
+    if total_hfo > 0:
+        hfo_co2_factor =  float(fuel_oil_info_list["HFO_info_list"]["emission_factor"]["S"])
+        co2_hfo = total_hfo * hfo_co2_factor
+    if total_lfo > 0:
+        lfo_co2_factor =  float(fuel_oil_info_list["LFO_info_list"]["emission_factor"]["S"])
+        co2_lfo = total_lfo * lfo_co2_factor
+    if total_mdo > 0:
+        mdo_co2_factor =  float(fuel_oil_info_list["MDO_info_list"]["emission_factor"]["S"])
+        co2_mdo = total_mdo * mdo_co2_factor
+    if total_mgo > 0:
+        mgo_co2_factor =  float(fuel_oil_info_list["MGO_info_list"]["emission_factor"]["S"])
+        co2_mgo = total_mgo * mgo_co2_factor
 
-        # CO2の総排出量(MT)
-        total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
-        print(f"total_co2{type(total_co2)}: {total_co2}")
-        eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
+    # CO2の総排出量(MT)
+    total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
+    print(f"total_co2{type(total_co2)}: {total_co2}")
+    eua       = total_co2 * float(eu_ets_rate) / 100
     return eua
 
 def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
@@ -391,7 +386,7 @@ def main(imo, timestamp):
                 total_total_foc = total_total_foc * float(eu_rate) / 100
                 
                 #EUA, CBを算出
-                leg_eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+                leg_eua        = calc_EUA(year_timestamp, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"leg_eua[{type(leg_eua)}]: {leg_eua}")
                 energy     = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
                 print(f"energy[{type(energy)}]: {energy}")
@@ -547,7 +542,7 @@ def main(imo, timestamp):
             total_total_foc = total_total_foc * float(eu_rate) / 100
 
             #EUA, CBを算出
-            leg_eua        = calc_EUA(year_timestamp, eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+            leg_eua        = calc_EUA(year_timestamp, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             print(f"EUA[{type(eua)}]: {eua}")
             energy     = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
             print(f"energy[{type(energy)}]: {energy}")
@@ -561,10 +556,10 @@ def main(imo, timestamp):
             # 航海に出発した場合この時点で海上なので、port_codeを参照できない
             if state != "IN PORT":
                 port_code = keep_port_code
-                arrival_time = formatted_date
             arrival_port     = check_port_name(port_code)
             print(f"arrival_port_name: {(arrival_port)}")
 
+            arrival_time     = formatted_date
             avg_displacement = str(float(sum_displacement / noonreport_count))
             total_distance   = str(float(total_distance))
             total_lng        = str(float(total_lng))

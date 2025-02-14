@@ -44,7 +44,7 @@ def calc_EUA(year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_o
     total_co2 = co2_lng + co2_hfo + co2_lfo + co2_mdo + co2_mgo
     print(f"total_co2{type(total_co2)}: {total_co2}")
     eua       = total_co2 * float(eu_ets_rate) / 100
-    return str(eua)
+    return eua
 
 def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     energy_lng = 0
@@ -135,7 +135,7 @@ def check_port_name(port_code):
     port_name   = port_record[0]["port_name"]["S"]
     return port_name
 
-def calc_sum_fuel(res_np):
+def calc_sum_fuel(res_np, eu_rate):
 
     total_distance      = 0
     total_displacement  = 0
@@ -158,7 +158,7 @@ def calc_sum_fuel(res_np):
         me_lsgo = Util.format_to_one_decimal(round(float(res_np[i]["me_lsgo"]["S"]), 1)) if 'me_lsgo' in res_np[i] and res_np[i]["me_lsgo"]["S"] != "" else 0.0
         dg_bog  = Util.format_to_one_decimal(round(float(res_np[i]["dg_bog"]["S"]), 1))  if 'dg_bog'  in res_np[i] and res_np[i]["dg_bog"]["S"]  != "" else 0.0
         dg_hfo  = Util.format_to_one_decimal(round(float(res_np[i]["dg_hfo"]["S"]), 1))  if 'dg_hfo'  in res_np[i] and res_np[i]["dg_hfo"]["S"]  != "" else 0.0
-        dg_lsfo = Util.format_to_one_decimal(round(float(res_np[i]["dg_foc"]["S"]), 1))  if 'dg_foc'  in res_np[i] and res_np[i]["dg_foc"]["S"]  != "" else 0.0
+        dg_lsfo = Util.format_to_one_decimal(round(float(res_np[i]["ge_foc"]["S"]), 1))  if 'ge_foc'  in res_np[i] and res_np[i]["ge_foc"]["S"]  != "" else 0.0
         dg_do   = Util.format_to_one_decimal(round(float(res_np[i]["dg_do"]["S"]), 1))   if 'dg_do'   in res_np[i] and res_np[i]["dg_do"]["S"]   != "" else 0.0
         dg_lsgo = Util.format_to_one_decimal(round(float(res_np[i]["dg_lsgo"]["S"]), 1)) if 'dg_lsgo' in res_np[i] and res_np[i]["dg_lsgo"]["S"] != "" else 0.0
         boiler_hfo  = Util.format_to_one_decimal(round(float(res_np[i]["boiler_hfo"]["S"]), 1))  if 'boiler_hfo'  in res_np[i] and res_np[i]["boiler_hfo"]["S"]  != "" else 0.0
@@ -185,8 +185,22 @@ def calc_sum_fuel(res_np):
         total_mdo          += mdo
         total_mgo          += mgo
         total_total_foc    += total_foc
+
+    # ループ終了後、燃料消費量にEU Rateをかける
+    total_lng       = total_lng * eu_rate / 100
+    total_hfo       = total_hfo * eu_rate / 100
+    total_lfo       = total_lfo * eu_rate / 100
+    total_mdo       = total_mdo * eu_rate / 100
+    total_mgo       = total_mgo * eu_rate / 100
+    total_total_foc = total_total_foc * eu_rate / 100
+
     print(f"record_count: {(count)}")
-    return total_distance, total_displacement/count, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_total_foc
+
+    avg_displacement = 0
+    if count > 0:
+        avg_displacement = total_displacement/count
+
+    return total_distance, avg_displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_total_foc
 
 def choise_period_noonreport(res_np, time_from, time_to):
 
@@ -194,14 +208,22 @@ def choise_period_noonreport(res_np, time_from, time_to):
 
     # 日付形式変更
     time_from_dt = datetime.strptime(time_from, "%Y/%m/%d %H:%M")
-    tmp_time_from = time_from_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    formatted_time_from = time_from_dt.strftime("%Y/%m/%d %H:%M")
     time_to_dt = datetime.strptime(time_to, "%Y/%m/%d %H:%M")
-    tmp_time_to = time_to_dt.strftime("%Y-%m-%dT%H:%M:%SZ")  
-    
+    formatted_time_to   = time_to_dt.strftime("%Y/%m/%d %H:%M")
+
     for i in range(len(res_np)):
         record     = res_np[i]
-        local_date = record['timestamp']['S']
-        if tmp_time_from <= local_date and local_date < tmp_time_to:
+        local_date = record['local_date']['S']
+
+        # local_timeを変換
+        # datetimeオブジェクトに変換
+        dt = datetime.strptime(local_date, "%Y/%m/%d %H:%M")
+        # フォーマットを適用して再度文字列化
+        formatted_date = dt.strftime("%Y/%m/%d %H:%M")
+        local_date =  formatted_date
+
+        if formatted_time_from <= local_date and local_date < formatted_time_to:
             nr_list.append(record)
 
     return nr_list
@@ -225,6 +247,9 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
     voyage_total_cb           = 0
     voyage_count              = 0
 
+    # str_year
+    str_year = Timestamp_to[0:4]
+
     # leg-totalデータ取得
     res_leg_list = select.get_leg_total(imo, Timestamp_to[0:4])
 
@@ -240,10 +265,6 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
     voyage_departure_time = voyage_info["departure_time"]["S"]
     voyage_arrival_time = voyage_info["arrival_time"]["S"]
 
-    voyage_count += 1
-    print(f"VoyageNo変化。ひとつ前のVoyage {(voyage_count)}を処理")
-    print(f"voyage_count{type(voyage_count)}: {voyage_count}")
-
     for j in range(len(res_leg)):
 
         print(f"{(j + 1)}レグ目を確認")
@@ -254,6 +275,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
         arrival_time   = res_leg[j]["arrival_time"]["S"]
         displacement   = float(res_leg[j]["displacement"]["S"] if 'displacement' in res_leg[j] and res_leg[j]["displacement"]["S"] != "" else 0)
         distance       = float(res_leg[j]["distance"]["S"] if 'distance' in res_leg[j] and res_leg[j]["distance"]["S"] != "" else 0)
+        leg_eu_rate    = int(res_leg[j]["eu_rate"]["S"])
         total_lng      = float(res_leg[j]["total_lng"]["S"])
         total_hfo      = float(res_leg[j]["total_hfo"]["S"])
         total_lfo      = float(res_leg[j]["total_lfo"]["S"])
@@ -294,9 +316,9 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 nr_list = choise_period_noonreport(res_np, departure_time, arrival_time)
                 # print(f"record_len: {(nr_list)}")
 
-                distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list)
+                distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list, leg_eu_rate)
                 print(f"distance: {(distance)}, displacement: {(displacement)}, total_lng: {(total_lng)}, total_hfo: {(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo: {(total_mdo)}, total_mgo: {(total_mgo)}, total_foc: {(total_foc)}")
-                voyage_eua = calc_EUA(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+                voyage_eua = calc_EUA(str_year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
                 voyage_energy = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
                 voyage_total_distance     += distance
                 voyage_total_lng          += total_lng
@@ -318,9 +340,9 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
             nr_list = choise_period_noonreport(res_np, voyage_departure_time, arrival_time)
             # print(f"record_len: {(nr_list)}")
 
-            distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list)
+            distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list, leg_eu_rate)
             print(f"distance: {(distance)}, displacement: {(displacement)}, total_lng: {(total_lng)}, total_hfo: {(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo: {(total_mdo)}, total_mgo: {(total_mgo)}, total_foc: {(total_foc)}")
-            voyage_eua = calc_EUA(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
+            voyage_eua = calc_EUA(str_year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
             voyage_energy = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
             voyage_total_distance     += distance
             voyage_total_lng          += total_lng

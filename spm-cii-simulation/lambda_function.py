@@ -190,6 +190,9 @@ def calc_cii(co2, distance, cii_ref, cii_rating, cii_reduction_rate, VESSELMASTE
     CII_Reference = a_G2 * pow(dwt, (-1 * c_G2))                          # CII ref. （G2）
     CII_Required        = CII_Reference * ((100 - reduction_rate) / 100)  # Required CII （G3, 2023）
     CII_Calculated      = CII_Attained / CII_Required                          # Attained CII / Required CII
+
+    print(f"dwt:{dwt},a_G2:{a_G2},reduction_rate:{reduction_rate},pow(dwt, (-1 * c_G2)):{pow(dwt, (-1 * c_G2))},")
+    print(f"CII_Attained:{CII_Attained},CII_Reference:{CII_Reference},CII_Required:{CII_Required},CII_Calculated:{CII_Calculated},")
     
     # CII計算値からCIIスコアを算出
     CII_Score = ""
@@ -502,6 +505,10 @@ def lambda_handler(event, context):
                 end_month = end_time.month
                 diff_month = end_month - start_month
 
+                print(f"start_time:{start_time}, end_time:{end_time}")
+                print(f"start_month:{start_month}, end_month:{end_month}, diff_month:{diff_month}")
+                print(f"leg_total_FOC_voyage:{leg_total_FOC_voyage}, leg_total_co2_emission:{leg_total_co2_emission}")
+
                 # ※例：start：10月、end：12月の場合、3回ループさせる。
                 for i in range(diff_month + 1):
                     
@@ -515,7 +522,9 @@ def lambda_handler(event, context):
                         start_last_day = calendar.monthrange(start_time.year, start_time.month)[1]
                         start_last_day_dt = datetime(start_time.year, start_month, start_last_day, 23, 59, 59)
                         caluculated_time = calc_time_diff(start_time, start_last_day_dt)
-                        
+
+                        print(f"target_month:{target_month}, start_last_day:{start_last_day}, start_last_day_dt:{start_last_day_dt}, caluculated_time:{caluculated_time}")
+
                     elif start_month < target_month < end_month:
                         # target_monthの月末までの時間を算出
                         target_month_last_day = calendar.monthrange(start_time.year, target_month)[1]
@@ -523,18 +532,27 @@ def lambda_handler(event, context):
                         target_month_farst_day_dt = datetime(start_time.year, target_month, 1, 0, 0, 0)
                         caluculated_time = calc_time_diff(target_month_farst_day_dt, target_month_last_day_dt)
 
+                        print(f"target_month:{target_month}, target_month_last_day:{target_month_last_day}, target_month_last_day_dt:{target_month_last_day_dt}, target_month_farst_day_dt: {target_month_farst_day_dt},caluculated_time:{caluculated_time}")
+
                     else:
                         # endTimeの月の1日からendTimeまでの時間を算出
                         end_first_day_dt = datetime(end_time.year, end_time.month, 1, 0, 0, 0)
                         caluculated_time = calc_time_diff(end_first_day_dt, end_time)
+
+                        print(f"target_month:{target_month}, end_first_day_dt:{end_first_day_dt}, caluculated_time:{caluculated_time}")
                     
                     # TotalTimeと算出した時間の割合を算出
                     calc_time_rate = caluculated_time / leg_total_time
+
+                    print(f"calc_time_rate:{calc_time_rate}")
 
                     # 月別集計リストの該当月に加算
                     tmp_distance_voyage = float(simulation_leg["distance"]["S"]) * calc_time_rate
                     tmp_foc_voyage = leg_total_FOC_voyage * calc_time_rate
                     tmp_co2_emission_voyage = leg_total_co2_emission * calc_time_rate
+
+                    print(f"target_month:{target_month}, tmp_distance_voyage:{tmp_distance_voyage}, tmp_foc_voyage:{tmp_foc_voyage}, tmp_co2_emission_voyage:{tmp_co2_emission_voyage}")
+
                     monthly_total_list[target_month - 1]["distance"] += tmp_distance_voyage
                     monthly_total_list[target_month - 1]["foc"] += tmp_foc_voyage
                     monthly_total_list[target_month - 1]["co2_emission"] += tmp_co2_emission_voyage
@@ -564,18 +582,22 @@ def lambda_handler(event, context):
             # BallastDisancen、LadenDistanceを加算
             total_ballast_laden_distance = ballast_ditance + laden_ditance
 
+            # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+            auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+            print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
             # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
             calc_balast_param_list = ast.literal_eval(res_foc_formulas[0]["me_ballast"]["S"])
             ballast_alpha = calc_balast_param_list[0]
             ballast_a = calc_balast_param_list[1]
             ballast_c = calc_balast_param_list[2]
-            ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c
+            ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c + auxiliary_equipment
             # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
             calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
             laden_alpha = calc_laden_param_list[0]
             laden_a = calc_laden_param_list[1]
             laden_c = calc_laden_param_list[2]
-            laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c
+            laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c + auxiliary_equipment
 
             # 1時間あたりのFOC算出
             ballast_foc_per_hour = ballast_foc_per_day / 24
@@ -642,6 +664,8 @@ def lambda_handler(event, context):
         cii_ration = []
         max_foc = 0
 
+        print(f"monthly_total_list:{monthly_total_list}")
+
         # 月別集計リスト分ループ（1月～12月分を繰り返し処理）
         for i in range(12):
             
@@ -658,6 +682,8 @@ def lambda_handler(event, context):
 
             monthly_total_list[i]["cii_value"] = tmp_monthly_cii_value
             monthly_total_list[i]["cii_score"] = tmp_monthly_cii_Score
+
+            print(f"i:{i}, tmp_monthly_cii_value:{tmp_monthly_cii_value}")
 
             total_foc_for_result += monthly_total_list[i]["foc"]
             total_distance_for_result += monthly_total_list[i]["distance"]
@@ -694,6 +720,8 @@ def lambda_handler(event, context):
         
         if (average_data_count_displaement != 0):
             calc_average_displacement = average_displacement_total / average_data_count_displaement
+
+        print(f"calculated_monthly_total_list:{monthly_total_list}")
 
     else:
         # 上記以外の場合、Simulationは行ない
@@ -837,18 +865,23 @@ def lambda_handler(event, context):
 
             # FOC算出（FOC Formulasが取得出来なかった場合は計算しない）
             if res_foc_formulas: 
+
+                # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+                auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+                print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
                 # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
                 calc_balast_param_list = ast.literal_eval(res_foc_formulas[0]["me_ballast"]["S"])
                 ballast_alpha = calc_balast_param_list[0]
                 ballast_a = calc_balast_param_list[1]
                 ballast_c = calc_balast_param_list[2]
-                ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c
+                ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c + auxiliary_equipment
                 # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
                 calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
                 laden_alpha = calc_laden_param_list[0]
                 laden_a = calc_laden_param_list[1]
                 laden_c = calc_laden_param_list[2]
-                laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c
+                laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c +auxiliary_equipment
 
                 # 1時間あたりのFOC算出
                 ballast_foc_per_hour = ballast_foc_per_day / 24

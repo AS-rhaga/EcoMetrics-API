@@ -313,18 +313,22 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
 
     if res_foc_formulas: 
 
+        # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+        auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+        print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
         # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
         calc_balast_param_list = ast.literal_eval(res_foc_formulas[0]["me_ballast"]["S"])
         ballast_alpha = calc_balast_param_list[0]
         ballast_a = calc_balast_param_list[1]
         ballast_c = calc_balast_param_list[2]
-        ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c
+        ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c + auxiliary_equipment
         # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
         calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
         laden_alpha = calc_laden_param_list[0]
         laden_a = calc_laden_param_list[1]
         laden_c = calc_laden_param_list[2]
-        laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c
+        laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c + auxiliary_equipment
 
         # 1時間あたりのFOC算出
         ballast_foc_per_hour = ballast_foc_per_day / 24
@@ -333,7 +337,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         ballast_foc = ballast_foc_per_hour * ballast_sailing_time
         laden_foc = laden_foc_per_hour * ballast_sailing_time
         # Leg内総FOCを算出
-        simulation_leg_foc = ballast_foc + laden_foc
+        simulation_leg_foc = (ballast_foc + laden_foc) * leg_eu_rate / 100
         
         # 燃料別消費量を算出する
         fuel_list = Util.convertFuelOileStringToList(speed_plan[0]["fuel"]["S"]) 

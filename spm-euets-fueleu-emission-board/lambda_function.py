@@ -183,6 +183,26 @@ def calc_time_diff(start_time, end_time):
     
     return return_val
 
+def choise_period_noonreport(res_np, time_from, time_to):
+
+    nr_list = []
+    
+    for i in range(len(res_np)):
+        record     = res_np[i]
+        local_date = record['local_date']['S']
+
+        # local_timeを変換
+        # datetimeオブジェクトに変換
+        dt = datetime.strptime(local_date, "%Y/%m/%d %H:%M")
+        # フォーマットを適用して再度文字列化
+        formatted_date = dt.strftime("%Y/%m/%d %H:%M")
+        local_date =  formatted_date
+
+        if time_from <= local_date and local_date < time_to:
+            nr_list.append(record)
+
+    return nr_list
+
 def lambda_handler(event, context):
 
     print(f"event{type(event)}: {event}")
@@ -270,6 +290,10 @@ def lambda_handler(event, context):
         elif name == "MGO":
             fuel_oil_info_list["MGO_info_list"] = fuel_oil_type_info_list[i][0]
 
+    # 検索期間のNoonReportを取得する。
+    response = select.get_noonreport(imo, Timestamp_from, Timestamp_to)
+    print(f"期間内のNoonReport数:{(len(response))}")
+
     # user情報取得
     res_user = select.get_user(user_id)
     # group情報取得
@@ -324,6 +348,7 @@ def lambda_handler(event, context):
             # 指定期間内で完結している
             if Timestamp_from <= departure_time and arrival_time <= Timestamp_to:
                 display_leg_list.append(res)
+                print("このlegは指定期間内で完結している")
             
             # 指定期間内に含まれている
             elif departure_time < Timestamp_from and Timestamp_from < arrival_time and arrival_time <= Timestamp_to:
@@ -335,6 +360,7 @@ def lambda_handler(event, context):
                 # resに設定
                 res["departure_time"]["S"] = departure_formatted_date_str
                 recalc_leg_list.append(res)
+                print("このlegは途中から最後まで含まれる")
                 
             elif Timestamp_from <= departure_time and departure_time < Timestamp_to and Timestamp_to < arrival_time:
                 # arrival_timeにTimestamp_toを設定
@@ -345,6 +371,7 @@ def lambda_handler(event, context):
                 # resに設定
                 res["arrival_time"]["S"] = arrival_formatted_date_str
                 recalc_leg_list.append(res)
+                print("このlegは最初から途中まで含まれる")
             
             # departure、arrivalの間にfrom、toが収まっている
             elif departure_time < Timestamp_from and Timestamp_to < arrival_time:
@@ -360,6 +387,7 @@ def lambda_handler(event, context):
                 res["arrival_time"]["S"] = arrival_formatted_date_str
 
                 recalc_leg_list.append(res)
+                print("このlegは指定期間内を含んでいる")
             
             # 指定期間外
             else:
@@ -377,30 +405,32 @@ def lambda_handler(event, context):
             arrival_time_dt = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
             arrival_time = arrival_time_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            res_noonreport_list = select.get_noonreport(imo, departure_time, arrival_time)
+            # res_noonreport_list = select.get_noonreport(imo, departure_time, arrival_time)
+            res_noonreport_list = choise_period_noonreport(response, departure_time_string, arrival_time_string)
             record_data = leg.make_leg_data(imo, departure_time, arrival_time, res_noonreport_list, fuel_oil_info_list, recalc_res)
-            resord_data_ = {
-                    "imo"           : {"S": record_data["imo"]},
-                    "leg_no"        : {"S": record_data["leg_no"]},
-                    "departure_port": {"S": record_data["departure_port"]},
-                    "departure_time": {"S": departure_time_string},
-                    "arrival_port"  : {"S": record_data["arrival_port"]},
-                    "arrival_time"  : {"S": arrival_time_string},
-                    "eu_rate"       : {"S": record_data["eu_rate"]},
-                    "displacement"  : {"S": record_data["displacement"]},
-                    "leg_type"      : {"S": record_data["leg_type"]},
-                    "distance"      : {"S": record_data["distance"]},
-                    "total_lng"     : {"S": record_data["total_lng"]},
-                    "total_hfo"     : {"S": record_data["total_hfo"]},
-                    "total_lfo"     : {"S": record_data["total_lfo"]},
-                    "total_mdo"     : {"S": record_data["total_mdo"]},
-                    "total_mgo"     : {"S": record_data["total_mgo"]},
-                    "total_foc"     : {"S": record_data["total_foc"]},
-                    "eta_local_date": {"S": record_data["eta_local_date"]},
-                    "eua"           : {"S": record_data["eua"]},
-                    "cb"            : {"S": record_data["cb"]}
-                }
-            display_leg_list.append(resord_data_)
+            if len(record_data) > 0:
+                resord_data_ = {
+                        "imo"           : {"S": record_data["imo"]},
+                        "leg_no"        : {"S": record_data["leg_no"]},
+                        "departure_port": {"S": record_data["departure_port"]},
+                        "departure_time": {"S": departure_time_string},
+                        "arrival_port"  : {"S": record_data["arrival_port"]},
+                        "arrival_time"  : {"S": arrival_time_string},
+                        "eu_rate"       : {"S": record_data["eu_rate"]},
+                        "displacement"  : {"S": record_data["displacement"]},
+                        "leg_type"      : {"S": record_data["leg_type"]},
+                        "distance"      : {"S": record_data["distance"]},
+                        "total_lng"     : {"S": record_data["total_lng"]},
+                        "total_hfo"     : {"S": record_data["total_hfo"]},
+                        "total_lfo"     : {"S": record_data["total_lfo"]},
+                        "total_mdo"     : {"S": record_data["total_mdo"]},
+                        "total_mgo"     : {"S": record_data["total_mgo"]},
+                        "total_foc"     : {"S": record_data["total_foc"]},
+                        "eta_local_date": {"S": record_data["eta_local_date"]},
+                        "eua"           : {"S": record_data["eua"]},
+                        "cb"            : {"S": record_data["cb"]}
+                    }
+                display_leg_list.append(resord_data_)
 
         # 航海開始時刻でソートする
         display_leg_list_sorted = sorted(display_leg_list, key=lambda x:x["departure_time"]["S"])
@@ -512,6 +542,7 @@ def lambda_handler(event, context):
             eua_data = [leg_count, float(display_leg["eua"]["S"])]
             EUAList.append(eua_data)
 
+            print(f"【from_to_leg】lng:{(from_to_leg_lng)}, hfo:{(from_to_leg_hfo)}, lfo:{(from_to_leg_lfo)}, mdo:{(from_to_leg_mdo)}, mgo:{(from_to_leg_mgo)}")
             from_to_leg_energy = calc_energy(from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
             from_to_leg_cb, from_to_leg_cb_cost = calc_cb(int(year_from), from_to_leg_energy, from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
             cb_data  = [leg_count, from_to_leg_cb / 1000000]
@@ -580,6 +611,7 @@ def lambda_handler(event, context):
             # 指定期間内で完結している
             if Timestamp_from <= departure_time and arrival_time <= Timestamp_to:
                 display_voyage_list.append(res)
+                print(f"voyage_no:{(res["voyage_no"]["S"])}は期間内で完結")
             
             # 指定期間内に含まれている
             elif departure_time < Timestamp_from and Timestamp_from < arrival_time and arrival_time <= Timestamp_to:
@@ -591,6 +623,7 @@ def lambda_handler(event, context):
                 # resに設定
                 res["departure_time"]["S"] = departure_formatted_date_str
                 recalc_voyage_list.append(res)
+                print(f"voyage_no:{(res["voyage_no"]["S"])}は途中から最後まで")
                 
             elif Timestamp_from <= departure_time and departure_time < Timestamp_to and Timestamp_to < arrival_time:
                 # arrival_timeにTimestamp_toを設定
@@ -601,6 +634,7 @@ def lambda_handler(event, context):
                 # resに設定
                 res["arrival_time"]["S"] = arrival_formatted_date_str
                 recalc_voyage_list.append(res)
+                print(f"voyage_no:{(res["voyage_no"]["S"])}は最初から途中まで")
 
             # departure、arrivalの間にfrom、toが収まっている
             elif departure_time < Timestamp_from and Timestamp_to < arrival_time:
@@ -615,6 +649,7 @@ def lambda_handler(event, context):
                 res["departure_time"]["S"] = departure_formatted_date_str
                 res["arrival_time"]["S"] = arrival_formatted_date_str
                 recalc_voyage_list.append(res)
+                print(f"voyage_no:{(res["voyage_no"]["S"])}は検索期間を含む")
             
             # 指定期間外
             else:
@@ -632,7 +667,8 @@ def lambda_handler(event, context):
             arrival_time_dt = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
             arrival_time = arrival_time_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            res_noonreport_list = select.get_noonreport(imo, departure_time, arrival_time)
+            res_noonreport_list = choise_period_noonreport(response, departure_time_string, arrival_time_string)
+            print(f"期間内のNoonReportレコード数:{(len(res_noonreport_list))}")
             record_data = voyage.make_voyage_data(imo, year_from, year_to, res_noonreport_list, fuel_oil_info_list, recalc_res)
             if len(record_data) > 0:
                 resord_data_ = {
@@ -767,6 +803,7 @@ def lambda_handler(event, context):
             eua_data = [voyage_count, float(display_voyage["eua"]["S"])]
             EUAList.append(eua_data)
 
+            print(f"【from_to_voyage】lng:{(from_to_voyage_lng)}, hfo:{(from_to_voyage_hfo)}, lfo:{(from_to_voyage_lfo)}, mdo:{(from_to_voyage_mdo)}, mgo:{(from_to_voyage_mgo)}")
             from_to_voyage_energy = calc_energy(from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
             from_to_voyage_cb, from_to_voyage_cb_cost = calc_cb(int(year_from), from_to_voyage_energy, from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
             cb_data  = [voyage_count, from_to_voyage_cb / 1000000]
@@ -806,7 +843,6 @@ def lambda_handler(event, context):
 
     # その他のグラフデータ取得（CII EmissionBoardから流用）
     print(f"unit_timestamp_list:{unit_timestamp_list}")
-    response = select.get_noonreport(imo, Timestamp_from, Timestamp_to)
     data = EmissionBoard.util_EmissionBoard_main(imo, Timestamp_from, Timestamp_to, response, unit_timestamp_list, unit)
 
     # CB_YAXISの桁数を調整する

@@ -205,7 +205,7 @@ def calc_sum_fuel(res_np, year, fuel_oil_info_list):
             me_lsgo = Util.format_to_one_decimal(round(float(res_np[i]["me_lsgo"]["S"]), 1)) if 'me_lsgo' in res_np[i] and res_np[i]["me_lsgo"]["S"] != "" else 0.0
             dg_bog  = Util.format_to_one_decimal(round(float(res_np[i]["dg_bog"]["S"]), 1))  if 'dg_bog'  in res_np[i] and res_np[i]["dg_bog"]["S"]  != "" else 0.0
             dg_hfo  = Util.format_to_one_decimal(round(float(res_np[i]["dg_hfo"]["S"]), 1))  if 'dg_hfo'  in res_np[i] and res_np[i]["dg_hfo"]["S"]  != "" else 0.0
-            dg_lsfo = Util.format_to_one_decimal(round(float(res_np[i]["dg_foc"]["S"]), 1))  if 'dg_foc'  in res_np[i] and res_np[i]["dg_foc"]["S"]  != "" else 0.0
+            dg_lsfo = Util.format_to_one_decimal(round(float(res_np[i]["ge_foc"]["S"]), 1))  if 'ge_foc'  in res_np[i] and res_np[i]["ge_foc"]["S"]  != "" else 0.0
             dg_do   = Util.format_to_one_decimal(round(float(res_np[i]["dg_do"]["S"]), 1))   if 'dg_do'   in res_np[i] and res_np[i]["dg_do"]["S"]   != "" else 0.0
             dg_lsgo = Util.format_to_one_decimal(round(float(res_np[i]["dg_lsgo"]["S"]), 1)) if 'dg_lsgo' in res_np[i] and res_np[i]["dg_lsgo"]["S"] != "" else 0.0
             boiler_hfo  = Util.format_to_one_decimal(round(float(res_np[i]["boiler_hfo"]["S"]), 1))  if 'boiler_hfo'  in res_np[i] and res_np[i]["boiler_hfo"]["S"]  != "" else 0.0
@@ -244,7 +244,7 @@ def calc_sum_fuel(res_np, year, fuel_oil_info_list):
             "total_lfo"     : total_lfo,
             "total_mdo"     : total_mdo,
             "total_mgo"     : total_mgo,
-            "total_foc"     : total_foc,
+            "total_foc"     : total_total_foc,
             "total_eua"     : total_eua
         }
 
@@ -270,6 +270,13 @@ def choise_period_noonreport(res_np, time_from, time_to):
     for i in range(len(res_np)):
         record     = res_np[i]
         local_date = record['local_date']['S']
+
+        # local_timeを変換
+        # datetimeオブジェクトに変換
+        dt = datetime.strptime(local_date, "%Y/%m/%d %H:%M")
+        # フォーマットを適用して再度文字列化
+        formatted_date = dt.strftime("%Y/%m/%d %H:%M")
+        local_date =  formatted_date
 
         if time_from <= local_date and local_date < time_to:
             nr_list.append(record)

@@ -18,6 +18,8 @@ _table_name_simulation_voyage  = os.environ['SIMULATION_VOYAGE']
 _table_name_simulation_speed   = os.environ['SIMULATION_SPEED']
 _table_name_fuel_oil_type      = os.environ['FUEL_OIL_TYPE']
 _table_name_FOC_Foemulas       = os.environ['FOC_FORMULAS']
+_table_name_simulation_voyage_cii   = os.environ['SIMULATION_VOYAGE_CII']
+_table_name_simulation_speed_cii    = os.environ['SIMULATION_SPEED_CII']
 
 def get_user(user_id):
     data = []
@@ -266,6 +268,45 @@ def get_foc_formulas(imo):
         },
         ExpressionAttributeValues={
             ':value0': {'S': imo}
+        },
+        KeyConditionExpression='#name0 = :value0'
+    )
+    # データが存在するか確認
+    if 'Items' in response:
+        return response['Items']
+    else:
+        return None
+
+def get_simulation_voyage_cii(imo, year):
+
+    response = _dynamodb_client.query(
+        TableName=_table_name_simulation_voyage_cii,
+        ExpressionAttributeNames={
+            '#name0': 'imo',
+            '#name1': 'year_and_serial_number'
+        },
+        ExpressionAttributeValues={
+            ':value0': {'S': imo},
+            ':value1': {'S': year}
+        },
+        KeyConditionExpression='#name0 = :value0 AND begins_with(#name1, :value1)'
+    )
+
+    # データが存在するか確認
+    if 'Items' in response:
+        return response['Items']
+    else:
+        return None       
+
+def get_simulation_speed_cii(imo, year):
+
+    response = _dynamodb_client.query(
+        TableName=_table_name_simulation_speed_cii,
+        ExpressionAttributeNames={
+            '#name0': 'imo'
+        },
+        ExpressionAttributeValues={
+            ':value0': {'S': imo},
         },
         KeyConditionExpression='#name0 = :value0'
     )

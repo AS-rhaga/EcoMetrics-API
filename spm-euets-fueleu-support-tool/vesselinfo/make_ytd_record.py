@@ -165,10 +165,9 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
         borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec and rec["borrowing"]["S"] != "" else "0")
 
-        # CBから消費量エネルギー（EU Rate考慮済）を算出する
-        GHG_Max    = calculate_function.calc_GHG_Max(year)
+        # 消費量エネルギー（EU Rate考慮済）を算出する
         GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
-        energy          = cb / (GHG_Max - GHG_Actual)
+        energy     = calculate_function.calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
 
         # 必要な計算を行う
         total_cb        = cb + borrowing + banking + last_year
@@ -550,10 +549,9 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         banking   = float(rec["banking"]["S"])
         borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec else "0")
 
-        # CBから消費量エネルギー（EU Rate考慮済）を算出する
-        GHG_Max    = calculate_function.calc_GHG_Max(year)
+        # 消費量エネルギー（EU Rate考慮済）を算出する
         GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-        energy          = cb / (GHG_Max - GHG_Actual)
+        energy     = calculate_function.calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
 
         # total値に加算
         total_lng += float(lng)

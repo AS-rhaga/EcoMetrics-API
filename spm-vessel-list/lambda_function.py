@@ -82,7 +82,7 @@ def calc_fuel_total_co2(fuel_list, leg_total_FOC, fuel_oil_info_list):
         fuel_rate = int(fuel_info_list[1])
 
         # 燃料別FOC算出
-        tmp_fuel_foc =  leg_total_FOC * fuel_rate
+        tmp_fuel_foc =  leg_total_FOC * (fuel_rate / 100)
 
         # 燃料ごとの係数を掛けて、CO2排出量を算出⇒総CO2排出量（予測値）に加算
         if fuel_name == "HFO":
@@ -272,10 +272,12 @@ def lambda_handler(event, context):
 
         # CII Simulation用データを確認
         # eco-cii-simulation-cond-voyage-plan取得
-        res_simulation_voyage = select.get_simulation_voyage(imo, year_now)
+        res_simulation_voyage = select.get_simulation_voyage_cii(imo, year_now)
 
         # eco-cii-simulation-cond-speed-plan取得
-        res_simulation_speed = select.get_simulation_speed(imo, year_now)
+        res_simulation_speed = select.get_simulation_speed_cii(imo, year_now)
+
+        # print(f"imo:{imo}, res_simulation_voyage:{res_simulation_voyage}, res_simulation_speed:{res_simulation_speed}")
 
         # シミュレーションの合計値保持のための変数定義
         all_distance_simulation = 0 # 総Distance（予測値）
@@ -302,6 +304,8 @@ def lambda_handler(event, context):
                 arrival_time_string = res_simulation_voyage[i]["arrival_time"]["S"]
                 arrival_time = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
 
+                # print(f"imo:{imo}, departure_time:{departure_time}, arrival_time:{arrival_time}")
+
                 # Leg航海時間算出
                 leg_sailing_time = calculate_function.calc_time_diff(departure_time, arrival_time)
                 
@@ -320,6 +324,8 @@ def lambda_handler(event, context):
                     tmp_ratio =  calculated_sailing_time / leg_sailing_time
                     calculated_distance = float(res_simulation_voyage[i]["distance"]["S"]) * tmp_ratio
 
+                    print(f"imo:{imo}, leg_sailing_time:{leg_sailing_time}, calculated_sailing_time:{calculated_sailing_time}, tmp_ratio:{tmp_ratio}, tmpcalculated_distance:{calculated_distance},")
+
                 else:
                     # 上記以外の場合、処理不要のため次の要素へ
                     continue
@@ -329,6 +335,12 @@ def lambda_handler(event, context):
 
                 # LogSpeed算出
                 log_speed = calculated_distance / calculated_sailing_time
+
+                print(f"imo:{imo}, log_speed:{log_speed}")
+
+                # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+                auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+                print(f"auxiliary_equipment: {(auxiliary_equipment)}")
 
                 # FOC算出時にBallast/Ladenどちらの式を使うかを判定
                 if res_simulation_voyage[i]["dispracement"]["S"] == "Ballast":
@@ -344,18 +356,24 @@ def lambda_handler(event, context):
                 a = calc_param_list[1]
                 c = calc_param_list[2]
 
+                print(f"imo:{imo}, alpah:{alpah}, a:{a}, c:{c}, ")
+
                 # 1日あたりのFOC算出（**は指数）
-                foc_per_day = alpah * log_speed ** a + c
+                foc_per_day = alpah * log_speed ** a + c + auxiliary_equipment
                 # 1時間あたりのFOC算出
                 foc_per_hour = foc_per_day / 24
                 # Leg内総FOCを算出
                 leg_total_FOC_voyage = foc_per_hour * calculated_sailing_time
+
+                print(f"imo:{imo}, leg_total_FOC_voyage:{leg_total_FOC_voyage}, foc_per_hour:{foc_per_hour}, foc_per_day:{foc_per_day}")
 
                 #Fuel取得
                 fuel_list = Util.convertFuelOileStringToList(res_simulation_voyage[i]["fuel"]["S"])
 
                 # 燃料別にCO2排出量を算出し、予測値に加算
                 all_co2_simulation += calc_fuel_total_co2(fuel_list, leg_total_FOC_voyage, fuel_oil_type_info_list)
+
+                print(f"imo:{imo}, all_co2_simulation:{all_co2_simulation}")
                 
         elif res_simulation_speed and res_simulation_speed[0]["flag"]["S"] == "1":
             # SpeedPlanが取得できたかつflagが1の場合
@@ -382,18 +400,22 @@ def lambda_handler(event, context):
             # 総Distance（予測値）に加算
             all_distance_simulation = ballast_ditance + laden_ditance
 
+            # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+            auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+            # print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+
             # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
             calc_balast_param_list = ast.literal_eval(res_foc_formulas[0]["me_ballast"]["S"])
             balast_alpha = calc_balast_param_list[0]
             balast_a = calc_balast_param_list[1]
             balast_c = calc_balast_param_list[2]
-            balast_foc_per_day = balast_alpha * ballst_logspeed ** balast_a + balast_c
+            balast_foc_per_day = balast_alpha * ballst_logspeed ** balast_a + balast_c + auxiliary_equipment
             # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
             calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
             laden_alpha = calc_laden_param_list[0]
             laden_a = calc_laden_param_list[1]
             laden_c = calc_laden_param_list[2]
-            laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c
+            laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c + auxiliary_equipment
 
             # 1時間あたりのFOC算出
             ballast_foc_per_hour = balast_foc_per_day / 24
@@ -426,7 +448,7 @@ def lambda_handler(event, context):
         cii_reduction_rate = select.get_cii_reduction_rate(str(year_now))
 
         # End of YearのCII算出
-        print(f"tmp_eof_co2:{(tmp_eof_co2)}, tmp_eof_distance:{(tmp_eof_distance)}, cii_ref, cii_rating:{(cii_rating)}, cii_reduction_rate:{(cii_reduction_rate)}, res_vesselmaster:{(res_vesselmaster)}")
+        print(f"imo:{imo}, tmp_eof_co2:{(tmp_eof_co2)}, tmp_eof_distance:{(tmp_eof_distance)}, cii_ref, cii_rating:{(cii_rating)}, cii_reduction_rate:{(cii_reduction_rate)}, res_vesselmaster:{(res_vesselmaster)}")
         tmp_eof_cii_value, CII_End_of_Year = calculate_function.calc_cii(tmp_eof_co2, tmp_eof_distance, cii_ref, cii_rating, cii_reduction_rate, res_vesselmaster)
             
         data = {
