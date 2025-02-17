@@ -286,6 +286,8 @@ def lambda_handler(event, context):
         if res_simulation_voyage and res_simulation_voyage[0]["flag"]["S"] == "1":
             # VoyagePlanが取得できたかつflagが1の場合
 
+            print(f"imo:{imo} Voyage Plan Simulation Start.")
+
             # VoyagePlanの取得件数分ループ
             for i in range(len(res_simulation_voyage)):
 
@@ -375,20 +377,22 @@ def lambda_handler(event, context):
 
                 print(f"imo:{imo}, all_co2_simulation:{all_co2_simulation}")
                 
-        elif res_simulation_speed and res_simulation_speed[0]["flag"]["S"] == "1":
+        elif res_simulation_speed and res_simulation_speed[0]["flag"]["S"] == "1" and res_simulation_speed[0]["year"]["S"] == year_now:
             # SpeedPlanが取得できたかつflagが1の場合
             
+            print(f"imo:{imo} Speed Plan Simulation Start.")
+
             # Time to End of Year算出（年末 - 現在）
             year_end = datetime(int(year_now), 12, 31, 23, 59, 59)
             time_to_end_of_year = calculate_function.calc_time_diff(dt_now, year_end)
 
             # 航海時間を算出
             sailing_rate = float(res_simulation_speed[0]["salling_rate"]["S"])
-            sailing_time = time_to_end_of_year * sailing_rate
+            sailing_time = time_to_end_of_year * (sailing_rate / 100)
 
             # Ballast、Ladenそれぞれの航海距離を算出
             displacement_rate = float(res_simulation_speed[0]["dispracement_rate"]["S"])
-            ballast_sailing_time = sailing_time * displacement_rate
+            ballast_sailing_time = sailing_time * (displacement_rate / 100)
             laden_sailing_time = sailing_time - ballast_sailing_time
 
             # 時間×速さで距離を算出
