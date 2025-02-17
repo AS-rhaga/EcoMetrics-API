@@ -500,7 +500,7 @@ def lambda_handler(event, context):
 
         # CBを算出する
         to_thisLeg_energy = calc_energy(0, total_lng_oms, 0, total_hfo, total_lfo, total_mdo, total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
-        total_energy     += to_thisLeg_energy
+        total_energy      = to_thisLeg_energy
         to_thisLeg_GHG    = calc_GHG_Actual(0, total_lng_oms, 0, total_hfo, total_lfo, total_mdo, total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
         to_thisLeg_cb     = calc_cb(now_year, to_thisLeg_energy, to_thisLeg_GHG)
 

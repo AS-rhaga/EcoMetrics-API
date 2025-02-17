@@ -488,7 +488,7 @@ def lambda_handler(event, context):
 
         # CBを算出する
         to_thisLeg_energy = calc_energy(0, total_lng_oms, 0, total_hfo, total_lfo, total_mdo, total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
-        total_energy     += to_thisLeg_energy
+        total_energy      = to_thisLeg_energy
         to_thisLeg_GHG    = calc_GHG_Actual(0, total_lng_oms, 0, total_hfo, total_lfo, total_mdo, total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
         to_thisLeg_cb     = calc_cb(now_year, to_thisLeg_energy, to_thisLeg_GHG)
 
@@ -688,6 +688,8 @@ def lambda_handler(event, context):
             total_energy      += simulation_energy
             simulation_leg_cb  = calc_cb(now_year, simulation_energy, simulation_leg_GHG)
 
+            print(f"simulatiuon:::::simulation_leg_GHG:{simulation_leg_GHG}, simulation_energy:{simulation_energy}, simulation_leg_cb:{simulation_leg_cb},")
+
             # シミュレーション計算
             # EUAList_YeartoDateにEUAをセット
             EUAList_Simulation.append([this_year_leg_count + i + 1, simulation_leg_eua])
@@ -696,6 +698,9 @@ def lambda_handler(event, context):
             year_to_leg_GHG = calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_info_list)
             year_to_leg_energy  = total_energy
             year_to_leg_cb  = calc_cb(now_year, year_to_leg_energy, year_to_leg_GHG)
+
+            print(f"total:::::year_to_leg_GHG:{year_to_leg_GHG}, year_to_leg_energy:{year_to_leg_energy}, year_to_leg_cb:{year_to_leg_cb},")
+
             # CBList_YeartoDateに通年CBをセット
             CBList_Simulation.append([this_year_leg_count + i + 1, float(year_to_leg_cb) / 1000000])
 
