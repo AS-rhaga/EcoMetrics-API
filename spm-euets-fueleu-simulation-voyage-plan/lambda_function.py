@@ -202,7 +202,9 @@ def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3
 # 該当年のGHG強度上限値を算出するメソッド
 def calc_GHG_Max(year):
     year = int(year)
-    if year <= 2029:
+    if year <= 2024:
+        target_rate = 0
+    elif year <= 2029:
         target_rate = 2
     elif year <= 2034:
         target_rate = 6

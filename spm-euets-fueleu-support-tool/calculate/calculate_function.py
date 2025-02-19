@@ -28,22 +28,9 @@ def calc_borrowing_limit(thisYear_borrowing, year, energy):
 
     # 今年ボローイングOKかを確認
     if thisYear_borrowing == True:
-        if int(year) <= 2029:
-            target_rate = 2
-        elif int(year) <= 2034:
-            target_rate = 6
-        elif int(year) <= 2039:
-            target_rate = 14.5
-        elif int(year) <= 2044:
-            target_rate = 31
-        elif int(year) <= 2049:
-            target_rate = 62
-        else:
-            target_rate = 80
     
-        # 削減目標量をもとにGHG強度上限を算出
-        GHG_Max = 91.16 * (100- target_rate) / 100
-
+        # GHG強度上限を算出
+        GHG_Max = calc_GHG_Max(year)
         # borrowing_limitを算出
         borrowing_limit = GHG_Max * 0.02 * energy
 
@@ -54,7 +41,9 @@ def calc_borrowing_limit(thisYear_borrowing, year, energy):
 
 def calc_GHG_Max(year):
     year = int(year)
-    if year <= 2029:
+    if year <= 2024:
+        target_rate = 0
+    elif year <= 2029:
         target_rate = 2
     elif year <= 2034:
         target_rate = 6
@@ -159,13 +148,13 @@ def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3
         total_energy += mdo * mdo_lcv
     if mgo > 0:
         mgo_lcv =  float(fuel_oil_type_list["MGO_info_list"]["lcv"]["S"])
-        total_energy += mdo * mgo_lcv
+        total_energy += mgo * mgo_lcv
     if lpg_p > 0:
         lpg_p_lcv =  float(fuel_oil_type_list["LPG_Puropane_info_list"]["lcv"]["S"])
         total_energy += lpg_p * lpg_p_lcv
     if lpg_b > 0:
         lpg_b_lcv =  float(fuel_oil_type_list["LPG_Butane_info_list"]["lcv"]["S"])
-        total_energy += lpg_p * lpg_b_lcv
+        total_energy += lpg_b * lpg_b_lcv
     if nh3_ng > 0:
         nh3_ng_lcv =  float(fuel_oil_type_list["NH3_Ng_info_list"]["lcv"]["S"])
         total_energy += nh3_ng * nh3_ng_lcv

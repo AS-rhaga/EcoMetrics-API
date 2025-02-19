@@ -70,7 +70,9 @@ def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_
 
 def calc_GHG_Max(year):
     year = int(year)
-    if year <= 2029:
+    if year <= 2024:
+        target_rate = 0
+    elif year <= 2029:
         target_rate = 2
     elif year <= 2034:
         target_rate = 6
@@ -139,15 +141,12 @@ def lambda_handler(event, context):
     
     # クエリからインプット情報取得-------------------------------------------------------
     user_id = queryStringParameters['user']
+    input_year = queryStringParameters['year']
     data = queryStringParameters['data']
     data_pooling_list = data.split(',')
 
     # Fuel-Oil-Typeリストを取得する
     fuel_oil_type_info_list = make_fuel_oil_type_info_list()
-
-    # 現在の西暦4桁を取得する
-    dt_now_str = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
-    year_now = dt_now_str[0:4]
 
     # 合計値用変数を設定する。
     total_lng = 0
@@ -179,7 +178,7 @@ def lambda_handler(event, context):
                 continue
 
             # imo, yearをキーに、
-            year_total_list = select.get_year_total_by_year(loop_imo, year_now)
+            year_total_list = select.get_year_total_by_year(loop_imo, input_year)
 
             for year_total in year_total_list:
 
@@ -203,7 +202,7 @@ def lambda_handler(event, context):
                 total_energy += energy
 
         # プーリンググループ合計のCBを算出する
-        total_cb     = calc_cb(year_now, total_energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+        total_cb     = calc_cb(input_year, total_energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
         str_total_cb = str(round(total_cb / 1000000, 1))
 
         # CBがマイナスの場合、コストを算出する
@@ -223,7 +222,7 @@ def lambda_handler(event, context):
         return_datas.append(group_data)
 
     datas = {
-        "ytd_group_total_list":return_datas
+        "group_total_list":return_datas
     }
     datas = json.dumps(datas)
     print(f"datas{type(datas)}: {datas}")

@@ -1,4 +1,6 @@
 
+import copy
+
 from dynamodb import select
 from Util import Util
 from calculate import calculate_function
@@ -34,7 +36,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
     # speed-planのシミュレーション使用フラグ確認
     if simulation_plan_speed:
         speed_flag = simulation_plan_speed[0]["flag"]["S"] if "flag" in simulation_plan_speed[0] else "0"
-        
+
     # シミュレーションプラン管理用リスト
     ytd_exist_voyage_list     = []
     ytd_not_exist_voyage_list = []
@@ -191,7 +193,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             "borrowing_limit": round(borrowing_limit / 1000000),
             "borrowing"      : round(borrowing / 1000000, 1),
             "banking"        : round(banking / 1000000, 1),
-            "total"          : round((total_cb + last_year) / 1000000, 1),
+            "total"          : round(total_cb / 1000000, 1),
             "penalty_factor" : penalty_factor,
             "cost"           : round(cost)
         }
@@ -211,17 +213,33 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         # voyage-planのシミュレーション使用フラグ確認
         if voyage_flag == "1":
 
-            # voyageのオペレーターのオペレーターを確認する
-            for simulation_voyage in simulation_plan_voyage_list:
-                simulation_operator = simulation_voyage["operator"]["S"]
+            # ループ用に保持しておく
+            keep_simulation_plan_voyage_list = simulation_plan_voyage_list.copy()
+
+            # voyageのシミュレーションレコードのオペレーターを確認する → 6
+            # print(f"ループするlen(keep_simulation_plan_voyage_list):{(len(keep_simulation_plan_voyage_list))}")
+            # print(f"operator{type(operator)}:{(operator)}")
+           
+            for i in range(len(keep_simulation_plan_voyage_list)):
+                print(f"len(keep_simulation_plan_voyage_list): {(len(keep_simulation_plan_voyage_list))}")
+                simulation_operator = keep_simulation_plan_voyage_list[i]["operator"]["S"]
 
                 # 基準のyear-totalレコードのオペレーターと一致する場合
                 if simulation_operator == operator:
+                    print("オペレーター一致。")
                     # 実測データが存在するリストに追加
-                    ytd_exist_voyage_list.append(simulation_voyage)
-                    # 各オペレーターで確認していった最後に、実測データ無しリスト入りにならないように
-                    simulation_plan_voyage_list.remove(simulation_voyage)
+                    # print(f"[before]ytd_exist_voyage_listのlen:{(len(ytd_exist_voyage_list))}")
+                    ytd_exist_voyage_list.append(keep_simulation_plan_voyage_list[i])
+                    # print(f"[after]ytd_exist_voyage_listのlen:{(len(ytd_exist_voyage_list))}")
+                    # print("ytdレコードを実測データが存在するリストに追加")
+                    # print(f"simulation_plan_voyage_list削除前レコード数:{(len(simulation_plan_voyage_list))}")
+                    # # 各オペレーターで確認していった最後に、実測データ無しリスト入りにならないように
+                    simulation_plan_voyage_list.remove(keep_simulation_plan_voyage_list[i])
+                    # print(f"simulation_plan_voyage_list削除後レコード数:{(len(simulation_plan_voyage_list))}")
         
+                else:
+                    print(f"オペレーター不一致。")
+
         # speed-planのシミュレーション使用フラグ確認
         if speed_flag == "1":
 
@@ -244,25 +262,25 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         # シミュレーションリストの処理
         # 実測データ有りvoyage-plan
         if len(ytd_exist_voyage_list) > 0:
-            for i in range(len(ytd_exist_voyage_list)):
-                eoy_grouped_vessel_data, total_fuel_list = make_eoy_record.make_voyage_plans_data(imo, vessel_name, rec, ytd_exist_voyage_list, res_foc_formulas, fuel_oil_type_info_list, penalty_factor, last_year, energy)
-                eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
 
-                # End of Yearの燃料消費量Total値に合算
-                total_eoy_hfo += total_fuel_list["eoy_hfo"]
-                total_eoy_lfo += total_fuel_list["eoy_lfo"]
-                total_eoy_mdo += total_fuel_list["eoy_mdo"]
-                total_eoy_mgo += total_fuel_list["eoy_mgo"]
-                total_eoy_lng_oms += total_fuel_list["eoy_lng_oms"]
-                total_eoy_lng_oss += total_fuel_list["eoy_lng_oss"]
-                total_eoy_lng_ods += total_fuel_list["eoy_lng_ods"]
-                total_eoy_lpg_p += total_fuel_list["eoy_lpg_p"]
-                total_eoy_lpg_b += total_fuel_list["eoy_lpg_b"]
-                total_eoy_h2_ng += total_fuel_list["eoy_h2_ng"]
-                total_eoy_nh3_ng += total_fuel_list["eoy_nh3_ng"]
-                total_eoy_methanol_ng += total_fuel_list["eoy_methanol_ng"]
-                total_eoy_nh3_ef += total_fuel_list["eoy_nh3_ef"]
-                total_eoy_energy += total_fuel_list["eoy_energy"]
+            eoy_grouped_vessel_data, total_fuel_list = make_eoy_record.make_voyage_plans_data(imo, vessel_name, rec, ytd_exist_voyage_list, res_foc_formulas, fuel_oil_type_info_list, penalty_factor, last_year, energy)
+            eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
+
+            # End of Yearの燃料消費量Total値に合算
+            total_eoy_hfo += total_fuel_list["simulation_hfo"]
+            total_eoy_lfo += total_fuel_list["simulation_lfo"]
+            total_eoy_mdo += total_fuel_list["simulation_mdo"]
+            total_eoy_mgo += total_fuel_list["simulation_mgo"]
+            total_eoy_lng_oms += total_fuel_list["simulation_lng_oms"]
+            total_eoy_lng_oss += total_fuel_list["simulation_lng_oss"]
+            total_eoy_lng_ods += total_fuel_list["simulation_lng_ods"]
+            total_eoy_lpg_p += total_fuel_list["simulation_lpg_p"]
+            total_eoy_lpg_b += total_fuel_list["simulation_lpg_b"]
+            total_eoy_h2_ng += total_fuel_list["simulation_h2_ng"]
+            total_eoy_nh3_ng += total_fuel_list["simulation_nh3_ng"]
+            total_eoy_methanol_ng += total_fuel_list["simulation_methanol_ng"]
+            total_eoy_nh3_ef += total_fuel_list["simulation_nh3_ef"]
+            total_eoy_energy += total_fuel_list["simulation_energy"]
 
         # 実測データ有りspeed-plan
         elif len(ytd_exist_speed_list) > 0:
@@ -270,20 +288,20 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
 
             # End of Yearの燃料消費量Total値に合算
-            total_eoy_hfo += total_fuel_list["eoy_hfo"]
-            total_eoy_lfo += total_fuel_list["eoy_lfo"]
-            total_eoy_mdo += total_fuel_list["eoy_mdo"]
-            total_eoy_mgo += total_fuel_list["eoy_mgo"]
-            total_eoy_lng_oms += total_fuel_list["eoy_lng_oms"]
-            total_eoy_lng_oss += total_fuel_list["eoy_lng_oss"]
-            total_eoy_lng_ods += total_fuel_list["eoy_lng_ods"]
-            total_eoy_lpg_p += total_fuel_list["eoy_lpg_p"]
-            total_eoy_lpg_b += total_fuel_list["eoy_lpg_b"]
-            total_eoy_h2_ng += total_fuel_list["eoy_h2_ng"]
-            total_eoy_nh3_ng += total_fuel_list["eoy_nh3_ng"]
-            total_eoy_methanol_ng += total_fuel_list["eoy_methanol_ng"]
-            total_eoy_nh3_ef += total_fuel_list["eoy_nh3_ef"]
-            total_eoy_energy += total_fuel_list["eoy_energy"]
+            total_eoy_hfo += total_fuel_list["simulation_hfo"]
+            total_eoy_lfo += total_fuel_list["simulation_lfo"]
+            total_eoy_mdo += total_fuel_list["simulation_mdo"]
+            total_eoy_mgo += total_fuel_list["simulation_mgo"]
+            total_eoy_lng_oms += total_fuel_list["simulation_lng_oms"]
+            total_eoy_lng_oss += total_fuel_list["simulation_lng_oss"]
+            total_eoy_lng_ods += total_fuel_list["simulation_lng_ods"]
+            total_eoy_lpg_p += total_fuel_list["simulation_lpg_p"]
+            total_eoy_lpg_b += total_fuel_list["simulation_lpg_b"]
+            total_eoy_h2_ng += total_fuel_list["simulation_h2_ng"]
+            total_eoy_nh3_ng += total_fuel_list["simulation_nh3_ng"]
+            total_eoy_methanol_ng += total_fuel_list["simulation_methanol_ng"]
+            total_eoy_nh3_ef += total_fuel_list["simulation_nh3_ef"]
+            total_eoy_energy += total_fuel_list["simulation_energy"]
 
         # 実測データ有り かつ シミュレーションなし
         else:
@@ -300,7 +318,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
                 "borrowing_limit"    : round(borrowing_limit / 1000000, 1),
                 "borrowing"          : round(borrowing / 1000000, 1),
                 "banking"            : round(banking / 1000000, 1),
-                "total"              : round((total_cb + last_year) / 1000000, 1),
+                "total"              : round(total_cb / 1000000, 1),
                 "penalty_factor"     : penalty_factor,
                 "cost"               : round(cost)
             }
@@ -322,20 +340,20 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         print(f"実測データ無しvoyage-planのtotal_fuel_list:{(total_fuel_list)}")
 
         # End of Yearの燃料消費量Total値に合算
-        total_eoy_hfo += total_fuel_list["eoy_hfo"]
-        total_eoy_lfo += total_fuel_list["eoy_lfo"]
-        total_eoy_mdo += total_fuel_list["eoy_mdo"]
-        total_eoy_mgo += total_fuel_list["eoy_mgo"]
-        total_eoy_lng_oms += total_fuel_list["eoy_lng_oms"]
-        total_eoy_lng_oss += total_fuel_list["eoy_lng_oss"]
-        total_eoy_lng_ods += total_fuel_list["eoy_lng_ods"]
-        total_eoy_lpg_p += total_fuel_list["eoy_lpg_p"]
-        total_eoy_lpg_b += total_fuel_list["eoy_lpg_b"]
-        total_eoy_h2_ng += total_fuel_list["eoy_h2_ng"]
-        total_eoy_nh3_ng += total_fuel_list["eoy_nh3_ng"]
-        total_eoy_methanol_ng += total_fuel_list["eoy_methanol_ng"]
-        total_eoy_nh3_ef += total_fuel_list["eoy_nh3_ef"]
-        total_eoy_energy += total_fuel_list["eoy_energy"]
+        total_eoy_hfo += total_fuel_list["simulation_hfo"]
+        total_eoy_lfo += total_fuel_list["simulation_lfo"]
+        total_eoy_mdo += total_fuel_list["simulation_mdo"]
+        total_eoy_mgo += total_fuel_list["simulation_mgo"]
+        total_eoy_lng_oms += total_fuel_list["simulation_lng_oms"]
+        total_eoy_lng_oss += total_fuel_list["simulation_lng_oss"]
+        total_eoy_lng_ods += total_fuel_list["simulation_lng_ods"]
+        total_eoy_lpg_p += total_fuel_list["simulation_lpg_p"]
+        total_eoy_lpg_b += total_fuel_list["simulation_lpg_b"]
+        total_eoy_h2_ng += total_fuel_list["simulation_h2_ng"]
+        total_eoy_nh3_ng += total_fuel_list["simulation_nh3_ng"]
+        total_eoy_methanol_ng += total_fuel_list["simulation_methanol_ng"]
+        total_eoy_nh3_ef += total_fuel_list["simulation_nh3_ef"]
+        total_eoy_energy += total_fuel_list["simulation_energy"]
 
         # 空のytd_grouped_vessel_dataレコードを追加
         ytd_grouped_vessel_data_zero = {
@@ -361,20 +379,20 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
 
         # End of Yearの燃料消費量Total値に合算
-        total_eoy_hfo += total_fuel_list["eoy_hfo"]
-        total_eoy_lfo += total_fuel_list["eoy_lfo"]
-        total_eoy_mdo += total_fuel_list["eoy_mdo"]
-        total_eoy_mgo += total_fuel_list["eoy_mgo"]
-        total_eoy_lng_oms += total_fuel_list["eoy_lng_oms"]
-        total_eoy_lng_oss += total_fuel_list["eoy_lng_oss"]
-        total_eoy_lng_ods += total_fuel_list["eoy_lng_ods"]
-        total_eoy_lpg_p += total_fuel_list["eoy_lpg_p"]
-        total_eoy_lpg_b += total_fuel_list["eoy_lpg_b"]
-        total_eoy_h2_ng += total_fuel_list["eoy_h2_ng"]
-        total_eoy_nh3_ng += total_fuel_list["eoy_nh3_ng"]
-        total_eoy_methanol_ng += total_fuel_list["eoy_methanol_ng"]
-        total_eoy_nh3_ef += total_fuel_list["eoy_nh3_ef"]
-        total_eoy_energy += total_fuel_list["eoy_energy"]
+        total_eoy_hfo += total_fuel_list["simulation_hfo"]
+        total_eoy_lfo += total_fuel_list["simulation_lfo"]
+        total_eoy_mdo += total_fuel_list["simulation_mdo"]
+        total_eoy_mgo += total_fuel_list["simulation_mgo"]
+        total_eoy_lng_oms += total_fuel_list["simulation_lng_oms"]
+        total_eoy_lng_oss += total_fuel_list["simulation_lng_oss"]
+        total_eoy_lng_ods += total_fuel_list["simulation_lng_ods"]
+        total_eoy_lpg_p += total_fuel_list["simulation_lpg_p"]
+        total_eoy_lpg_b += total_fuel_list["simulation_lpg_b"]
+        total_eoy_h2_ng += total_fuel_list["simulation_h2_ng"]
+        total_eoy_nh3_ng += total_fuel_list["simulation_nh3_ng"]
+        total_eoy_methanol_ng += total_fuel_list["simulation_methanol_ng"]
+        total_eoy_nh3_ef += total_fuel_list["simulation_nh3_ef"]
+        total_eoy_energy += total_fuel_list["simulation_energy"]
 
         # 空のytd_grouped_vessel_dataレコードを追加
         ytd_grouped_vessel_data_zero = {
@@ -546,8 +564,8 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         foc       = float(rec["total_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"])
-        borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec else "0")
+        banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
+        borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec and rec["borrowing"]["S"] != "" else "0")
 
         # 消費量エネルギー（EU Rate考慮済）を算出する
         GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
@@ -562,7 +580,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         total_energy += energy
 
         # 必要な計算を行う
-        total_cb        = cb + borrowing + banking + last_year
+        total_cb        = (cb + borrowing + banking + last_year)
         penalty_factor  = (consecutive_years) / 10 + 1
 
         cb_cost = 0
@@ -579,12 +597,12 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
             "operator"           : operator,
             "distance"           : round(distance),
             "foc"                : round(foc),
-            "end_of_year"        : round(total_cb / 1000000, 1),
+            "end_of_year"        : round(cb / 1000000, 1),
             "last_year"          : round(last_year / 1000000, 1),
             "borrowing_limit"    : round(borrowing_limit / 1000000, 1),
             "borrowing"          : round(borrowing / 1000000, 1),
             "banking"            : round(banking / 1000000, 1),
-            "total"              : round((cb + last_year) / 1000000, 1),
+            "total"              : round(total_cb / 1000000, 1),
             "penalty_factor"     : penalty_factor,
             "cost"               : round(cb_cost)
         }

@@ -34,7 +34,24 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
     total_distance    = 0
     total_eua         = 0
     total_energy      = 0
+    eoy_cb            = 0
     total_cb          = 0
+
+    # simulation部分だけの合計値
+    simulation_total_lng_oms     = 0
+    simulation_total_lng_oss     = 0
+    simulation_total_lng_ods     = 0
+    simulation_total_hfo         = 0
+    simulation_total_lfo         = 0
+    simulation_total_mdo         = 0
+    simulation_total_mgo         = 0
+    simulation_total_lpg_p       = 0
+    simulation_total_lpg_b       = 0
+    simulation_total_h2_ng       = 0
+    simulation_total_nh3_ng      = 0
+    simulation_total_methanol_ng = 0
+    simulation_total_nh3_ef      = 0
+    simulation_total_energy      = 0
 
     # 処理実施時の年、日付を取得
     dt_now = datetime.now()
@@ -156,46 +173,60 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
                 if  fuel_type == "LNG(Otto Diesel Speed)":
                     simulation_leg_lng_ods = simulation_leg_foc * int(fuel_rate) / 100
                     total_lng_ods     += simulation_leg_lng_ods
+                    simulation_total_lng_ods += simulation_leg_lng_ods
                 elif  fuel_type == "LNG(Otto Medium Speed)":
                     simulation_leg_lng_oms = simulation_leg_foc * int(fuel_rate) / 100
                     total_lng_oms     += simulation_leg_lng_oms
+                    simulation_total_lng_oms += simulation_leg_lng_oms
                 elif  fuel_type == "LNG(Otto Slow Speed)":
                     simulation_leg_lng_oss = simulation_leg_foc * int(fuel_rate) / 100
                     total_lng_oss     += simulation_leg_lng_oss
+                    simulation_total_lng_oss += simulation_leg_lng_oss
                 elif fuel_type == "HFO":
                     simulation_leg_hfo = simulation_leg_foc * int(fuel_rate) / 100
                     total_hfo          += simulation_leg_hfo
+                    simulation_total_hfo += simulation_leg_hfo
                 elif fuel_type == "LFO":
                     simulation_leg_lfo = simulation_leg_foc * int(fuel_rate) / 100
                     total_lfo         += simulation_leg_lfo
+                    simulation_total_lfo += simulation_leg_lfo
                 elif fuel_type == "MDO":
                     simulation_leg_mdo = simulation_leg_foc * int(fuel_rate) / 100
                     total_mdo         += simulation_leg_mdo
+                    simulation_total_mdo += simulation_leg_mdo
                 elif fuel_type == "MGO":
                     simulation_leg_mgo = simulation_leg_foc * int(fuel_rate) / 100
                     total_mgo         += simulation_leg_mgo
+                    simulation_total_mgo += simulation_leg_mgo
                 elif fuel_type == "LPG(Propane)":
                     simulation_leg_lpg_p = simulation_leg_foc * int(fuel_rate) / 100
                     total_lpg_p         += simulation_leg_lpg_p
+                    simulation_total_lpg_p += simulation_leg_lpg_p
                 elif fuel_type == "LPG(Butane)":
                     simulation_leg_lpg_b = simulation_leg_foc * int(fuel_rate) / 100
                     total_lpg_b         += simulation_leg_lpg_b
+                    simulation_total_lpg_b += simulation_leg_lpg_b
                 elif fuel_type == "NH3(Natural gas)":
                     simulation_leg_nh3_ng = simulation_leg_foc * int(fuel_rate) / 100
                     total_nh3_ng         += simulation_leg_nh3_ng
+                    simulation_total_nh3_ng += simulation_leg_nh3_ng
                 elif fuel_type == "NH3(e-fuel)":
                     simulation_leg_nh3_ef = simulation_leg_foc * int(fuel_rate) / 100
                     total_nh3_ef         += simulation_leg_nh3_ef
+                    simulation_total_nh3_ef += simulation_leg_nh3_ef
                 elif fuel_type == "Methanol(Natural gas)":
                     simulation_leg_methanol_ng = simulation_leg_foc * int(fuel_rate) / 100
                     total_methanol_ng         += simulation_leg_methanol_ng
+                    simulation_total_methanol_ng += simulation_leg_methanol_ng
                 elif fuel_type == "H2(Natural gas)":
                     simulation_leg_h2_ng = simulation_leg_foc * int(fuel_rate) / 100
                     total_h2_ng         += simulation_leg_h2_ng
+                    simulation_total_h2_ng += simulation_leg_h2_ng
 
             # シミュレーション部分のエネルギー総消費量を算出する
             simulation_energy  = calculate_function.calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
             total_energy      += simulation_energy
+            simulation_total_energy += simulation_energy
 
             # 合計用変数に加算する
             total_distance += leg_distance
@@ -203,7 +234,14 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
 
     # 最終的なCBを算出
     total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
-    total_cb  = calculate_function.calc_cb(now_year, total_energy, total_GHG)
+    print(f"レコード作成用データ  imo:{(imo)} eoy_total_lfo:{(total_lfo)}, eoy_total_mgo:{(total_mgo)}, eoy_total_energy:{(total_energy)}")
+    eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
+
+    # banking, borrowingを取得
+    banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
+    borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
+
+    total_cb  = eoy_cb + borrowing + last_year
 
     # CB Costの算出
     if float(total_cb) >= 0:
@@ -220,33 +258,35 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
         "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else voyage_plan_list[0]["operator"]["S"],
         "distance"       : round(total_distance),
         "foc"            : round(total_foc),
-        "end_of_year"    : round(float(total_cb) / 1000000, 1),
+        "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
         "last_year"      : round(last_year / 1000000, 1),
         "borrowing_limit": round(borrowing_limit / 1000000),
-        "borrowing"      : round(float(thisyear_year_total["borrowing"]["S"]) / 1000000, 1) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0,
-        "banking"        : float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0,
-        "total"          : round((float(total_cb) + last_year) / 1000000, 1),
+        "borrowing"      : round(borrowing / 1000000, 1),
+        "banking"        : round(banking / 1000000, 1),
+        "total"          : round(float(total_cb) / 1000000, 1),
         "penalty_factor" : penalty_factor,
         "cost"        : round(eoy_cb_cost, 0)
     }
-    total_fuel_list = {
-        "eoy_hfo": total_hfo,
-        "eoy_lfo": total_lfo,
-        "eoy_mdo": total_mdo,
-        "eoy_mgo": total_mgo,
-        "eoy_lng_oms": total_lng_oms,
-        "eoy_lng_oss": total_lng_oss,
-        "eoy_lng_ods": total_lng_ods,
-        "eoy_lpg_p": total_lpg_p,
-        "eoy_lpg_b": total_lpg_b,
-        "eoy_h2_ng": total_h2_ng,
-        "eoy_nh3_ng": total_nh3_ng,
-        "eoy_methanol_ng": total_methanol_ng,
-        "eoy_nh3_ef": total_nh3_ef, 
-        "eoy_energy": total_energy
+
+    # ytdも入った燃料消費量 → シミュレーション部分だけの燃料消費量
+    simuletion_fuel_list = {
+        "simulation_hfo": simulation_total_hfo,
+        "simulation_lfo": simulation_total_lfo,
+        "simulation_mdo": simulation_total_mdo,
+        "simulation_mgo": simulation_total_mgo,
+        "simulation_lng_oms": simulation_total_lng_oms,
+        "simulation_lng_oss": simulation_total_lng_oss,
+        "simulation_lng_ods": simulation_total_lng_ods,
+        "simulation_lpg_p": simulation_total_lpg_p,
+        "simulation_lpg_b": simulation_total_lpg_b,
+        "simulation_h2_ng": simulation_total_h2_ng,
+        "simulation_nh3_ng": simulation_total_nh3_ng,
+        "simulation_methanol_ng": simulation_total_methanol_ng,
+        "simulation_nh3_ef": simulation_total_nh3_ef, 
+        "simulation_energy": simulation_total_energy
     }
 
-    return dataset, total_fuel_list
+    return dataset, simuletion_fuel_list
 
 def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_plan, res_foc_formulas, fuel_oil_type_list,penalty_factor, last_year, ytd_energy):
 
@@ -268,7 +308,24 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
     total_distance    = 0
     total_eua         = 0
     total_energy      = 0
+    eoy_cb            = 0
     total_cb          = 0
+
+    # simulation部分だけの合計値
+    simulation_total_lng_oms     = 0
+    simulation_total_lng_oss     = 0
+    simulation_total_lng_ods     = 0
+    simulation_total_hfo         = 0
+    simulation_total_lfo         = 0
+    simulation_total_mdo         = 0
+    simulation_total_mgo         = 0
+    simulation_total_lpg_p       = 0
+    simulation_total_lpg_b       = 0
+    simulation_total_h2_ng       = 0
+    simulation_total_nh3_ng      = 0
+    simulation_total_methanol_ng = 0
+    simulation_total_nh3_ef      = 0
+    simulation_total_energy      = 0
 
     # 処理実施時の年、日付を取得
     dt_now = datetime.now()
@@ -364,46 +421,60 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
             if  fuel_type == "LNG(Otto Diesel Speed)":
                 simulation_leg_lng_ods = simulation_leg_foc * int(fuel_rate) / 100
                 total_lng_ods     += simulation_leg_lng_ods
+                simulation_total_lng_ods += simulation_leg_lng_ods
             elif  fuel_type == "LNG(Otto Medium Speed)":
                 simulation_leg_lng_oms = simulation_leg_foc * int(fuel_rate) / 100
                 total_lng_oms     += simulation_leg_lng_oms
+                simulation_total_lng_oms += simulation_leg_lng_oms
             elif  fuel_type == "LNG(Otto Slow Speed)":
                 simulation_leg_lng_oss = simulation_leg_foc * int(fuel_rate) / 100
                 total_lng_oss     += simulation_leg_lng_oss
+                simulation_total_lng_oss += simulation_leg_lng_oss
             elif fuel_type == "HFO":
                 simulation_leg_hfo = simulation_leg_foc * int(fuel_rate) / 100
                 total_hfo          += simulation_leg_hfo
+                simulation_total_hfo += simulation_leg_hfo
             elif fuel_type == "LFO":
                 simulation_leg_lfo = simulation_leg_foc * int(fuel_rate) / 100
                 total_lfo         += simulation_leg_lfo
+                simulation_total_lfo += simulation_leg_lfo
             elif fuel_type == "MDO":
                 simulation_leg_mdo = simulation_leg_foc * int(fuel_rate) / 100
                 total_mdo         += simulation_leg_mdo
+                simulation_total_mdo += simulation_leg_mdo
             elif fuel_type == "MGO":
                 simulation_leg_mgo = simulation_leg_foc * int(fuel_rate) / 100
                 total_mgo         += simulation_leg_mgo
+                simulation_total_mgo += simulation_leg_mgo
             elif fuel_type == "LPG(Propane)":
                 simulation_leg_lpg_p = simulation_leg_foc * int(fuel_rate) / 100
                 total_lpg_p         += simulation_leg_lpg_p
+                simulation_total_lpg_p += simulation_leg_lpg_p
             elif fuel_type == "LPG(Butane)":
                 simulation_leg_lpg_b = simulation_leg_foc * int(fuel_rate) / 100
                 total_lpg_b         += simulation_leg_lpg_b
+                simulation_total_lpg_b += simulation_leg_lpg_b
             elif fuel_type == "NH3(Natural gas)":
                 simulation_leg_nh3_ng = simulation_leg_foc * int(fuel_rate) / 100
                 total_nh3_ng         += simulation_leg_nh3_ng
+                simulation_total_nh3_ng += simulation_leg_nh3_ng
             elif fuel_type == "NH3(e-fuel)":
                 simulation_leg_nh3_ef = simulation_leg_foc * int(fuel_rate) / 100
                 total_nh3_ef         += simulation_leg_nh3_ef
+                simulation_total_nh3_ef += simulation_leg_nh3_ef
             elif fuel_type == "Methanol(Natural gas)":
                 simulation_leg_methanol_ng = simulation_leg_foc * int(fuel_rate) / 100
                 total_methanol_ng         += simulation_leg_methanol_ng
+                simulation_total_methanol_ng += simulation_leg_methanol_ng
             elif fuel_type == "H2(Natural gas)":
                 simulation_leg_h2_ng = simulation_leg_foc * int(fuel_rate) / 100
                 total_h2_ng         += simulation_leg_h2_ng
+                simulation_total_h2_ng += simulation_leg_h2_ng
 
         # シミュレーション部分のエネルギー総消費量を算出する
         simulation_energy  = calculate_function.calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
         total_energy      += simulation_energy
+        simulation_total_energy += simulation_energy
 
         # 合計用変数に加算する
         total_distance += total_ballast_laden_distance
@@ -411,8 +482,14 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
 
         # CB算出
         total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
-        total_cb  = calculate_function.calc_cb(now_year, total_energy, total_GHG)
-        print(f"simulation_energy:{simulation_energy}, ytd_energy:{ytd_energy}, total_energy:{total_energy}, total_GHG:{total_GHG}")
+        eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
+
+        # banking, borrowingを取得
+        banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
+        borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
+
+        total_cb  = eoy_cb + borrowing + last_year
+        print(f"imo:{(imo)} total_cb:{(total_cb)}, eoy_cb:{(eoy_cb)}, borrowing:{(borrowing)}, last_year:{(last_year)}")
 
         # CB Costの算出
         if float(total_cb) >= 0:
@@ -422,7 +499,6 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
 
     borrowing_limit = calculate_function.calc_borrowing_limit(True, year, total_energy)
 
-
     # Speed Planのシミュレーション用データ
     dataset = {
         "imo"            : imo,
@@ -430,31 +506,32 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else speed_plan[0]["operator"]["S"],
         "distance"       : round(total_distance),
         "foc"            : round(total_foc),
-        "end_of_year"    : round(float(total_cb) / 1000000, 1),
+        "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
         "last_year"      : round(last_year / 1000000, 1),
         "borrowing_limit": round(borrowing_limit / 1000000, 1),
-        "borrowing"      : round(float(thisyear_year_total["borrowing"]["S"]) / 1000000, 1) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0,
-        "banking"        : float(thisyear_year_total["banking"]["S"] if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0),
-        "total"          : round((float(total_cb) + last_year) / 1000000, 1),
+        "borrowing"      : round(borrowing / 1000000, 1),
+        "banking"        : round(banking / 1000000, 1),
+        "total"          : round(float(total_cb) / 1000000, 1),
         "penalty_factor" : penalty_factor,
         "cost"        : round(eoy_cb_cost)
     }
 
-    total_fuel_list = {
-        "eoy_hfo": total_hfo,
-        "eoy_lfo": total_lfo,
-        "eoy_mdo": total_mdo,
-        "eoy_mgo": total_mgo,
-        "eoy_lng_oms": total_lng_oms,
-        "eoy_lng_oss": total_lng_oss,
-        "eoy_lng_ods": total_lng_ods,
-        "eoy_lpg_p": total_lpg_p,
-        "eoy_lpg_b": total_lpg_b,
-        "eoy_h2_ng": total_h2_ng,
-        "eoy_nh3_ng": total_nh3_ng,
-        "eoy_methanol_ng": total_methanol_ng,
-        "eoy_nh3_ef": total_nh3_ef, 
-        "eoy_energy": total_energy
+    # ytdも入った燃料消費量 → シミュレーション部分だけの燃料消費量
+    simuletion_fuel_list = {
+        "simulation_hfo": simulation_total_hfo,
+        "simulation_lfo": simulation_total_lfo,
+        "simulation_mdo": simulation_total_mdo,
+        "simulation_mgo": simulation_total_mgo,
+        "simulation_lng_oms": simulation_total_lng_oms,
+        "simulation_lng_oss": simulation_total_lng_oss,
+        "simulation_lng_ods": simulation_total_lng_ods,
+        "simulation_lpg_p": simulation_total_lpg_p,
+        "simulation_lpg_b": simulation_total_lpg_b,
+        "simulation_h2_ng": simulation_total_h2_ng,
+        "simulation_nh3_ng": simulation_total_nh3_ng,
+        "simulation_methanol_ng": simulation_total_methanol_ng,
+        "simulation_nh3_ef": simulation_total_nh3_ef, 
+        "simulation_energy": simulation_total_energy
     }
 
-    return dataset, total_fuel_list
+    return dataset, simuletion_fuel_list

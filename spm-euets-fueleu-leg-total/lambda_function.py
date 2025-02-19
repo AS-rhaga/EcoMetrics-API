@@ -111,7 +111,9 @@ def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_
 
 def calc_GHG_Max(year):
     year = int(year)
-    if year <= 2029:
+    if year <= 2024:
+        target_rate = 0
+    elif year <= 2029:
         target_rate = 2
     elif year <= 2034:
         target_rate = 6
@@ -553,10 +555,10 @@ def main(imo, timestamp):
             leg_count       += 1
             leg_no           = year_timestamp + "{:0>3}".format(leg_count)
 
-            # 航海に出発した場合この時点で海上なので、port_codeを参照できない
-            if state != "IN PORT":
-                port_code = keep_port_code
-            arrival_port     = check_port_name(port_code)
+            # 停泊中の場合、到着港は出発港と同じ
+            if state == "IN PORT":
+                eta_port_code = keep_port_code
+            arrival_port     = check_port_name(eta_port_code)
             print(f"arrival_port_name: {(arrival_port)}")
 
             arrival_time     = formatted_date

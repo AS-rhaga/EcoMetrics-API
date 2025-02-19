@@ -217,7 +217,7 @@ def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, 
     else:
         eu_ets_rate = 100
 
-    print(f"eu_ets_rate: {(eu_ets_rate)}")
+    # print(f"eu_ets_rate: {(eu_ets_rate)}")
     if lng_ods > 0:
         lng_ods_co2_factor =  float(fuel_oil_type_info_list["LNG_ODS_info_list"]["emission_factor"]["S"])
         co2_total += lng_ods * lng_ods_co2_factor
@@ -261,32 +261,27 @@ def calc_co2(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, 
     return co2_total
 
 # EUAの算出メソッド
-def calc_eua(year, eu_rate, total_co2):
+def calc_eua(year, total_co2):
 
     # EUAの算出
     eu_ets_rate = 0
     eua = 0
 
-    # EU Rateの確認
-    if eu_rate == 0:
-        # EU外航海は対象外なのでゼロ
-        total_co2 = 0
+    # EU-ETS対象割合を確認
+    if year == "2024":
+        eu_ets_rate = 40
+    elif year == "2025":
+        eu_ets_rate = 70
     else:
-        # EU-ETS対象割合を確認
-        if year == "2024":
-            eu_ets_rate = 40
-        elif year == "2025":
-            eu_ets_rate = 70
-        else:
-            eu_ets_rate = 100
-        print(f"eu_ets_rate: {(eu_ets_rate)}")
+        eu_ets_rate = 100
+    # print(f"eu_ets_rate: {(eu_ets_rate)}")
 
-        eua       = total_co2 * float(eu_ets_rate) / 100 * float(eu_rate) / 100
-        print(f"eua{type(eua)}: {eua}")
+    eua       = total_co2 * float(eu_ets_rate) / 100
+    # print(f"eua{type(eua)}: {eua}")
     return eua
 
 # エネルギーの総消費量を算出するメソッド
-def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
+def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
     total_energy = 0
 
     if lng_ods > 0:
@@ -329,7 +324,7 @@ def calc_energy(eu_rate, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, l
         h2_ng_lcv = float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["lcv"]["S"])
         total_energy += h2_ng * h2_ng_lcv
 
-    return_energy = total_energy * float(eu_rate) / 100
+    return_energy = total_energy
 
     return return_energy
 
@@ -393,12 +388,14 @@ def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b,
 
     if sum_foc != 0:
         GHG_Actual = round(float(sum_ghg / sum_foc), 2)
-    print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
+    # print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual
 
 def calc_GHG_Max(year):
     year = int(year)
-    if year <= 2029:
+    if year <= 2024:
+        target_rate = 0
+    elif year <= 2029:
         target_rate = 2
     elif year <= 2034:
         target_rate = 6
@@ -412,18 +409,16 @@ def calc_GHG_Max(year):
         target_rate = 80
 
     GHG_Max = round(float(91.16 * (100 - float(target_rate)) / 100), 2)
-    print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
+    # print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
     return GHG_Max
 
 # コンプライアンスバランスを算出するメソッド
 def calc_cb(year_timestamp, energy, GHG_Actual):
     GHG_Max    = calc_GHG_Max(year_timestamp)
     cb = (GHG_Max - GHG_Actual) * energy
-    print(f"cb{type(cb)}: {cb}")
-    cb_formatted = str(round(float(cb), 1))
-    print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
+    # print(f"cb{type(cb)}: {cb}")
 
-    return cb_formatted
+    return cb
 
 def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formulas, fuel_oil_type_list, ytd_energy):
 
@@ -495,11 +490,11 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
         # 各legの期間から、反映割合を算出する
         # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
         if str_now <= str_departure_time:
-            print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
+            # print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
             leg_rate              = 1
 
         elif str_now <= str_arrival_time:
-            print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは現在進行中")
+            # print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは現在進行中")
             # 表示する範囲の時間を算出し、leg全体に対する割合を求める。
             dt_time_from  = to_datetime(str_now)
             dt_time_to    = to_datetime(str_arrival_time)
@@ -511,7 +506,7 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
             leg_rate              = float(leg_part_time / leg_total_time)
 
         else:
-            print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
+            # print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
             # 以降の処理は行わず、次のlegを確認
             continue
 
@@ -525,6 +520,9 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
 
         if res_foc_formulas:
 
+            # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+            auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+
             # Ballast、Ladenどちらか判断して、FOCを算出
             if displacement == "Ballast":
                 # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
@@ -532,19 +530,19 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
                 ballast_alpha = calc_balast_param_list[0]
                 ballast_a = calc_balast_param_list[1]
                 ballast_c = calc_balast_param_list[2]
-                simulation_foc_per_day = ballast_alpha * leg_log_speed ** ballast_a + ballast_c
+                simulation_foc_per_day = ballast_alpha * leg_log_speed ** ballast_a + ballast_c + auxiliary_equipment
             else:
                 # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
                 calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
                 laden_alpha = calc_laden_param_list[0]
                 laden_a = calc_laden_param_list[1]
                 laden_c = calc_laden_param_list[2]
-                simulation_foc_per_day = laden_alpha * leg_log_speed ** laden_a + laden_c
+                simulation_foc_per_day = laden_alpha * leg_log_speed ** laden_a + laden_c + auxiliary_equipment
 
             # 1時間あたりのFOC算出
             simulation_foc_per_hour = simulation_foc_per_day / 24
             # Leg内総FOCを算出
-            simulation_leg_foc = simulation_foc_per_hour * leg_total_time
+            simulation_leg_foc = simulation_foc_per_hour * leg_total_time * leg_eu_rate / 100
 
             # 燃料別消費量を算出する
             fuel_list = convertFuelOileStringToList(voyage_plan_list[i]["fuel"]["S"])  
@@ -611,10 +609,10 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
             # シミュレーション部分で実際に排出したco2を算出する
             simulation_leg_co2 = calc_co2(now_year, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
             # シミュレーション部分のEUAを算出する
-            simulation_leg_eua = calc_eua(now_year, leg_eu_rate, simulation_leg_co2)
+            simulation_leg_eua = calc_eua(now_year, simulation_leg_co2)
 
             # シミュレーション部分のエネルギー総消費量を算出する
-            simulation_energy  = calc_energy(leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+            simulation_energy  = calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
             total_energy      += simulation_energy
 
             # 合計用変数に加算する
@@ -709,18 +707,21 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
 
     if res_foc_formulas: 
 
+        # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
+        auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
+
         # Ballast用の計算パラメータを取得し、1日当たりのFOCを算出
         calc_balast_param_list = ast.literal_eval(res_foc_formulas[0]["me_ballast"]["S"])
         ballast_alpha = calc_balast_param_list[0]
         ballast_a = calc_balast_param_list[1]
         ballast_c = calc_balast_param_list[2]
-        ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c
+        ballast_foc_per_day = ballast_alpha * ballast_logspeed ** ballast_a + ballast_c + auxiliary_equipment
         # Laden用の計算パラメータを取得し、1日当たりのFOCを算出
         calc_laden_param_list = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
         laden_alpha = calc_laden_param_list[0]
         laden_a = calc_laden_param_list[1]
         laden_c = calc_laden_param_list[2]
-        laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c
+        laden_foc_per_day = laden_alpha * laden_logspeed ** laden_a + laden_c + auxiliary_equipment
 
         # 1時間あたりのFOC算出
         ballast_foc_per_hour = ballast_foc_per_day / 24
@@ -729,7 +730,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         ballast_foc = ballast_foc_per_hour * ballast_sailing_time
         laden_foc = laden_foc_per_hour * ballast_sailing_time
         # Leg内総FOCを算出
-        simulation_leg_foc = ballast_foc + laden_foc
+        simulation_leg_foc = (ballast_foc + laden_foc) * leg_eu_rate / 100
         
         # 燃料別消費量を算出する
         fuel_list = convertFuelOileStringToList(speed_plan[0]["fuel"]["S"]) 
@@ -796,10 +797,10 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         simulation_leg_co2 = calc_co2(now_year, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
 
         # シミュレーション部分のEUAを算出する
-        simulation_leg_eua = calc_eua(now_year, leg_eu_rate, simulation_leg_co2)
+        simulation_leg_eua = calc_eua(now_year, simulation_leg_co2)
 
         # シミュレーション部分のエネルギー総消費量を算出する
-        simulation_energy  = calc_energy(leg_eu_rate, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
+        simulation_energy  = calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
         total_energy      += simulation_energy
 
         # 合計用変数に加算する
@@ -810,7 +811,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         # CB算出
         total_GHG = calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
         total_cb  = calc_cb(now_year, total_energy, total_GHG)
-        print(f"simulation_energy:{simulation_energy}, ytd_energy:{ytd_energy}, total_energy:{total_energy}, total_GHG:{total_GHG}")
+        # print(f"simulation_energy:{simulation_energy}, ytd_energy:{ytd_energy}, total_energy:{total_energy}, total_GHG:{total_GHG}")
 
         # Voyage Planのシミュレーション用データ
         dataset = {
@@ -859,7 +860,9 @@ def calc_eua_cb(imo):
 
     # シミュレーションプラン管理用リスト
     ytd_exist_voyage_list     = []
+    ytd_not_exist_voyage_list = []
     ytd_exist_speed_list      = []
+    ytd_not_exist_speed_list  = []
 
     # 同一imoのyear-totalリストでループ
     for year_rec in total_year_total_list:
@@ -884,7 +887,7 @@ def calc_eua_cb(imo):
         # 昨年分のレコードを入れるリスト
         last_year_rec = []
 
-        print(f"total_year_total_list:{total_year_total_list}")
+        # print(f"total_year_total_list:{total_year_total_list}")
         # 同一imoのyear-totalリストでループ
         for year_rec in total_year_total_list:
 
@@ -904,8 +907,8 @@ def calc_eua_cb(imo):
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         last_year = 0
         if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"])
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"] if "borrowing" in last_year_rec else "0")
+            last_year_banking   = float(last_year_rec["banking"]["S"] if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else "0")
+            last_year_borrowing = float(last_year_rec["borrowing"]["S"] if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else "0")
 
             if last_year_borrowing > 0:
                 last_year = last_year_borrowing * (-1.1)
@@ -925,13 +928,11 @@ def calc_eua_cb(imo):
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"])
-        borrowing = float(rec["borrowing"]["S"] if "borrowing" in last_year_rec else "0")
+        banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
+        borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec and rec["borrowing"]["S"] != "" else "0")
 
         # CBから消費量エネルギー（EU Rate考慮済）を算出する
-        GHG_Max    = calc_GHG_Max(year_now)
-        GHG_Actual = calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-        energy          = cb / (GHG_Max - GHG_Actual)
+        energy     = calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
 
         # 必要な計算を行う
         foc             = lng + hfo + lfo + mdo + mgo
@@ -958,14 +959,22 @@ def calc_eua_cb(imo):
         # voyage-planのシミュレーション使用フラグ確認
         if voyage_flag == "1":
 
+            # ループ用に保持しておく
+            keep_simulation_plan_voyage_list = simulation_plan_voyage_list.copy()
+
             # voyageのオペレーターを確認する
-            for simulation_voyage in simulation_plan_voyage_list:
+            for simulation_voyage in keep_simulation_plan_voyage_list:
                 simulation_operator = simulation_voyage["operator"]["S"]
 
                 # 基準のyear-totalレコードのオペレーターと一致する場合
                 if simulation_operator == operator:
                     # 実測データが存在するリストに追加
                     ytd_exist_voyage_list.append(simulation_voyage)
+                    # 各オペレーターで確認していった最後に、実測データ無しリスト入りにならないように
+                    simulation_plan_voyage_list.remove(simulation_voyage)
+
+            print(f"imo:{(imo)} ループ後len(ytd_exist_voyage_list):{(len(ytd_exist_voyage_list))}")
+            print(f"imo:{(imo)} ループ後len(simulation_plan_voyage_list):{(len(simulation_plan_voyage_list))}")
         
         # speed-planのシミュレーション使用フラグ確認
         if speed_flag == "1":
@@ -977,6 +986,8 @@ def calc_eua_cb(imo):
             if simulation_operator == operator:
                 # 実測データが存在するリストに追加
                 ytd_exist_speed_list.append(simulation_plan_speed[0])
+                # 各オペレーターで確認していった最後に、実測データ無しリスト入りにならないように
+                simulation_plan_speed.remove(simulation_plan_speed[0])
        
         # シミュレーションリストの処理
         # 実測データ有り かつ voyage-planの場合
@@ -986,10 +997,10 @@ def calc_eua_cb(imo):
 
             # operatorが一致するytdデータと合わせて、データセットを作成
             dataset = {
-                "ytd_eua"            : round(ytd_dataset["eua"]),
-                "ytd_cb"             : round(ytd_dataset["cb"], 1),
-                "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]), 1),
+                "ytd_eua"            : float(ytd_dataset["eua"]),
+                "ytd_cb"             : float(ytd_dataset["cb"]),
+                "eoy_eua"            : float(eoy_vessel_data["eoy_eua"]),
+                "eoy_cb"             : float(eoy_vessel_data["eoy_cb"])
             }
             return_data_list.append(dataset)
 
@@ -998,10 +1009,10 @@ def calc_eua_cb(imo):
             eoy_vessel_data = make_speed_plans_data(rec, ytd_exist_speed_list, res_foc_formulas, fuel_oil_type_list, energy)
 
             dataset = {              
-                "ytd_eua"            : round(ytd_dataset["eua"]),
-                "ytd_cb"             : round(ytd_dataset["cb"], 1),
-                "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]), 1),
+                "ytd_eua"            : float(ytd_dataset["eua"]),
+                "ytd_cb"             : float(ytd_dataset["cb"]),
+                "eoy_eua"            : float(eoy_vessel_data["eoy_eua"]),
+                "eoy_cb"             : float(eoy_vessel_data["eoy_cb"])
             }
             return_data_list.append(dataset)
 
@@ -1009,15 +1020,55 @@ def calc_eua_cb(imo):
         else:
             # Simulation無の場合は、ytdと同じ値をeoyに設定
             dataset = {
-                "ytd_eua"            : round(ytd_dataset["eua"]),
-                "ytd_cb"             : round(ytd_dataset["cb"], 1),
-                "eoy_eua"            : round(ytd_dataset["eua"]),
-                "eoy_cb"             : round(float(ytd_dataset["cb"]), 1),
+                "ytd_eua"            : float(ytd_dataset["eua"]),
+                "ytd_cb"             : float(ytd_dataset["cb"]),
+                "eoy_eua"            : float(ytd_dataset["eua"]),
+                "eoy_cb"             : float(ytd_dataset["cb"]),
             }
             return_data_list.append(dataset)
     
-    # 実測値なし
-    if len(total_year_total_list) == 0:
+    # year-totalループ終了後、各シミュレーションリストに残っているものは、実測データ無しオペレーター
+    if voyage_flag == "1" and len(simulation_plan_voyage_list) > 0:
+        for simulation_voyage in simulation_plan_voyage_list:
+            # 実測データが存在しないリストに追加
+            ytd_not_exist_voyage_list.append(simulation_voyage)
+    if speed_flag == "1" and len(simulation_plan_speed) > 0:
+        ytd_not_exist_speed_list.append(simulation_plan_speed[0])
+    
+    # 実測データ無しvoyage-plan
+    if len(ytd_not_exist_voyage_list) > 0:
+
+        # VoyagePlanのシミュレーション実施
+        eoy_vessel_data = make_voyage_plans_data(None, ytd_not_exist_voyage_list, res_foc_formulas, fuel_oil_type_list, 0)
+
+        print(f"imo:{imo}, eoy_eua:{eoy_vessel_data["eoy_eua"]}, eoy_cb:{eoy_vessel_data["eoy_cb"]}")
+
+        # ytdは0、eoyはSimulation結果を設定
+        dataset = {
+            "ytd_eua"            : 0,
+            "ytd_cb"             : 0,
+            "eoy_eua"            : float(eoy_vessel_data["eoy_eua"]),
+            "eoy_cb"             : float(eoy_vessel_data["eoy_cb"])
+        }
+        return_data_list.append(dataset)
+
+        print(f"imo:{imo}, return_data_list:{return_data_list}")
+
+    # 実測データ無しspeed-plan
+    if len(ytd_not_exist_speed_list) > 0:
+
+        eoy_vessel_data = make_speed_plans_data(None, ytd_not_exist_speed_list, res_foc_formulas, fuel_oil_type_list, 0)
+
+        dataset = {              
+            "ytd_eua"            : 0,
+            "ytd_cb"             : 0,
+            "eoy_eua"            : float(eoy_vessel_data["eoy_eua"]),
+            "eoy_cb"             : float(eoy_vessel_data["eoy_cb"])
+        }
+        return_data_list.append(dataset)
+
+    # 実測値、シミュレーションなし
+    if len(return_data_list) == 0:
         dataset = {
             "ytd_eua"            : "0",
             "ytd_cb"             : "0",
@@ -1026,7 +1077,7 @@ def calc_eua_cb(imo):
         }
         return_data = dataset
 
-    # 実測値あり
+    # 実測値、シミュレーションあり
     else:
 
         return_ytd_eua = 0
@@ -1051,5 +1102,7 @@ def calc_eua_cb(imo):
         }
 
         return_data = dataset
-            
+    
+    print(f"imo:{imo}, return_data:{return_data}")
+
     return return_data

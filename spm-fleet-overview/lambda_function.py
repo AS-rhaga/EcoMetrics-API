@@ -18,6 +18,7 @@ _table_name_vessel_type     = os.environ['VESSEL_TYPE']
 _table_name_vessel_alarm    = os.environ['VESSEL_ALARM']
 _table_name_noonreport      = os.environ['NOONREPORT']
 _table_name_lo_code_master  = os.environ['LO_CODE_MASTER']
+_table_name_euets_fueleu_leg_total = os.environ['EUETS_FUELEU_LEG_TOTAL']
 
 # Favoriteテーブルに登録
 def upsert_favorite(dataSet, retry_count: int=42) -> None:
@@ -214,7 +215,28 @@ def get_lo_code_master(lo_code):
     data = response['Items']
     
     return data
- 
+
+# eco-euets-fueleu-leg-totalテーブルから対象の年の最新のレコードを取得
+def get_euets_fueleu_leg_total(imo, year):
+    data = []
+    response = _dynamodb_client.query(
+        TableName=_table_name_euets_fueleu_leg_total,
+        ExpressionAttributeNames={
+            '#imo': 'imo',
+            '#leg_no': 'leg_no',
+        },
+        ExpressionAttributeValues={
+            ':imo_value': {'S': imo},
+            ':year_value': {'S': year},  # YYYY に一致する leg_no を取得
+        },
+        KeyConditionExpression='#imo = :imo_value AND begins_with(#leg_no, :year_value)',
+        ScanIndexForward=False,  # 降順ソート（最新の leg_no を先頭にする）
+        Limit=1  # 最新の1件のみ取得
+    )
+    data = response['Items']
+    
+    return data
+
 def lambda_handler(event, context):
     print(f"event{type(event)}: {event}")
     
@@ -307,10 +329,13 @@ def lambda_handler(event, context):
         res_vessel_type = get_vessel_type(res_vessel_master[0]["VesselType"]["S"])
         res_vessel_alarm = get_vessel_alarm(imo, year)
         res_noonreport = get_noonreport(imo)
-        res_lo_code_master_departure = get_lo_code_master(res_noonreport[0]["port_code"]["S"])
-        # ↓noonreportにeta_port_codeが追加されたら使用可能。それまではいったん固定値JPYOSを設定
-        # res_lo_code_master_arrival = get_lo_code_master(res_noonreport[0]["eta_port_code"]["S"])
-        res_lo_code_master_arrival = get_lo_code_master("JPYOS")
+        # res_lo_code_master_departure = get_lo_code_master(res_noonreport[0]["port_code"]["S"])
+        
+        # noonreportのTimeStampから年(YYYY)を取得
+        noonreport_timestamp_str = res_noonreport[0]["timestamp"]["S"]
+        noonreport_timestamp_dt = datetime.strptime(noonreport_timestamp_str, "%Y-%m-%dT%H:%M:%SZ")
+        noonreport_timestamp_year_str = str(noonreport_timestamp_dt.year)
+        res_euets_fueleu_leg_total = get_euets_fueleu_leg_total(imo, noonreport_timestamp_year_str)
 
         # End of YearのCii算出
         res_cii_data = cii_caluclate.calc_cii(imo, res_vessel_master, res_vessel_alarm)
@@ -321,6 +346,11 @@ def lambda_handler(event, context):
         favorite               = "default"
         imo                    = res_vessel_master[0].get("imo", {}).get("S", "")
         vesselName             = res_vessel_master[0].get("VesselName", {}).get("S", "")
+
+        oneMonth               = res_vessel_alarm[0]["oneMonth"]["S"]
+        januaryToNow           = res_vessel_alarm[0]["Januarytonow"]["S"]
+        lastYear               = res_vessel_alarm[0]["LastYear"]["S"]
+        
         grosstongue            = res_vessel_master[0].get("Grosstongue", {}).get("S", "")
         vesselType             = res_vessel_type[0].get("type_name", {}).get("S", "")
         latitude               = res_noonreport[0].get("lat", {}).get("S", "")
@@ -329,12 +359,18 @@ def lambda_handler(event, context):
         beaufort               = res_noonreport[0].get("beaufort", {}).get("S", "")
         windDirection          = res_noonreport[0].get("wind_direction", {}).get("S", "")
         course                 = res_noonreport[0].get("course", {}).get("S", "")
-        portOfDeparture        = res_lo_code_master_departure[0].get("port_name", {}).get("S", "")
-        portOfArrival          = res_lo_code_master_arrival[0].get("port_name", {}).get("S", "")
+        portOfDeparture        = res_euets_fueleu_leg_total[0].get("departure_port", {}).get("S", "")
+        portOfArrival          = res_euets_fueleu_leg_total[0].get("arrival_port", {}).get("S", "")
         actualTimeOfDeparture  = res_noonreport[0].get("start_local_date", {}).get("S", "")
         estimatedTimeOfArrival = res_noonreport[0].get("eta_local_date", {}).get("S", "")
         logSpeed               = res_noonreport[0].get("log_speed", {}).get("S", "")
+        # ToDo vessel_masterにlog_speed_maxが追加されたらべたを削除し、以下のコメントアウトを外す
+        # logSpeedMax            = res_vessel_master[0].get("log_speed_max", {}).get("S", "")
+        logSpeedMax            = "18"
         meRPM                  = res_noonreport[0].get("me_rpm", {}).get("S", "")
+        # ToDo vessel_masterにme_rpm_maxが追加されたらべたを削除し、以下のコメントアウトを外す
+        # meRPMMax               = res_vessel_master[0].get("me_rpm_max", {}).get("S", "")
+        meRPMMax               = "100"
         meLoad                 = res_noonreport[0].get("me_load", {}).get("S", "")
         foc                    = res_noonreport[0].get("total_foc", {}).get("S", "")
         cpCurveAlarm           = float(res_vessel_alarm[0].get("cp", {}).get("S", ""))
@@ -346,10 +382,16 @@ def lambda_handler(event, context):
         cbYearToDate           = res_eua_cb_data["ytd_cb"]
         cbEndOfYear            = res_eua_cb_data["eoy_cb"]
         
+        print(f"imo:{imo}   lambda_function res_eua_cb_data:{res_eua_cb_data}")
+        print(f"imo:{imo}   lambda_function euaEndOfYear:{euaEndOfYear}, cbEndOfYear:{cbEndOfYear}")
+
         data = {
             "imo"                    : imo,
             "favorite"               : favorite, 
             "vesselName"             : vesselName, 
+            "oneMonth"               : oneMonth,
+            "januaryToNow"           : januaryToNow, 
+            "lastYear"               : lastYear, 
             "grosstongue"            : grosstongue, 
             "vesselType"             : vesselType, 
             "latitude"               : latitude, 
@@ -363,7 +405,9 @@ def lambda_handler(event, context):
             "actualTimeOfDeparture"  : actualTimeOfDeparture, 
             "estimatedTimeOfArrival" : estimatedTimeOfArrival, 
             "logSpeed"               : logSpeed, 
+            "logSpeedMax"            : logSpeedMax, 
             "meRPM"                  : meRPM, 
+            "meRPMMax"                  : meRPMMax, 
             "meLoad"                 : meLoad, 
             "foc"                    : foc, 
             "cpCurveAlarm"           : cpCurveAlarm,
@@ -380,16 +424,16 @@ def lambda_handler(event, context):
             if imo in favorite_imo_list:
                 data["favorite"] = "checked"
                 data_list.append(data)
-                group_imo_list.append({"imoNo":imo,"vesselName": vesselName})
+                group_imo_list.append({"imoNo":imo,"VesselName": vesselName})
         else:
             if imo in favorite_imo_list:
                 data["favorite"] = "checked"
             data_list.append(data)
-            group_imo_list.append({"imoNo":imo,"vesselName": vesselName})
+            group_imo_list.append({"imoNo":imo,"VesselName": vesselName})
     
     
     # ソート実行-------------------------------------------------------
-    new_group_imo_list = sorted(group_imo_list, key=lambda x: x['vesselName'])
+    new_group_imo_list = sorted(group_imo_list, key=lambda x: x['VesselName'])
     
     new_data_list = sorted(data_list, key=lambda x: x['vesselName'])
        
@@ -414,7 +458,6 @@ def lambda_handler(event, context):
             }
     }
     datas = json.dumps(datas)
-    print(f"datas{type(datas)}: {datas}")
     
     return {
         'statusCode': 200,

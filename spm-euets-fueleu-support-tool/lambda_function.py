@@ -86,6 +86,7 @@ def lambda_handler(event, context):
     ytd_not_grouped_vessels_list = []
     eoy_not_grouped_vessels_list = []
     ytd_all_vessels_list         = []
+    eoy_all_vessels_list         = []
     ytd_pooling_group_list       = []
     eoy_pooling_group_list       = []
 
@@ -116,7 +117,7 @@ def lambda_handler(event, context):
     company_and_year = para_year + company_id
 
     # GHG上限値を算出する
-    GHG_Max    = calculate_function.calc_GHG_Max(year_now)
+    GHG_Max    = calculate_function.calc_GHG_Max(para_year)
 
     # groupテーブルのadminのimoリストを取得
     rep_group = select.get_group(company_id, "admin")
@@ -207,7 +208,7 @@ def lambda_handler(event, context):
                         # 過去年分の処理の場合
                         ytd_grouped_vessel_info, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed_past(imo, vessel_name, para_year, fuel_oil_type_info_list)
 
-                    print(f"imo:{(imo)}, ytd_grouped_vessel_info:{(ytd_grouped_vessel_info)}, eoy_grouped_vessel_info:{(ytd_grouped_vessel_info)}")
+                    print(f"imo:{(imo)}, ytd_grouped_vessel_info:{(ytd_grouped_vessel_info)}, eoy_grouped_vessel_info:{(eoy_grouped_vessel_info)}")
                     # グルーピングされている船の情報を出力用リストに追加する
                     for j in range(len(ytd_grouped_vessel_info)):
 
@@ -251,6 +252,19 @@ def lambda_handler(event, context):
                             "group"         : group_name
                         }
                         ytd_all_vessels_list.append(ytd_vessel_data)
+
+                        # eoy_all_vessels_listに追加
+                        eoy_vessel_data = {
+                            "imo"           : imo,
+                            "vessel_name"   : vessel_name,
+                            "operator"      : eoy_grouped_vessel_info[j]["operator"],
+                            "year_to_date"  : eoy_grouped_vessel_info[j]["end_of_year"],
+                            "last_year"     : eoy_grouped_vessel_info[j]["last_year"],
+                            "total"         : eoy_grouped_vessel_info[j]["total"],
+                            "penalty_factor": eoy_grouped_vessel_info[j]["penalty_factor"],
+                            "group"         : group_name
+                        }
+                        eoy_all_vessels_list.append(eoy_vessel_data)
 
                     # 燃料消費量を足し合わせるグループを探す
                     list_index = 0
@@ -379,6 +393,19 @@ def lambda_handler(event, context):
 
                 eoy_not_grouped_vessels_list.append(vessel_info)
 
+                # eoy_all_vessels_listに追加
+                eoy_vessel_data = {
+                    "imo"           : imo,
+                    "vessel_name"   : vessel_name,
+                    "operator"      : vessel_info["operator"],
+                    "year_to_date"  : vessel_info["end_of_year"],
+                    "last_year"     : vessel_info["last_year"],
+                    "total"         : vessel_info["total"],
+                    "penalty_factor": vessel_info["penalty_factor"],
+                    "group"         : "-"
+                }
+                eoy_all_vessels_list.append(eoy_vessel_data)
+
                 # グルーピングされていない船のCB、CB_COSTを足し合わせる。
                 eoy_not_grouped_vessels_total_cb += vessel_info["total"]
                 eoy_not_grouped_vessels_total_cb_cost += vessel_info["cost"]
@@ -487,7 +514,7 @@ def lambda_handler(event, context):
         eoy_grouped_vessels_total_nh3_ef      = pooling_group_datalist[index]["eoy_total_nh3_ef"]
         eoy_grouped_vessels_total_energy      = pooling_group_datalist[index]["eoy_total_energy"]
 
-        print(f"eoy_grouped_vessels_total_hfo:{(eoy_grouped_vessels_total_hfo)}, eoy_grouped_vessels_total_lfo:{(eoy_grouped_vessels_total_lfo)}")
+        print(f"pooling_group_datalist[index]:{(pooling_group_datalist[index])}")
         eoy_grouped_vessels_total_GHG = calculate_function.calc_GHG_Actual(eoy_grouped_vessels_total_lng_ods, eoy_grouped_vessels_total_lng_oms, eoy_grouped_vessels_total_lng_oss, eoy_grouped_vessels_total_hfo, eoy_grouped_vessels_total_lfo, eoy_grouped_vessels_total_mdo, eoy_grouped_vessels_total_mgo, eoy_grouped_vessels_total_lpg_p, eoy_grouped_vessels_total_lpg_b, eoy_grouped_vessels_total_nh3_ng, eoy_grouped_vessels_total_nh3_ef, eoy_grouped_vessels_total_methanol_ng, eoy_grouped_vessels_total_h2_ng, fuel_oil_type_info_list)
         eoy_grouped_vessels_total_cb  = (GHG_Max - eoy_grouped_vessels_total_GHG) * eoy_grouped_vessels_total_energy
 
@@ -546,7 +573,7 @@ def lambda_handler(event, context):
         "banking_vessels"  : str(count_ytd_banking_vessels),
         "banking_cb"       : str(ytd_banking_cb),
         "borrowing_vessels": str(count_ytd_borrowing_vessels),
-        "borrowing_cb"     : str(ytd_borrowing_cb)
+        "borrowing_cb"     : str(round(ytd_borrowing_cb, 1))
     }
     eoy_total_list = {
         "total_cb"         : str(round(eoy_total_cb, 1)),
@@ -555,11 +582,13 @@ def lambda_handler(event, context):
         "banking_vessels"  : str(count_eoy_banking_vessels),
         "banking_cb"       : str(eoy_banking_cb),
         "borrowing_vessels": str(count_eoy_borrowing_vessels),
-        "borrowing_cb"     : str(eoy_borrowing_cb)
+        "borrowing_cb"     : str(round(eoy_borrowing_cb, 1))
     }
 
     # ytd_all_vessels_listをソート
     ytd_all_vessels_list = sorted(ytd_all_vessels_list, key=lambda x:x["vessel_name"])
+    # eoy_all_vessels_listをソート
+    eoy_all_vessels_list = sorted(eoy_all_vessels_list, key=lambda x:x["vessel_name"])
 
     # 返却用データセットを設定する
     datas = {
@@ -572,7 +601,8 @@ def lambda_handler(event, context):
         "eoy_pooling_group_list"      : eoy_pooling_group_list,
         "eoy_not_grouped_total"       : eoy_not_grouped_total,
         "eoy_not_grouped_vessels_list": eoy_not_grouped_vessels_list,
-        "ytd_all_vessels_list"        : ytd_all_vessels_list
+        "ytd_all_vessels_list"        : ytd_all_vessels_list,
+        "eoy_all_vessels_list"        : eoy_all_vessels_list
     }
 
     datas = json.dumps(datas)

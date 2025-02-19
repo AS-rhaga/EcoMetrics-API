@@ -74,7 +74,9 @@ def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_
 
 def calc_GHG_Max(year):
     year = int(year)
-    if year <= 2029:
+    if year <= 2024:
+        target_rate = 0
+    elif year <= 2029:
         target_rate = 2
     elif year <= 2034:
         target_rate = 6

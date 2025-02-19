@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 import math
 import re
+import copy
 
 from dynamodb import select
 from Util import Util
@@ -197,8 +198,11 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         # voyage-planのシミュレーション使用フラグ確認
         if voyage_flag == "1":
 
+            # ループ用に保持しておく
+            keep_simulation_plan_voyage_list = simulation_plan_voyage_list.copy()
+
             # voyageのオペレーターを確認する
-            for simulation_voyage in simulation_plan_voyage_list:
+            for simulation_voyage in keep_simulation_plan_voyage_list:
                 simulation_operator = simulation_voyage["operator"]["S"]
 
                 # 基準のyear-totalレコードのオペレーターと一致する場合
