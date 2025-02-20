@@ -98,18 +98,30 @@ def sum_year_total(imo, year, GHG_Max, ytd_distance, res_foc_formulas, fuel_oil_
     res_simulation_speed       = select.get_simulation_speed(imo, year)
     # print(f"res_simulation_voyage_list:{(res_simulation_voyage_list)}, res_simulation_speed:{(res_simulation_speed)}")
 
+    # voyageかspeedのどちらを使うかフラグで管理する
+    voyage_flag = 0
+    speed_flag = 0
+    if len(res_simulation_voyage_list) > 0 and res_simulation_voyage_list[0]["flag"]["S"] == "1":
+        voyage_flag = 1
+    elif len(res_simulation_speed) > 0 and res_simulation_speed[0]["flag"]["S"] == "1":
+        speed_flag = 1
+
     # シミュレーション用リストから使用予定の燃料消費量を算出する
     # FOC Formulasが登録されている場合
-    if res_foc_formulas and (len(res_simulation_voyage_list) > 0 or len(res_simulation_speed) > 0):
+    if res_foc_formulas and (voyage_flag == 1 or speed_flag == 1):
+        print(f"res_simulation_voyage_list:{(res_simulation_voyage_list)}, res_simulation_speed:{(res_simulation_speed)}")
         simulation_fuel_list = []
 
         # voyage-planとspeed-planのどちらを使うか判断する
-        if len(res_simulation_voyage_list) > 0 and res_simulation_voyage_list[0]["flag"]["S"] == "1":
+        if voyage_flag == 1:
             print("simulation plan: VOYAGE")
             simulation_fuel_list = make_eoy_record.make_voyage_plans_data(res_simulation_voyage_list, res_foc_formulas, fuel_oil_type_info_list)
-        elif len(res_simulation_speed) > 0 and res_simulation_speed[0]["flag"]["S"] == "1":
+            print(f"voyage_planのsimulation_fuel_list:{(simulation_fuel_list)}")
+        elif speed_flag == 1:
             print("simulation plan: SPEED")
             simulation_fuel_list = make_eoy_record.make_speed_plans_data(res_simulation_speed, res_foc_formulas, fuel_oil_type_info_list)
+        else:
+            print(f"どちらのsimulation planも使わない")
 
         # シミュレーションデータ内での航行距離、各燃料の消費量とエネルギー量を合計する
         eoy_lng_ods     += simulation_fuel_list["simulation_lng_ods"]
