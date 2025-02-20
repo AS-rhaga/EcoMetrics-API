@@ -386,7 +386,8 @@ def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b,
         sum_ghg += h2_ng * h2_ng_ghg_intensity
         sum_foc += h2_ng
 
-    if sum_foc != 0:
+    GHG_Actual = 0
+    if sum_foc > 0:
         GHG_Actual = round(float(sum_ghg / sum_foc), 2)
     # print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual

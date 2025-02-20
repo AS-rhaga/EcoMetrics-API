@@ -481,7 +481,7 @@ def lambda_handler(event, context):
                     "foc"            : grouped_vessel[1]["foc"],
                     "year_to_date"   : grouped_vessel[1]["year_to_date"],
                     "last_year"      : grouped_vessel[1]["last_year"],
-                    "total"          : grouped_vessel[1]["year_to_date"] + grouped_vessel[1]["last_year"],
+                    "total"          : round(grouped_vessel[1]["year_to_date"] + grouped_vessel[1]["last_year"], 1),
                     "penalty_factor" : grouped_vessel[1]["penalty_factor"]
                 }
                 ytd_this_group_vessels.append(append_data)
@@ -539,7 +539,7 @@ def lambda_handler(event, context):
                     "foc"             : grouped_vessel[1]["foc"],
                     "end_of_year"     : grouped_vessel[1]["end_of_year"],
                     "last_year"       : grouped_vessel[1]["last_year"],
-                    "total"           : grouped_vessel[1]["end_of_year"] + grouped_vessel[1]["last_year"],
+                    "total"           : round(grouped_vessel[1]["end_of_year"] + grouped_vessel[1]["last_year"], 1),
                     "penalty_factor"  : grouped_vessel[1]["penalty_factor"]
                 }
                 eoy_this_group_vessels.append(append_data)

@@ -65,6 +65,7 @@ def calc_GHG_Max(year):
 def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_list):
     sum_ghg = 0
     sum_foc = 0
+    GHG_Actual = 0
 
     if lng_ods > 0:
         lng_ghg_ods_intensity =  float(fuel_oil_type_list["LNG_ODS_info_list"]["ghg_intensity"]["S"])
