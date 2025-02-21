@@ -186,46 +186,63 @@ def data_formatting(imo, response, fromDisp, toDisp, BallastLaden, fromLogSpeed,
     print(f"fromEngineLoad[{type(fromEngineLoad)}]: {fromEngineLoad}, toEngineLoad[{type(toEngineLoad)}]: {toEngineLoad}")
     
     # Advanced Filterをセット
-    # fromLogSpeedAF
+    # フィルターリストを作成する
     fromLogSpeedAFsplitted = fromLogSpeedAF.split("-")
+    toLogSpeedAFsplitted   = toLogSpeedAF.split("-")
+    fromFOCAFsplitted      = fromFOCAF.split("-")
+    toFOCAFsplitted        = toFOCAF.split("-")
     fromLogSpeedAFList = []
+    toLogSpeedAFList   = []
+    fromFOCAFList      = []
+    toFOCAFList        = []
     i = 0
     for i in range(len(fromLogSpeedAFsplitted)):
-        if fromLogSpeedAFsplitted[i] == "":
+
+        # LogSpeed, FOCフィルターの上限下限が全て未入力の場合(LogSpeed:True,FOC:Trueにする)
+        if fromLogSpeedAFsplitted[i] == "" and toLogSpeedAFsplitted[i] == "" and fromFOCAFsplitted[i] == "" and toFOCAFsplitted[i] == "":
             fromLogSpeedAFList.append(Defaultupperlimit)
+            toLogSpeedAFList.append(0)
+            fromFOCAFList.append(Defaultupperlimit)
+            toFOCAFList.append(0)
+            continue
+
+        # LogSpeedフィルターの確認
+        # LogSpeedフィルターの上限下限が両方未入力、FOCフィルターには一つ以上入力ありの場合、
+        # FOCフィルターの指定範囲がFalse,Falseになるよう、LogSpeed側では全範囲をFalseにする。
+        if fromLogSpeedAFsplitted[i] == "" and toLogSpeedAFsplitted[i] == "":
+            fromLogSpeedAFList.append(0)
+            toLogSpeedAFList.append(Defaultupperlimit)
+        # LogSpeedフィルターの下限が未入力の場合
+        elif fromLogSpeedAFsplitted[i] == "":
+            fromLogSpeedAFList.append(0)
+            toLogSpeedAFList.append(round(float(toLogSpeedAFsplitted[i]), 2))
+        # LogSpeedフィルターの上限が未入力の場合
+        elif toLogSpeedAFsplitted[i] == "":
+            fromLogSpeedAFList.append(round(float(fromLogSpeedAFsplitted[i]), 2))
+            toLogSpeedAFList.append(Defaultupperlimit)
+        # LogSpeedフィルターの上限下限が両方入力されている場合
         else:
             fromLogSpeedAFList.append(round(float(fromLogSpeedAFsplitted[i]), 2))
-        i += 1
-    # toLogSpeedAF
-    toLogSpeedAFsplitted = toLogSpeedAF.split("-")
-    toLogSpeedAFList = []
-    i = 0
-    for i in range(len(toLogSpeedAFsplitted)):
-        if toLogSpeedAFsplitted[i] == "":
-            toLogSpeedAFList.append(0)
-        else:
             toLogSpeedAFList.append(round(float(toLogSpeedAFsplitted[i]), 2))
-        i += 1
-    # fromFOCAF
-    fromFOCAFsplitted = fromFOCAF.split("-")
-    fromFOCAFList = []
-    i = 0
-    for i in range(len(fromFOCAFsplitted)):
-        if fromFOCAFsplitted[i] == "":
-            fromFOCAFList.append(Defaultupperlimit)
+
+        # FOCフィルターの確認
+        # FOCフィルターの上限下限が両方未入力、LogSpeedフィルターには一つ以上入力ありの場合、
+        # LogSpeedフィルターの指定範囲がFalse,Falseになるよう、FOC側では全範囲をFalseにする。
+        if fromFOCAFsplitted[i] == "" and toFOCAFsplitted[i] == "":
+            fromFOCAFList.append(0)
+            toFOCAFList.append(Defaultupperlimit)
+        # FOCフィルターの下限が未入力の場合
+        elif fromFOCAFsplitted[i] == "":
+            fromFOCAFList.append(0)
+            toFOCAFList.append(round(float(toFOCAFsplitted[i]), 2))
+        # FOCフィルターの上限が未入力の場合
+        elif toFOCAFsplitted[i] == "":
+            fromFOCAFList.append(round(float(fromFOCAFsplitted[i]), 2))
+            toFOCAFList.append(Defaultupperlimit)
+        # FOCフィルターの上限下限が両方入力されている場合
         else:
             fromFOCAFList.append(round(float(fromFOCAFsplitted[i]), 2))
-        i += 1
-    # toFOCAF
-    toFOCAFsplitted = toFOCAF.split("-")
-    toFOCAFList = []
-    i = 0
-    for i in range(len(toFOCAFsplitted)):
-        if toFOCAFsplitted[i] == "":
-            toFOCAFList.append(0)
-        else:
             toFOCAFList.append(round(float(toFOCAFsplitted[i]), 2))
-        i += 1
 
     print(f"fromLogSpeedAFsplitted[{type(fromLogSpeedAFsplitted)}]: {fromLogSpeedAFsplitted}, toLogSpeedAFsplitted[{type(toLogSpeedAFsplitted)}]: {toLogSpeedAFsplitted}")
     print(f"fromFOCAFsplitted[{type(fromFOCAFsplitted)}]: {fromFOCAFsplitted}, toFOCAFsplitted[{type(toFOCAFsplitted)}]: {toFOCAFsplitted}")
@@ -234,52 +251,38 @@ def data_formatting(imo, response, fromDisp, toDisp, BallastLaden, fromLogSpeed,
     
     def checkAdvancedFilters(log_speed_float, me_foc_float):
 
+        print(f"[checkAdvancedFilters]log_speed_float:{(log_speed_float)}, me_foc_float:{(me_foc_float)})")
+
         result = False
         i = 0
 
         # LogSpeedAFチェック
         def checkLogSpeedAF(i):
-            # 両方入力されている場合
-            if (fromLogSpeedAFList[i] != Defaultupperlimit and toLogSpeedAFList[i] != 0):
-                # log_speed_floatが入力範囲外の場合
-                if (log_speed_float <= fromLogSpeedAFList[i] or toLogSpeedAFList[i] <= log_speed_float):
-                    scResult = True
-                else:
-                    scResult = False
-            # 片方だけ入力されている　または　入力なしの場合
+            # log_speed_floatが入力範囲外の場合
+            if (log_speed_float <= fromLogSpeedAFList[i] or toLogSpeedAFList[i] <= log_speed_float):
+                scResult = True
             else:
-                if (log_speed_float <= fromLogSpeedAFList[i] and toLogSpeedAFList[i] <= log_speed_float):
-                    scResult = True
-                else:
-                    scResult = False
+                scResult = False
             return scResult
         # FOCAFチェック
         def checkFOCAF(i):
-            # 両方入力されている場合
-            if (fromFOCAFList[i] != Defaultupperlimit and toFOCAFList[i] != 0):
-                # me_foc_floatが入力範囲外の場合
-                if (me_foc_float <= fromFOCAFList[i] or toFOCAFList[i] <= me_foc_float):
-                    focResult = True
-                else:
-                    focResult = False
-            # 片方だけ入力されている　または　入力なしの場合
+            # me_foc_floatが入力範囲外の場合
+            if (me_foc_float <= fromFOCAFList[i] or toFOCAFList[i] <= me_foc_float):
+                focResult = True
             else:
-                if (me_foc_float <= fromFOCAFList[i] and toFOCAFList[i] <= me_foc_float):
-                    focResult = True
-                else:
-                    focResult = False
+                focResult = False
             return focResult
 
         for i in range(len(fromLogSpeedAFList)):
             print(f"fromLogSpeedAFList[{i}]: {fromLogSpeedAFList[i]}, toLogSpeedAFList[{i}]: {toLogSpeedAFList[i]}, fromFOCAFList[{i}]: {fromFOCAFList[i]}, toFOCAFList[{i}]: {toFOCAFList[i]}")
-            if (checkLogSpeedAF(i) and checkFOCAF(i)):
-                result = True
-                print(f"checkAdvancedFilters{i}: {result}")
-                i += 1
-            else:
+            if checkLogSpeedAF(i) == False and checkFOCAF(i) == False:
                 result = False
-                print(f"checkAdvancedFilters{i}: {result}")
+                print(f"checkAdvancedFilters{i}: {result}（checkLogSpeedAF{i}:{checkLogSpeedAF(i)}, checkFOCAFAF{i}:{checkFOCAF(i)}）")
                 break
+            else:
+                result = True
+                print(f"checkAdvancedFilters{i}: {result}（checkLogSpeedAF{i}:{checkLogSpeedAF(i)}, checkFOCAFAF{i}:{checkFOCAF(i)}）")
+                i += 1
         return result
 
     beaufort_filter = []
