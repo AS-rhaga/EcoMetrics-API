@@ -849,7 +849,7 @@ def lambda_handler(event, context):
                 CBList_Simulation[0] = graph_data_cb_simulation
         
         for i in range(len(EUAList_Simulation)):
-            tmp_simulation_XAxis = "LEG E" + str(i + 1)
+            tmp_simulation_XAxis = "(LEG E" + str(i + 1) + ")"
             XAxisList.append(tmp_simulation_XAxis)    
 
             # EUA_Simulationのグラフの色を設定
