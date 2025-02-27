@@ -53,6 +53,10 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
     simulation_total_nh3_ef      = 0
     simulation_total_energy      = 0
 
+    dataset              = []
+    simuletion_fuel_list = []
+    count_target_voyage  = 0
+
     # 処理実施時の年、日付を取得
     dt_now = datetime.now()
     now_year = str(dt_now.year)
@@ -70,6 +74,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
         total_distance += float(thisyear_year_total["distance"]["S"])
         total_eua      += float(thisyear_year_total["eua"]["S"])
         total_energy   += ytd_energy
+        count_target_voyage += 1
 
     for i in range(len(voyage_plan_list)):
 
@@ -95,6 +100,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
         if str_now <= str_departure_time:
             print(f"str_now:{str_now}, departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
             leg_rate              = 1
+            count_target_voyage  += 1
 
         elif str_now <= str_arrival_time:
             print(f"str_now:{str_now}, departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは現在進行中")
@@ -107,8 +113,10 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
             leg_total_time = leg_part_time
 
             leg_rate              = float(leg_part_time / leg_total_time)
+            count_target_voyage  += 1
 
         else:
+            print("このレグは範囲外")
             print(f"str_now:{str_now}, departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
             # 以降の処理は行わず、次のlegを確認
             continue
@@ -232,59 +240,60 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
             total_distance += leg_distance
             total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
 
-    # 最終的なCBを算出
-    total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
-    print(f"レコード作成用データ  imo:{(imo)} eoy_total_lfo:{(total_lfo)}, eoy_total_mgo:{(total_mgo)}, eoy_total_energy:{(total_energy)}")
-    eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
+    if count_target_voyage > 0:
+        # 最終的なCBを算出
+        total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
+        print(f"レコード作成用データ  imo:{(imo)} eoy_total_lfo:{(total_lfo)}, eoy_total_mgo:{(total_mgo)}, eoy_total_energy:{(total_energy)}")
+        eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
 
-    # banking, borrowingを取得
-    banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
-    borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
+        # banking, borrowingを取得
+        banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
+        borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
 
-    total_cb  = eoy_cb + borrowing + last_year
+        total_cb  = eoy_cb + borrowing + last_year
 
-    # CB Costの算出
-    if float(total_cb) >= 0:
-        eoy_cb_cost = 0
-    else:
-        eoy_cb_cost = abs(float(total_cb)) * 2400 / (total_GHG * 41000) * penalty_factor
+        # CB Costの算出
+        if float(total_cb) >= 0:
+            eoy_cb_cost = 0
+        else:
+            eoy_cb_cost = abs(float(total_cb)) * 2400 / (total_GHG * 41000) * penalty_factor
 
-    borrowing_limit = calculate_function.calc_borrowing_limit(True, now_year, total_energy)
+        borrowing_limit = calculate_function.calc_borrowing_limit(True, now_year, total_energy)
 
-    # Voyage Planのシミュレーション用データ
-    dataset = {
-        "imo"            : imo,
-        "vessel_name"    : vessel_name,
-        "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else voyage_plan_list[0]["operator"]["S"],
-        "distance"       : round(total_distance),
-        "foc"            : round(total_foc),
-        "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
-        "last_year"      : round(last_year / 1000000, 1),
-        "borrowing_limit": round(borrowing_limit / 1000000),
-        "borrowing"      : round(borrowing / 1000000, 1),
-        "banking"        : round(banking / 1000000, 1),
-        "total"          : round(float(total_cb) / 1000000, 1),
-        "penalty_factor" : penalty_factor,
-        "cost"        : round(eoy_cb_cost, 0)
-    }
+        # Voyage Planのシミュレーション用データ
+        dataset = {
+            "imo"            : imo,
+            "vessel_name"    : vessel_name,
+            "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else voyage_plan_list[0]["operator"]["S"],
+            "distance"       : round(total_distance),
+            "foc"            : round(total_foc),
+            "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
+            "last_year"      : round(last_year / 1000000, 1),
+            "borrowing_limit": round(borrowing_limit / 1000000),
+            "borrowing"      : round(borrowing / 1000000, 1),
+            "banking"        : round(banking / 1000000, 1),
+            "total"          : round(float(total_cb) / 1000000, 1),
+            "penalty_factor" : penalty_factor,
+            "cost"        : round(eoy_cb_cost, 0)
+        }
 
-    # ytdも入った燃料消費量 → シミュレーション部分だけの燃料消費量
-    simuletion_fuel_list = {
-        "simulation_hfo": simulation_total_hfo,
-        "simulation_lfo": simulation_total_lfo,
-        "simulation_mdo": simulation_total_mdo,
-        "simulation_mgo": simulation_total_mgo,
-        "simulation_lng_oms": simulation_total_lng_oms,
-        "simulation_lng_oss": simulation_total_lng_oss,
-        "simulation_lng_ods": simulation_total_lng_ods,
-        "simulation_lpg_p": simulation_total_lpg_p,
-        "simulation_lpg_b": simulation_total_lpg_b,
-        "simulation_h2_ng": simulation_total_h2_ng,
-        "simulation_nh3_ng": simulation_total_nh3_ng,
-        "simulation_methanol_ng": simulation_total_methanol_ng,
-        "simulation_nh3_ef": simulation_total_nh3_ef, 
-        "simulation_energy": simulation_total_energy
-    }
+        # ytdも入った燃料消費量 → シミュレーション部分だけの燃料消費量
+        simuletion_fuel_list = {
+            "simulation_hfo": simulation_total_hfo,
+            "simulation_lfo": simulation_total_lfo,
+            "simulation_mdo": simulation_total_mdo,
+            "simulation_mgo": simulation_total_mgo,
+            "simulation_lng_oms": simulation_total_lng_oms,
+            "simulation_lng_oss": simulation_total_lng_oss,
+            "simulation_lng_ods": simulation_total_lng_ods,
+            "simulation_lpg_p": simulation_total_lpg_p,
+            "simulation_lpg_b": simulation_total_lpg_b,
+            "simulation_h2_ng": simulation_total_h2_ng,
+            "simulation_nh3_ng": simulation_total_nh3_ng,
+            "simulation_methanol_ng": simulation_total_methanol_ng,
+            "simulation_nh3_ef": simulation_total_nh3_ef, 
+            "simulation_energy": simulation_total_energy
+        }
 
     return dataset, simuletion_fuel_list
 

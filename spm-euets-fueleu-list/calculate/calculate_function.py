@@ -179,10 +179,7 @@ def calc_cb(year_timestamp, energy, GHG_Actual):
     GHG_Max    = calc_GHG_Max(year_timestamp)
     cb = (GHG_Max - GHG_Actual) * energy
     print(f"cb{type(cb)}: {cb}")
-    cb_formatted = str(round(float(cb), 1))
-    print(f"cb_formatted{type(cb_formatted)}: {cb_formatted}")
-
-    return cb_formatted
+    return cb
 
 # CO2排出量の算出メソッド
 def calc_co2(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng, nh3_ef, methanol_ng, h2_ng, fuel_oil_type_info_list):

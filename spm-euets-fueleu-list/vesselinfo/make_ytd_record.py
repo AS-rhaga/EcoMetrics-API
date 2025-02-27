@@ -310,25 +310,26 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         # VoyagePlanのシミュレーション実施
         eoy_vessel_data = make_eoy_record.make_voyage_plans_data(None, ytd_not_exist_voyage_list, res_foc_formulas, fuel_oil_type_list, energy, penalty_factor)
 
-        # ytdは0、eoyはSimulation結果を設定
-        dataset = {
-            "imo"                : imo,
-            "vessel_name"        : vessel_master["VesselName"]["S"],
-            "operator"           : ytd_not_exist_voyage_list[0]["operator"]["S"],
-            "ytd_distance"       : "0",
-            "ytd_foc"            : "0",
-            "ytd_eua"            : "0",
-            "ytd_eua_cost"       : "0",
-            "ytd_cb"             : "0",
-            "ytd_cb_cost"        : "0",
-            "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
-            "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
-            "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-            "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
-            "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
-            "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
-        }
-        record_data_list.append(dataset)
+        if len(eoy_vessel_data) > 0:
+            # ytdは0、eoyはSimulation結果を設定
+            dataset = {
+                "imo"                : imo,
+                "vessel_name"        : vessel_master["VesselName"]["S"],
+                "operator"           : ytd_not_exist_voyage_list[0]["operator"]["S"],
+                "ytd_distance"       : "0",
+                "ytd_foc"            : "0",
+                "ytd_eua"            : "0",
+                "ytd_eua_cost"       : "0",
+                "ytd_cb"             : "0",
+                "ytd_cb_cost"        : "0",
+                "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
+                "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
+                "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
+                "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
+                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
+                "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
+            }
+            record_data_list.append(dataset)
 
     # 実測データ無しspeed-plan
     if len(ytd_not_exist_speed_list) > 0:

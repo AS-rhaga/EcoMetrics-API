@@ -335,43 +335,45 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
     # 実測データ無しvoyage-plan
     if len(ytd_not_exist_voyage_list) > 0:
         eoy_grouped_vessel_data, total_fuel_list = make_eoy_record.make_voyage_plans_data(imo, vessel_name, None, ytd_not_exist_voyage_list, res_foc_formulas, fuel_oil_type_info_list, penalty_factor, last_year, 0)
-        eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
+        
+        if len(eoy_grouped_vessel_data) > 0:
+            eoy_grouped_vessel_info.append(eoy_grouped_vessel_data)
 
-        print(f"実測データ無しvoyage-planのtotal_fuel_list:{(total_fuel_list)}")
+            print(f"実測データ無しvoyage-planのtotal_fuel_list:{(total_fuel_list)}")
 
-        # End of Yearの燃料消費量Total値に合算
-        total_eoy_hfo += total_fuel_list["simulation_hfo"]
-        total_eoy_lfo += total_fuel_list["simulation_lfo"]
-        total_eoy_mdo += total_fuel_list["simulation_mdo"]
-        total_eoy_mgo += total_fuel_list["simulation_mgo"]
-        total_eoy_lng_oms += total_fuel_list["simulation_lng_oms"]
-        total_eoy_lng_oss += total_fuel_list["simulation_lng_oss"]
-        total_eoy_lng_ods += total_fuel_list["simulation_lng_ods"]
-        total_eoy_lpg_p += total_fuel_list["simulation_lpg_p"]
-        total_eoy_lpg_b += total_fuel_list["simulation_lpg_b"]
-        total_eoy_h2_ng += total_fuel_list["simulation_h2_ng"]
-        total_eoy_nh3_ng += total_fuel_list["simulation_nh3_ng"]
-        total_eoy_methanol_ng += total_fuel_list["simulation_methanol_ng"]
-        total_eoy_nh3_ef += total_fuel_list["simulation_nh3_ef"]
-        total_eoy_energy += total_fuel_list["simulation_energy"]
+            # End of Yearの燃料消費量Total値に合算
+            total_eoy_hfo += total_fuel_list["simulation_hfo"]
+            total_eoy_lfo += total_fuel_list["simulation_lfo"]
+            total_eoy_mdo += total_fuel_list["simulation_mdo"]
+            total_eoy_mgo += total_fuel_list["simulation_mgo"]
+            total_eoy_lng_oms += total_fuel_list["simulation_lng_oms"]
+            total_eoy_lng_oss += total_fuel_list["simulation_lng_oss"]
+            total_eoy_lng_ods += total_fuel_list["simulation_lng_ods"]
+            total_eoy_lpg_p += total_fuel_list["simulation_lpg_p"]
+            total_eoy_lpg_b += total_fuel_list["simulation_lpg_b"]
+            total_eoy_h2_ng += total_fuel_list["simulation_h2_ng"]
+            total_eoy_nh3_ng += total_fuel_list["simulation_nh3_ng"]
+            total_eoy_methanol_ng += total_fuel_list["simulation_methanol_ng"]
+            total_eoy_nh3_ef += total_fuel_list["simulation_nh3_ef"]
+            total_eoy_energy += total_fuel_list["simulation_energy"]
 
-        # 空のytd_grouped_vessel_dataレコードを追加
-        ytd_grouped_vessel_data_zero = {
-            "imo"            : imo,
-            "vessel_name"    : vessel_name,
-            "operator"       : ytd_not_exist_voyage_list[0]["operator"]["S"],
-            "distance"       : 0,
-            "foc"            : 0,
-            "year_to_date"   : 0,
-            "last_year"      : 0,
-            "borrowing_limit": 0,
-            "borrowing"      : 0,
-            "banking"        : 0,
-            "total"          : 0,
-            "penalty_factor" : eoy_grouped_vessel_data["penalty_factor"],
-            "cost"           : 0
-        }
-        ytd_grouped_vessel_info.append(ytd_grouped_vessel_data_zero)
+            # 空のytd_grouped_vessel_dataレコードを追加
+            ytd_grouped_vessel_data_zero = {
+                "imo"            : imo,
+                "vessel_name"    : vessel_name,
+                "operator"       : ytd_not_exist_voyage_list[0]["operator"]["S"],
+                "distance"       : 0,
+                "foc"            : 0,
+                "year_to_date"   : 0,
+                "last_year"      : 0,
+                "borrowing_limit": 0,
+                "borrowing"      : 0,
+                "banking"        : 0,
+                "total"          : 0,
+                "penalty_factor" : eoy_grouped_vessel_data["penalty_factor"],
+                "cost"           : 0
+            }
+            ytd_grouped_vessel_info.append(ytd_grouped_vessel_data_zero)
 
     # 実測データ無しspeed-plan
     elif len(ytd_not_exist_speed_list) > 0:
