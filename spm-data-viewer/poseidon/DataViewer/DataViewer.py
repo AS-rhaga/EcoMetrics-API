@@ -15,16 +15,31 @@ def create_responce_list(imo, response, DATACHANNEL):
     print(f"response[{type(response)}]: {response}")
     
     beaufort_count = 0
-    boiler_foc_count = 0
     course_count = 0
     displacement_count = 0
     dwt_count = 0
-    ge_foc_count = 0
     gt_count = 0
     lat_count = 0
     lng_count = 0
     log_distance_count = 0
     log_speed_count = 0
+    me_bog_count = 0
+    me_hfo_count = 0
+    me_lsfo_count = 0
+    me_do_count = 0
+    me_lsgo_count = 0
+    dg_bog_count = 0
+    dg_hfo_count = 0
+    dg_lsfo_count = 0
+    dg_do_count = 0
+    dg_lsgo_count = 0
+    boiler_hfo_count = 0
+    boiler_lsfo_count = 0
+    boiler_do_count = 0
+    boiler_lsgo_count = 0
+    igg_go_count = 0
+    igg_lsgo_count = 0
+    gcu_bog_count = 0
     me_foc_count = 0
     me_load_count = 0
     me_rpm_count = 0
@@ -54,6 +69,21 @@ def create_responce_list(imo, response, DATACHANNEL):
     lower_lng = float(DATACHANNEL["lower_lng"]) if DATACHANNEL["lower_lng"] != "" else -9999999
     lower_log_distance = float(DATACHANNEL["lower_log_distance"]) if DATACHANNEL["lower_log_distance"] != "" else -9999999
     lower_log_speed = float(DATACHANNEL["lower_log_speed"]) if DATACHANNEL["lower_log_speed"] != "" else -9999999
+    lower_me_bog  = float(DATACHANNEL["lower_me_bog"])  if DATACHANNEL["lower_me_bog"] != "" else -9999999
+    lower_me_hfo  = float(DATACHANNEL["lower_me_hfo"])  if DATACHANNEL["lower_me_hfo"] != "" else -9999999
+    lower_me_lsfo = float(DATACHANNEL["lower_me_lsfo"]) if DATACHANNEL["lower_me_lsfo"] != "" else -9999999
+    lower_me_do   = float(DATACHANNEL["lower_me_do"])   if DATACHANNEL["lower_me_do"] != "" else -9999999
+    lower_me_lsgo = float(DATACHANNEL["lower_me_lsgo"]) if DATACHANNEL["lower_me_lsgo"] != "" else -9999999
+    lower_dg_bog  = float(DATACHANNEL["lower_dg_bog"])  if DATACHANNEL["lower_dg_bog"] != "" else -9999999
+    lower_dg_hfo  = float(DATACHANNEL["lower_dg_hfo"])  if DATACHANNEL["lower_dg_hfo"] != "" else -9999999
+    lower_dg_do   = float(DATACHANNEL["lower_dg_do"])   if DATACHANNEL["lower_dg_do"] != "" else -9999999
+    lower_dg_lsgo = float(DATACHANNEL["lower_dg_lsgo"]) if DATACHANNEL["lower_dg_lsgo"] != "" else -9999999
+    lower_boiler_hfo  = float(DATACHANNEL["lower_boiler_hfo"])  if DATACHANNEL["lower_boiler_hfo"] != "" else -9999999
+    lower_boiler_do   = float(DATACHANNEL["lower_boiler_do"])   if DATACHANNEL["lower_boiler_do"] != "" else -9999999
+    lower_boiler_lsgo = float(DATACHANNEL["lower_boiler_lsgo"]) if DATACHANNEL["lower_boiler_lsgo"] != "" else -9999999
+    lower_igg_go   = float(DATACHANNEL["lower_igg_go"])   if DATACHANNEL["lower_igg_go"] != "" else -9999999
+    lower_igg_lsgo = float(DATACHANNEL["lower_igg_lsgo"]) if DATACHANNEL["lower_igg_lsgo"] != "" else -9999999
+    lower_gcu_bog  = float(DATACHANNEL["lower_gcu_bog"])  if DATACHANNEL["lower_gcu_bog"] != "" else -9999999
     lower_me_foc = float(DATACHANNEL["lower_me_foc"]) if DATACHANNEL["lower_me_foc"] != "" else -9999999
     lower_me_load = float(DATACHANNEL["lower_me_load"]) if DATACHANNEL["lower_me_load"] != "" else -9999999
     lower_me_rpm = float(DATACHANNEL["lower_me_rpm"]) if DATACHANNEL["lower_me_rpm"] != "" else -9999999
@@ -80,6 +110,21 @@ def create_responce_list(imo, response, DATACHANNEL):
     upper_lng = float(DATACHANNEL["upper_lng"]) if DATACHANNEL["upper_lng"] != "" else 9999999
     upper_log_distance = float(DATACHANNEL["upper_log_distance"]) if DATACHANNEL["upper_log_distance"] != "" else 9999999
     upper_log_speed = float(DATACHANNEL["upper_log_speed"]) if DATACHANNEL["upper_log_speed"] != "" else 9999999
+    upper_me_bog  = float(DATACHANNEL["upper_me_bog"])  if DATACHANNEL["upper_me_bog"] != "" else 9999999
+    upper_me_hfo  = float(DATACHANNEL["upper_me_hfo"])  if DATACHANNEL["upper_me_hfo"] != "" else 9999999
+    upper_me_lsfo = float(DATACHANNEL["upper_me_lsfo"]) if DATACHANNEL["upper_me_lsfo"] != "" else 9999999
+    upper_me_do   = float(DATACHANNEL["upper_me_do"])   if DATACHANNEL["upper_me_do"] != "" else 9999999
+    upper_me_lsgo = float(DATACHANNEL["upper_me_lsgo"]) if DATACHANNEL["upper_me_lsgo"] != "" else 9999999
+    upper_dg_bog  = float(DATACHANNEL["upper_dg_bog"])  if DATACHANNEL["upper_dg_bog"] != "" else 9999999
+    upper_dg_hfo  = float(DATACHANNEL["upper_dg_hfo"])  if DATACHANNEL["upper_dg_hfo"] != "" else 9999999
+    upper_dg_do   = float(DATACHANNEL["upper_dg_do"])   if DATACHANNEL["upper_dg_do"] != "" else 9999999
+    upper_dg_lsgo = float(DATACHANNEL["upper_dg_lsgo"]) if DATACHANNEL["upper_dg_lsgo"] != "" else 9999999
+    upper_boiler_hfo  = float(DATACHANNEL["upper_boiler_hfo"])  if DATACHANNEL["upper_boiler_hfo"] != "" else 9999999
+    upper_boiler_do   = float(DATACHANNEL["upper_boiler_do"])   if DATACHANNEL["upper_boiler_do"] != "" else 9999999
+    upper_boiler_lsgo = float(DATACHANNEL["upper_boiler_lsgo"]) if DATACHANNEL["upper_boiler_lsgo"] != "" else 9999999
+    upper_igg_go   = float(DATACHANNEL["upper_igg_go"])   if DATACHANNEL["upper_igg_go"] != "" else 9999999
+    upper_igg_lsgo = float(DATACHANNEL["upper_igg_lsgo"]) if DATACHANNEL["upper_igg_lsgo"] != "" else 9999999
+    upper_gcu_bog  = float(DATACHANNEL["upper_gcu_bog"])  if DATACHANNEL["upper_gcu_bog"] != "" else 9999999
     upper_me_foc = float(DATACHANNEL["upper_me_foc"]) if DATACHANNEL["upper_me_foc"] != "" else 9999999
     upper_me_load = float(DATACHANNEL["upper_me_load"]) if DATACHANNEL["upper_me_load"] != "" else 9999999
     upper_me_rpm = float(DATACHANNEL["upper_me_rpm"]) if DATACHANNEL["upper_me_rpm"] != "" else 9999999
@@ -132,19 +177,39 @@ def create_responce_list(imo, response, DATACHANNEL):
         eta_destination = res["eta_destination"]["S"] if "eta_destination" in res and res["eta_destination"]["S"] != "" else ""
         ablog_id        = res["ablog_id"]["S"] if "ablog_id" in res and res["ablog_id"]["S"] != "" else ""
         co2_factor      = float(res["co2_factor"]["S"]) if "co2_factor" in res and res["co2_factor"]["S"] != "" else 1
-        
+        start_local_date = res["start_local_date"]["S"] if "start_local_date" in res and res["start_local_date"]["S"] != "" else ""
+        start_utc_date   = res["start_utc_date"]["S"] if "start_utc_date" in res and res["start_utc_date"]["S"] != "" else ""
+        port_code        = res["port_code"]["S"] if "port_code" in res and res["port_code"]["S"] != "" else ""
+        eta_port_code    = res["eta_port_code"]["S"] if "eta_port_code" in res and res["eta_port_code"]["S"] != "" else ""
+        operator         = res["operator"]["S"] if "operator" in res and res["operator"]["S"] != "" else ""
+
         # 数値項目、上下限チェック開始
         beaufort = ""
-        boiler_foc = ""
         course = ""
         displacement = ""
         dwt = ""
-        ge_foc = ""
         gt = ""
         lat = ""
         lng = ""
         log_distance = ""
         log_speed = ""
+        me_bog = ""
+        me_hfo = ""
+        me_lsfo = ""
+        me_do = ""
+        me_lsgo = ""
+        dg_bog = ""
+        dg_hfo = ""
+        dg_lsfo = ""
+        dg_do = ""
+        dg_lsgo = ""
+        boiler_hfo = ""
+        boiler_lsfo = ""
+        boiler_do = ""
+        boiler_lsgo = ""
+        igg_go = ""
+        igg_lsgo = ""
+        gcu_bog = ""
         me_foc = ""
         me_load = ""
         me_rpm = ""
@@ -154,7 +219,6 @@ def create_responce_list(imo, response, DATACHANNEL):
         swell_height = ""
         swell_period = ""
         total_foc = ""
-        co2 = ""
         wave_direction = ""
         wave_height = ""
         wave_period = ""
@@ -162,16 +226,31 @@ def create_responce_list(imo, response, DATACHANNEL):
         wind_speed = ""
         
         beaufort_alerm = 0
-        boiler_foc_alerm = 0
         course_alerm = 0
         displacement_alerm = 0
         dwt_alerm = 0
-        ge_foc_alerm = 0
         gt_alerm = 0
         lat_alerm = 0
         lng_alerm = 0
         log_distance_alerm = 0
         log_speed_alerm = 0
+        me_bog_alerm = 0
+        me_hfo_alerm = 0
+        me_lsfo_alerm = 0
+        me_do_alerm = 0
+        me_lsgo_alerm = 0
+        dg_bog_alerm = 0
+        dg_hfo_alerm = 0
+        dg_lsfo_alerm = 0
+        dg_do_alerm = 0
+        dg_lsgo_alerm = 0
+        boiler_hfo_alerm = 0
+        boiler_lsfo_alerm = 0
+        boiler_do_alerm = 0
+        boiler_lsgo_alerm = 0
+        igg_go_alerm = 0
+        igg_lsgo_alerm = 0
+        gcu_bog_alerm = 0
         me_foc_alerm = 0
         me_load_alerm = 0
         me_rpm_alerm = 0
@@ -192,11 +271,6 @@ def create_responce_list(imo, response, DATACHANNEL):
             if beaufort < lower_beaufort or upper_beaufort < beaufort: 
                 beaufort_count += 1
                 beaufort_alerm = 1
-        if "boiler_foc" in res and res["boiler_foc"]["S"] != "": 
-            boiler_foc = float(res["boiler_foc"]["S"]) 
-            if boiler_foc < lower_boiler_foc or upper_boiler_foc < boiler_foc: 
-                boiler_foc_count += 1
-                boiler_foc_alerm = 1
         if "course" in res and res["course"]["S"] != "": 
             course = float(res["course"]["S"]) 
             if course < lower_course or upper_course < course: 
@@ -212,11 +286,6 @@ def create_responce_list(imo, response, DATACHANNEL):
             if dwt < lower_dwt or upper_dwt < dwt: 
                 dwt_count += 1
                 dwt_alerm = 1
-        if "ge_foc" in res and res["ge_foc"]["S"] != "": 
-            ge_foc = float(res["ge_foc"]["S"]) 
-            if ge_foc < lower_ge_foc or upper_ge_foc < ge_foc: 
-                ge_foc_count += 1
-                ge_foc_alerm = 1
         if "gt" in res and res["gt"]["S"] != "": 
             gt = float(res["gt"]["S"]) 
             if gt < lower_gt or upper_gt < gt: 
@@ -242,6 +311,91 @@ def create_responce_list(imo, response, DATACHANNEL):
             if log_speed < lower_log_speed or upper_log_speed < log_speed: 
                 log_speed_count += 1
                 log_speed_alerm = 1
+        if "me_bog" in res and res["me_bog"]["S"] != "": 
+            me_bog = float(res["me_bog"]["S"]) 
+            if me_bog < lower_me_bog or upper_me_bog < me_bog: 
+                me_bog_count += 1
+                me_bog_alerm = 1
+        if "me_hfo" in res and res["me_hfo"]["S"] != "": 
+            me_hfo = float(res["me_hfo"]["S"]) 
+            if me_hfo < lower_me_hfo or upper_me_hfo < me_hfo: 
+                me_hfo_count += 1
+                me_hfo_alerm = 1
+        if "me_lsfo" in res and res["me_lsfo"]["S"] != "": 
+            me_lsfo = float(res["me_lsfo"]["S"]) 
+            if me_lsfo < lower_me_lsfo or upper_me_lsfo < me_lsfo: 
+                me_lsfo_count += 1
+                me_lsfo_alerm = 1
+        if "me_do" in res and res["me_do"]["S"] != "": 
+            me_do = float(res["me_do"]["S"]) 
+            if me_do < lower_me_do or upper_me_do < me_do: 
+                me_do_count += 1
+                me_do_alerm = 1
+        if "me_lsgo" in res and res["me_lsgo"]["S"] != "": 
+            me_lsgo = float(res["me_lsgo"]["S"]) 
+            if me_lsgo < lower_me_lsgo or upper_me_lsgo < me_lsgo: 
+                me_lsgo_count += 1
+                me_lsgo_alerm = 1
+        if "dg_bog" in res and res["dg_bog"]["S"] != "": 
+            dg_bog = float(res["dg_bog"]["S"]) 
+            if dg_bog < lower_dg_bog or upper_dg_bog < dg_bog: 
+                dg_bog_count += 1
+                dg_bog_alerm = 1
+        if "dg_hfo" in res and res["dg_hfo"]["S"] != "": 
+            dg_hfo = float(res["dg_hfo"]["S"]) 
+            if dg_hfo < lower_dg_hfo or upper_dg_hfo < dg_hfo: 
+                dg_hfo_count += 1
+                dg_hfo_alerm = 1
+        if "ge_foc" in res and res["ge_foc"]["S"] != "": 
+            dg_lsfo = float(res["ge_foc"]["S"]) 
+            if dg_lsfo < lower_ge_foc or upper_ge_foc < dg_lsfo: 
+                dg_lsfo_count += 1
+                dg_lsfo_alerm = 1
+        if "dg_do" in res and res["dg_do"]["S"] != "": 
+            dg_do = float(res["dg_do"]["S"]) 
+            if dg_do < lower_dg_do or upper_dg_do < dg_do: 
+                dg_do_count += 1
+                dg_do_alerm = 1
+        if "dg_lsgo" in res and res["dg_lsgo"]["S"] != "": 
+            dg_lsgo = float(res["dg_lsgo"]["S"]) 
+            if dg_lsgo < lower_dg_lsgo or upper_dg_lsgo < dg_lsgo: 
+                dg_lsgo_count += 1
+                dg_lsgo_alerm = 1
+        if "boiler_hfo" in res and res["boiler_hfo"]["S"] != "": 
+            boiler_hfo = float(res["boiler_hfo"]["S"])
+            if boiler_hfo < lower_boiler_hfo or upper_boiler_hfo < boiler_hfo: 
+                boiler_hfo_count += 1
+                boiler_hfo_alerm = 1
+        if "boiler_foc" in res and res["boiler_foc"]["S"] != "": 
+            boiler_lsfo = float(res["boiler_foc"]["S"]) 
+            if boiler_lsfo < lower_boiler_foc or upper_boiler_foc < boiler_lsfo: 
+                boiler_lsfo_count += 1
+                boiler_lsfo_alerm = 1
+        if "boiler_do" in res and res["boiler_do"]["S"] != "": 
+            boiler_do = float(res["boiler_do"]["S"]) 
+            if boiler_do < lower_boiler_do or upper_boiler_do < boiler_do: 
+                boiler_do_count += 1
+                boiler_do_alerm = 1
+        if "boiler_lsgo" in res and res["boiler_lsgo"]["S"] != "": 
+            boiler_lsgo = float(res["boiler_lsgo"]["S"]) 
+            if boiler_lsgo < lower_boiler_lsgo or upper_boiler_lsgo < boiler_lsgo: 
+                boiler_lsgo_count += 1
+                boiler_lsgo_alerm = 1
+        if "igg_go" in res and res["igg_go"]["S"] != "": 
+            igg_go = float(res["igg_go"]["S"]) 
+            if igg_go < lower_igg_go or upper_igg_go < igg_go: 
+                igg_go_count += 1
+                igg_go_alerm = 1
+        if "igg_lsgo" in res and res["igg_lsgo"]["S"] != "": 
+            igg_lsgo = float(res["igg_lsgo"]["S"]) 
+            if igg_lsgo < lower_igg_lsgo or upper_igg_lsgo < igg_lsgo: 
+                igg_lsgo_count += 1
+                igg_lsgo_alerm = 1
+        if "gcu_bog" in res and res["gcu_bog"]["S"] != "": 
+            gcu_bog = float(res["gcu_bog"]["S"]) 
+            if gcu_bog < lower_gcu_bog or upper_gcu_bog < gcu_bog: 
+                gcu_bog_count += 1
+                gcu_bog_alerm = 1
         if "me_foc" in res and res["me_foc"]["S"] != "": 
             me_foc = float(res["me_foc"]["S"]) 
             if me_foc < lower_me_foc or upper_me_foc < me_foc: 
@@ -284,7 +438,6 @@ def create_responce_list(imo, response, DATACHANNEL):
                 swell_period_alerm = 1
         if "total_foc" in res and res["total_foc"]["S"] != "": 
             total_foc = float(res["total_foc"]["S"])
-            co2 = total_foc * co2_factor
             if total_foc < lower_total_foc or upper_total_foc < total_foc: 
                 total_foc_count += 1
                 total_foc_alerm = 1
@@ -329,7 +482,6 @@ def create_responce_list(imo, response, DATACHANNEL):
             "leg_no": leg_no,
             "leg": leg,
             "co2_factor": co2_factor,
-            "co2": co2_factor,
             "course": course,
             "beaufort": beaufort,
             "log_distance": log_distance,
@@ -337,8 +489,23 @@ def create_responce_list(imo, response, DATACHANNEL):
             "log_speed": log_speed,
             "og_speed": og_speed,
             "me_rpm": me_rpm,
-            "ge_foc": ge_foc,
-            "boiler_foc": boiler_foc,
+            "me_bog" : me_bog,
+            "me_hfo" : me_hfo,
+            "me_lsfo" : me_lsfo,
+            "me_do" : me_do,
+            "me_lsgo" : me_lsgo,
+            "dg_bog" : dg_bog,
+            "dg_hfo" : dg_hfo,
+            "dg_lsfo" : dg_lsfo,
+            "dg_do" : dg_do,
+            "dg_lsgo" : dg_lsgo,
+            "boiler_hfo": boiler_hfo,
+            "boiler_lsfo": boiler_lsfo,
+            "boiler_do": boiler_do,
+            "boiler_lsgo": boiler_lsgo,
+            "igg_go": igg_go,
+            "igg_lsgo": igg_lsgo,
+            "gcu_bog": gcu_bog,
             "me_foc": me_foc,
             "total_foc": total_foc,
             "me_load": me_load,
@@ -348,6 +515,9 @@ def create_responce_list(imo, response, DATACHANNEL):
             "displacement": displacement,
             "gt": gt,
             "dwt": dwt,
+            "start_local_date": start_local_date,
+            "start_utc_date": start_utc_date,
+            "port_code": port_code,
             "wind_speed": wind_speed,
             "wind_direction": wind_direction,
             "wave_period": wave_period,
@@ -357,19 +527,36 @@ def create_responce_list(imo, response, DATACHANNEL):
             "swell_period": swell_period,
             "swell_direction": swell_direction,
             "ablog_id": ablog_id,
+            "eta_port_code": eta_port_code,
+            "operator": operator,
             
             # 上下限値アラーム
             "beaufort_alerm" : beaufort_alerm,
-            "boiler_foc_alerm" : boiler_foc_alerm,
             "course_alerm" : course_alerm,
             "displacement_alerm" : displacement_alerm,
             "dwt_alerm" : dwt_alerm,
-            "ge_foc_alerm" : ge_foc_alerm,
             "gt_alerm" : gt_alerm,
             "lat_alerm" : lat_alerm,
             "lng_alerm" : lng_alerm,
             "log_distance_alerm" : log_distance_alerm,
             "log_speed_alerm" : log_speed_alerm,
+            "me_bog_alerm" : me_bog_alerm,
+            "me_hfo_alerm" : me_hfo_alerm,
+            "me_lsfo_alerm" : me_lsfo_alerm,
+            "me_do_alerm" : me_do_alerm,
+            "me_lsgo_alerm" : me_lsgo_alerm,
+            "dg_bog_alerm" : dg_bog_alerm,
+            "dg_hfo_alerm" : dg_hfo_alerm,
+            "dg_lsfo_alerm" : dg_lsfo_alerm,
+            "dg_do_alerm" : dg_do_alerm,
+            "dg_lsgo_alerm" : dg_lsgo_alerm,
+            "boiler_hfo_alerm": boiler_hfo_alerm,
+            "boiler_lsfo_alerm": boiler_lsfo_alerm,
+            "boiler_do_alerm": boiler_do_alerm,
+            "boiler_lsgo_alerm": boiler_lsgo_alerm,
+            "igg_go_alerm": igg_go_alerm,
+            "igg_lsgo_alerm": igg_lsgo_alerm,
+            "gcu_bog_alerm": gcu_bog_alerm,
             "me_foc_alerm" : me_foc_alerm,
             "me_load_alerm" : me_load_alerm,
             "me_rpm_alerm" : me_rpm_alerm,
@@ -384,74 +571,37 @@ def create_responce_list(imo, response, DATACHANNEL):
             "wave_period_alerm" : wave_period_alerm,
             "wind_direction_alerm" : wind_direction_alerm,
             "wind_speed_alerm" : wind_speed_alerm,
-
-            # 上下限値
-            # "lower_beaufort": lower_beaufort,
-            # "lower_boiler_foc": lower_boiler_foc,
-            # "lower_course": lower_course,
-            # "lower_displacement": lower_displacement,
-            # "lower_dwt": lower_dwt,
-            # "lower_ge_foc": lower_ge_foc,
-            # "lower_gt": lower_gt,
-            # "lower_lat": lower_lat,
-            # "lower_lng": lower_lng,
-            # "lower_log_distance": lower_log_distance,
-            # "lower_log_speed": lower_log_speed,
-            # "lower_me_foc": lower_me_foc,
-            # "lower_me_load": lower_me_load,
-            # "lower_me_rpm": lower_me_rpm,
-            # "lower_og_distance": lower_og_distance,
-            # "lower_og_speed": lower_og_speed,
-            # "lower_swell_direction": lower_swell_direction,
-            # "lower_swell_height": lower_swell_height,
-            # "lower_swell_period": lower_swell_period,
-            # "lower_total_foc": lower_total_foc,
-            # "lower_wave_direction": lower_wave_direction,
-            # "lower_wave_height": lower_wave_height,
-            # "lower_wave_period": lower_wave_period,
-            # "lower_wind_direction": lower_wind_direction,
-            # "lower_wind_speed": lower_wind_speed,
-            # "upper_beaufort": upper_beaufort,
-            # "upper_boiler_foc": upper_boiler_foc,
-            # "upper_course": upper_course,
-            # "upper_displacement": upper_displacement,
-            # "upper_dwt": upper_dwt,
-            # "upper_ge_foc": upper_ge_foc,
-            # "upper_gt": upper_gt,
-            # "upper_lat": upper_lat,
-            # "upper_lng": upper_lng,
-            # "upper_log_distance": upper_log_distance,
-            # "upper_log_speed": upper_log_speed,
-            # "upper_me_foc": upper_me_foc,
-            # "upper_me_load": upper_me_load,
-            # "upper_me_rpm": upper_me_rpm,
-            # "upper_og_distance": upper_og_distance,
-            # "upper_og_speed": upper_og_speed,
-            # "upper_swell_direction": upper_swell_direction,
-            # "upper_swell_height": upper_swell_height,
-            # "upper_swell_period": upper_swell_period,
-            # "upper_total_foc": upper_total_foc,
-            # "upper_wave_direction": upper_wave_direction,
-            # "upper_wave_height": upper_wave_height,
-            # "upper_wave_period": upper_wave_period,
-            # "upper_wind_direction": upper_wind_direction,
-            # "upper_wind_speed": upper_wind_speed,
         }
         RESPONSE_LIST.append(VALUE_LIST)
         # print(f"VALUE_LIST[{type(len(VALUE_LIST))}][{len(VALUE_LIST)}]: {VALUE_LIST}")
     
     ALERM_LIST = {
         "beaufort_alerm_count": beaufort_count,
-        "boiler_foc_alerm_count": boiler_foc_count,
         "course_alerm_count": course_count,
         "displacement_alerm_count": displacement_count,
         "dwt_alerm_count": dwt_count,
-        "ge_foc_alerm_count": ge_foc_count,
         "gt_alerm_count": gt_count,
         "lat_alerm_count": lat_count,
         "lng_alerm_count": lng_count,
         "log_distance_alerm_count": log_distance_count,
         "log_speed_alerm_count": log_speed_count,
+        "me_bog_alerm_count": me_bog_count,
+        "me_hfo_alerm_count": me_hfo_count,
+        "me_lsfo_alerm_count": me_lsfo_count,
+        "me_do_alerm_count": me_do_count,
+        "me_lsgo_alerm_count": me_lsgo_count,
+        "dg_bog_alerm_count": dg_bog_count,
+        "dg_hfo_alerm_count": dg_hfo_count,
+        "dg_lsfo_alerm_count": dg_lsfo_count,
+        "dg_do_alerm_count": dg_do_count,
+        "dg_lsgo_alerm_count": dg_lsgo_count,
+        "boiler_hfo_alerm_count": boiler_hfo_count,
+        "boiler_lsfo_alerm_count": boiler_lsfo_count,
+        "boiler_do_alerm_count": boiler_do_count,
+        "boiler_lsgo_alerm_count": boiler_lsgo_count,
+        "igg_go_alerm_count": igg_go_count,
+        "igg_lsgo_alerm_count": igg_lsgo_count,
+        "gcu_bog_alerm_count": gcu_bog_count,
         "me_foc_alerm_count": me_foc_count,
         "me_load_alerm_count": me_load_count,
         "me_rpm_alerm_count": me_rpm_count,
