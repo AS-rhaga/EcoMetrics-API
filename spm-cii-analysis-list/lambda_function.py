@@ -483,11 +483,11 @@ def lambda_handler(event, context):
             # 返却用データセットに値を設定
             imo                 = imo
             VesselName          = res_vesselmaster[0]["VesselName"]["S"]
-            l4w_distance        = round(float(res_vesselalarm[0]["oneMonth_distance"]["S"])) if res_vesselalarm else 0
-            l4w_foc             = round(float(res_vesselalarm[0]["oneMonth_foc"]["S"]), 1) if res_vesselalarm else 0
-            l4w_cii_score       = res_vesselalarm[0]["oneMonth"]["S"] if res_vesselalarm else ""
-            l4w_from            = res_vesselalarm[0]["oneMonth_from"]["S"] if res_vesselalarm else ""
-            l4w_to              = res_vesselalarm[0]["oneMonth_to"]["S"] if res_vesselalarm else ""
+            l4w_distance        = 0
+            l4w_foc             = 0
+            l4w_cii_score       = ""
+            l4w_from            = ""
+            l4w_to              = ""
             ytd_distance        = 0
             ytd_foc             = 0
             ytd_cii_score       = ""
