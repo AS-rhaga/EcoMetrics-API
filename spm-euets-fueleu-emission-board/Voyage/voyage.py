@@ -244,6 +244,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
     voyage_total_mdo          = 0
     voyage_total_mgo          = 0
     voyage_total_foc          = 0
+    eu_actual_total_foc       = 0
     voyage_total_eua          = 0
     voyage_total_energy       = 0
     voyage_total_cb           = 0
@@ -303,6 +304,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 voyage_total_mdo          += total_mdo
                 voyage_total_mgo          += total_mgo
                 voyage_total_foc          += total_foc
+                eu_actual_total_foc       += total_foc / (leg_eu_rate / 100)
                 voyage_total_displacement += displacement
                 voyage_count_displacement += 1
                 voyage_total_eua          += eua
@@ -329,6 +331,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 voyage_total_mdo          += total_mdo
                 voyage_total_mgo          += total_mgo
                 voyage_total_foc          += total_foc
+                eu_actual_total_foc       += total_foc / (leg_eu_rate / 100)
                 voyage_total_displacement += displacement
                 voyage_count_displacement += 1
                 voyage_total_eua          += voyage_eua
@@ -353,6 +356,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
             voyage_total_mdo          += total_mdo
             voyage_total_mgo          += total_mgo
             voyage_total_foc          += total_foc
+            eu_actual_total_foc       += total_foc / (leg_eu_rate / 100)
             voyage_total_displacement += displacement
             voyage_count_displacement += 1
             voyage_total_eua          += voyage_eua
@@ -386,6 +390,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
         voyage_total_mdo      = str(float(voyage_total_mdo))
         voyage_total_mgo      = str(float(voyage_total_mgo))
         voyage_total_foc      = str(float(voyage_total_foc))
+        eu_actual_total_foc   = str(float(eu_actual_total_foc))
         voyage_total_eua      = str(float(voyage_total_eua))
         voyage_total_cb       = str(float(voyage_total_cb),)
         voyage_total_cb_cost  = str(float(voyage_total_cb_cost))
@@ -406,6 +411,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
             "total_mdo"     : voyage_total_mdo,
             "total_mgo"     : voyage_total_mgo,
             "total_foc"     : voyage_total_foc,
+            "eu_actual_foc" : eu_actual_total_foc,
             "GHG_Actual"    : voyage_total_GHG,
             "eua"           : voyage_total_eua,
             "cb"            : voyage_total_cb,

@@ -305,6 +305,7 @@ def main(imo, timestamp):
     voyage_total_mdo          = 0
     voyage_total_mgo          = 0
     voyage_total_foc          = 0
+    eu_actual_total_foc       = 0
     voyage_total_eua          = 0
     voyage_total_energy       = 0
     voyage_total_cb           = 0
@@ -416,6 +417,7 @@ def main(imo, timestamp):
                 total_mgo      = float(res_leg[j]["total_mgo"]["S"])
                 total_foc      = float(res_leg[j]["total_foc"]["S"])
                 eua            = float(res_leg[j]["eua"]["S"])
+                eu_rate        = int(res_leg[j]["eu_rate"]["S"])
                 leg_timestamp  = res_leg[j]["timestamp"]["S"]
                 # print(f"total_foc[{type(total_foc)}]: {total_foc}")
 
@@ -434,6 +436,7 @@ def main(imo, timestamp):
                         voyage_total_mdo          += total_mdo
                         voyage_total_mgo          += total_mgo
                         voyage_total_foc          += total_foc
+                        eu_actual_total_foc       += total_foc / (eu_rate / 100)
                         voyage_total_displacement += displacement
                         voyage_count_displacement += 1
                         voyage_total_eua          += eua
@@ -463,6 +466,7 @@ def main(imo, timestamp):
                         voyage_total_mdo          += fuel_total_list["total_mdo"]
                         voyage_total_mgo          += fuel_total_list["total_mgo"]
                         voyage_total_foc          += fuel_total_list["total_foc"]
+                        eu_actual_total_foc       += fuel_total_list["total_foc"] / (eu_rate / 100)
                         voyage_total_displacement += fuel_total_list["displacement"]
                         if fuel_total_list["displacement"] != 0:
                             voyage_count_displacement += 1
@@ -487,6 +491,7 @@ def main(imo, timestamp):
                     voyage_total_mdo          += fuel_total_list["total_mdo"]
                     voyage_total_mgo          += fuel_total_list["total_mgo"]
                     voyage_total_foc          += fuel_total_list["total_foc"]
+                    eu_actual_total_foc       += fuel_total_list["total_foc"] / (eu_rate / 100)
                     voyage_total_displacement += fuel_total_list["displacement"]
                     if fuel_total_list["displacement"] != 0:
                         voyage_count_displacement += 1
@@ -521,6 +526,7 @@ def main(imo, timestamp):
                 voyage_total_mdo      = str(float(voyage_total_mdo))
                 voyage_total_mgo      = str(float(voyage_total_mgo))
                 voyage_total_foc      = str(float(voyage_total_foc))
+                eu_actual_total_foc   = str(float(eu_actual_total_foc))
                 voyage_total_energy   = str(float(voyage_total_energy))
                 voyage_total_eua      = str(float(voyage_total_eua))
                 voyage_total_cb       = str(float(voyage_total_cb))
@@ -541,6 +547,7 @@ def main(imo, timestamp):
                     "total_mdo"     : voyage_total_mdo,
                     "total_mgo"     : voyage_total_mgo,
                     "total_foc"     : voyage_total_foc,
+                    "eu_actual_foc" : eu_actual_total_foc,
                     "total_energy"  : voyage_total_energy,
                     "eua"           : voyage_total_eua,
                     "cb"            : voyage_total_cb,
@@ -564,6 +571,7 @@ def main(imo, timestamp):
             voyage_total_mdo          = 0
             voyage_total_mgo          = 0
             voyage_total_foc          = 0
+            eu_actual_total_foc       = 0
             voyage_total_displacement = 0
             voyage_count_displacement = 0
             voyage_total_eua          = 0
@@ -602,6 +610,7 @@ def main(imo, timestamp):
                     total_mgo      = float(res_leg[j]["total_mgo"]["S"])
                     total_foc      = float(res_leg[j]["total_foc"]["S"])
                     eua            = float(res_leg[j]["eua"]["S"])
+                    eu_rate        = int(res_leg[j]["eu_rate"]["S"])
                     leg_timestamp  = res_leg[j]["timestamp"]["S"]
                     # print(f"total_foc[{type(total_foc)}]: {total_foc}")
 
@@ -620,6 +629,7 @@ def main(imo, timestamp):
                             voyage_total_mdo          += total_mdo
                             voyage_total_mgo          += total_mgo
                             voyage_total_foc          += total_foc
+                            eu_actual_total_foc       += total_foc / (eu_rate / 100)
                             voyage_total_displacement += displacement
                             voyage_count_displacement += 1
                             voyage_total_eua          += eua
@@ -650,6 +660,7 @@ def main(imo, timestamp):
                             voyage_total_mdo          += fuel_total_list["total_mdo"]
                             voyage_total_mgo          += fuel_total_list["total_mgo"]
                             voyage_total_foc          += fuel_total_list["total_foc"]
+                            eu_actual_total_foc       += fuel_total_list["total_foc"] / (eu_rate / 100)
                             voyage_total_displacement += fuel_total_list["displacement"]
                             if fuel_total_list["displacement"] != 0:
                                 voyage_count_displacement += 1
@@ -674,6 +685,7 @@ def main(imo, timestamp):
                         voyage_total_mdo          += fuel_total_list["total_mdo"]
                         voyage_total_mgo          += fuel_total_list["total_mgo"]
                         voyage_total_foc          += fuel_total_list["total_foc"]
+                        eu_actual_total_foc       += fuel_total_list["total_foc"] / (eu_rate / 100)
                         voyage_total_displacement += fuel_total_list["displacement"]
                         if fuel_total_list["displacement"] != 0:
                             voyage_count_displacement += 1
@@ -704,6 +716,7 @@ def main(imo, timestamp):
                     voyage_total_mdo      = str(float(voyage_total_mdo))
                     voyage_total_mgo      = str(float(voyage_total_mgo))
                     voyage_total_foc      = str(float(voyage_total_foc))
+                    eu_actual_total_foc   = str(float(eu_actual_total_foc))
                     voyage_total_energy   = str(float(voyage_total_energy))
                     voyage_total_eua      = str(float(voyage_total_eua))
                     voyage_total_cb       = str(float(voyage_total_cb))
@@ -724,6 +737,7 @@ def main(imo, timestamp):
                         "total_mdo"     : voyage_total_mdo,
                         "total_mgo"     : voyage_total_mgo,
                         "total_foc"     : voyage_total_foc,
+                        "eu_actual_foc" : eu_actual_total_foc,
                         "total_energy"  : voyage_total_energy,
                         "eua"           : voyage_total_eua,
                         "cb"            : voyage_total_cb,

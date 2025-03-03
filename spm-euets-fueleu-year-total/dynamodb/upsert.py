@@ -32,9 +32,11 @@ def upsert_year_total(data, retry_count: int=42) -> None:
                     "total_mdo"   : { "S": data["total_mdo"] },
                     "total_mgo"   : { "S": data["total_mgo"] },
                     "total_foc"   : { "S": data["total_foc"] },
+                    "eu_actual_foc" : { "S": data["eu_actual_foc"]},
                     "eua"         : { "S": data["eua"] },
                     "cb"          : { "S": data["cb"] },
                     "banking"     : { "S": data["banking"] },
+                    "borrowing"   : { "S": data["borrowing"] },
                     "fine_flag"   : { "S": data["fine_flag"] },
                     "pooling_group": { "S": data["pooling_group"]},
                     "timestamp"   : { "S": data["timestamp"] }

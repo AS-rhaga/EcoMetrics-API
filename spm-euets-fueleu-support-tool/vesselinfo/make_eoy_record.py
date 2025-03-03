@@ -31,6 +31,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
     total_methanol_ng = 0
     total_nh3_ef      = 0
     total_foc         = 0
+    total_eu_actual_foc = 0
     total_distance    = 0
     total_eua         = 0
     total_energy      = 0
@@ -71,6 +72,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
         total_mdo      += float(thisyear_year_total["total_mdo"]["S"])
         total_mgo      += float(thisyear_year_total["total_mgo"]["S"])
         total_foc      += float(thisyear_year_total["total_foc"]["S"])
+        total_eu_actual_foc += float(thisyear_year_total["eu_actual_foc"]["S"])
         total_distance += float(thisyear_year_total["distance"]["S"])
         total_eua      += float(thisyear_year_total["eua"]["S"])
         total_energy   += ytd_energy
@@ -239,6 +241,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
             # 合計用変数に加算する
             total_distance += leg_distance
             total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
+            total_eu_actual_foc += simulation_leg_foc / (leg_eu_rate / 100)
 
     if count_target_voyage > 0:
         # 最終的なCBを算出
@@ -266,7 +269,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
             "vessel_name"    : vessel_name,
             "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else voyage_plan_list[0]["operator"]["S"],
             "distance"       : round(total_distance),
-            "foc"            : round(total_foc),
+            "foc"            : round(total_eu_actual_foc),
             "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
             "last_year"      : round(last_year / 1000000, 1),
             "borrowing_limit": round(borrowing_limit / 1000000),
@@ -314,6 +317,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
     total_methanol_ng = 0
     total_nh3_ef      = 0
     total_foc         = 0
+    total_eu_actual_foc = 0
     total_distance    = 0
     total_eua         = 0
     total_energy      = 0
@@ -348,6 +352,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         total_mdo      += float(thisyear_year_total["total_mdo"]["S"])
         total_mgo      += float(thisyear_year_total["total_mgo"]["S"])
         total_foc      += float(thisyear_year_total["total_foc"]["S"])
+        total_eu_actual_foc += float(thisyear_year_total["eu_actual_foc"]["S"])
         total_distance += float(thisyear_year_total["distance"]["S"])
         total_eua      += float(thisyear_year_total["eua"]["S"])
         total_energy   += ytd_energy
@@ -488,6 +493,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         # 合計用変数に加算する
         total_distance += total_ballast_laden_distance
         total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
+        total_eu_actual_foc += simulation_leg_foc / (leg_eu_rate / 100)
 
         # CB算出
         total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
@@ -514,7 +520,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         "vessel_name"    : vessel_name,
         "operator"       : thisyear_year_total["year_and_ope"]["S"][4:50] if thisyear_year_total else speed_plan[0]["operator"]["S"],
         "distance"       : round(total_distance),
-        "foc"            : round(total_foc),
+        "foc"            : round(total_eu_actual_foc),
         "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
         "last_year"      : round(last_year / 1000000, 1),
         "borrowing_limit": round(borrowing_limit / 1000000, 1),

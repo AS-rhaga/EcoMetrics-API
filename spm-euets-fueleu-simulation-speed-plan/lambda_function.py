@@ -373,6 +373,7 @@ def lambda_handler(event, context):
     total_methanol_ng = 0
     total_nh3_ef      = 0
     total_foc         = 0
+    total_eu_actual_foc = 0
     total_co2         = 0
     total_distance    = 0
     total_eua         = 0
@@ -476,12 +477,13 @@ def lambda_handler(event, context):
     for i in range(len(this_year_leg_list)):
 
         # 1leg当たりの数値を取得する
-        eu_rate      = int(this_year_leg_list[0]["eu_rate"]["S"])
+        eu_rate      = int(this_year_leg_list[i]["eu_rate"]["S"])
         leg_lng      = float(this_year_leg_list[i]["total_lng"]["S"])
         leg_hfo      = float(this_year_leg_list[i]["total_hfo"]["S"])
         leg_lfo      = float(this_year_leg_list[i]["total_lfo"]["S"])
         leg_mdo      = float(this_year_leg_list[i]["total_mdo"]["S"])
         leg_mgo      = float(this_year_leg_list[i]["total_mgo"]["S"])
+        leg_foc      = float(this_year_leg_list[i]["total_foc"]["S"])
         leg_distance = float(this_year_leg_list[i]["distance"]["S"])
         leg_eua      = float(this_year_leg_list[i]["eua"]["S"])
 
@@ -498,6 +500,7 @@ def lambda_handler(event, context):
         total_mdo      += leg_mdo
         total_mgo      += leg_mgo
         total_foc      += (leg_lng + leg_hfo + leg_lfo + leg_mdo + leg_mgo)
+        total_eu_actual_foc += leg_foc / (eu_rate / 100)
         total_co2      += leg_co2
         total_distance += leg_distance
         total_eua      += leg_eua
@@ -711,6 +714,7 @@ def lambda_handler(event, context):
             # 合計用変数に加算する
             total_distance += total_ballast_laden_distance
             total_foc      += (simulation_leg_lng + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_ethanol + simulation_leg_lpg_b + simulation_leg_methanol)
+            total_eu_actual_foc += leg_total_FOC_speed / (simularion_leg_eu_rate / 100)
             total_co2      += simulation_leg_co2
             total_eua      += simulation_leg_eua
             total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
@@ -734,7 +738,7 @@ def lambda_handler(event, context):
                 "fuel"                         : output_fuel_list,
                 "eu_rate"                      : str(res_simulation[0]["eu_rate"]["S"]),
                 "distance"                     : str(round(total_ballast_laden_distance)),
-                "foc"                          : str(round(leg_total_FOC_speed)),
+                "foc"                          : str(round(leg_total_FOC_speed / (simularion_leg_eu_rate / 100))),
                 "eua"                          : str_eua,
                 "cb"                           : str_cb
             }
@@ -802,9 +806,10 @@ def lambda_handler(event, context):
     SimulationResultTotal = None
     XAxisList = []    
     EUA_graph_data = []
+    print(f"total_eu_actual_foc:{(total_eu_actual_foc)}")
     if res_simulation:
         str_distance = str(round(total_distance)) if total_distance != "" else ""
-        str_foc      = str(round(total_foc, 1))      if total_foc      != "" else ""
+        str_foc      = str(round(total_eu_actual_foc, 1)) if total_eu_actual_foc != "" else ""
         str_co2      = str(round(total_co2))      if total_co2      != "" else ""
         str_eua      = str(round(total_eua, 1))      if total_eua      != "" else ""
         str_eua_cost = str(round(round(total_eua, 1) * eua_price)) if total_eua_cost != "" else ""

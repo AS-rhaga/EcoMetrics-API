@@ -440,6 +440,7 @@ def lambda_handler(event, context):
         # 合計用変数を設定
         leg_count      = 0
         total_foc      = 0
+        eu_actual_total_foc = 0
         total_GHG      = 0
         total_distance = 0
         total_eua      = 0
@@ -492,6 +493,7 @@ def lambda_handler(event, context):
 
             # 各種合計値に加算
             total_foc      += float(display_leg["total_foc"]["S"])
+            eu_actual_total_foc += float(display_leg["total_foc"]["S"]) / (int(display_leg["eu_rate"]["S"]) / 100)
             total_GHG      += tmp_co2_Actual
             total_distance += float(display_leg["distance"]["S"]) if display_leg["distance"]["S"] != "" else 0
             total_eua      += float(display_leg["eua"]["S"])
@@ -519,6 +521,8 @@ def lambda_handler(event, context):
             arrival_time = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
             # DepartureTimeからArrivalTimeまでのTotalTimeを算出
             tmp_total_time = calc_time_diff(departure_time, arrival_time)
+            # EU範囲内の実績FOC算出
+            eu_actual_foc = float(display_leg["total_foc"]["S"]) / (int(display_leg["eu_rate"]["S"]) / 100)
 
             #画面返却用データを作成
             datarow = {
@@ -534,7 +538,7 @@ def lambda_handler(event, context):
                 "displacement"  : str(round(float(display_leg["displacement"]["S"]))) if display_leg["displacement"]["S"] != "" else "",
                 "distance"      : str(round(float(display_leg["distance"]["S"]))) if display_leg["distance"]["S"] != "" else "",
                 "fuel"          : fuel_list,
-                "foc"           : str(round(float(display_leg["total_foc"]["S"]), 1)),
+                "foc"           : str(round(eu_actual_foc, 1)),
                 "eua"           : str(round(float(display_leg["eua"]["S"]))),
                 "cb"            : str(round(float(display_leg["cb"]["S"]) / 1000000, 1))
             }
@@ -572,7 +576,7 @@ def lambda_handler(event, context):
                 unit_timestamp_list.append(timestamp_arrival_time)
         
         VoyageInformationTotal = {
-            "foc"     : round(total_foc),
+            "foc"     : round(eu_actual_total_foc),
             "ghg"     : round(total_GHG),
             "distance": round(total_distance),
             "eua"     : round(total_eua),
@@ -689,6 +693,7 @@ def lambda_handler(event, context):
                     "total_mdo"     : {"S": record_data["total_mdo"]},
                     "total_mgo"     : {"S": record_data["total_mgo"]},
                     "total_foc"     : {"S": record_data["total_foc"]},
+                    "eu_actual_foc" : {"S": record_data["eu_actual_foc"]},
                     "eua"           : {"S": record_data["eua"]},
                     "cb"            : {"S": record_data["cb"]},
                     "cb_cost"       : {"S": record_data["cb_cost"]}
@@ -701,6 +706,7 @@ def lambda_handler(event, context):
         # 合計用変数を設定
         voyage_count   = 0
         total_foc      = 0
+        eu_actual_total_foc = 0
         total_GHG      = 0
         total_distance = 0
         total_eua      = 0
@@ -754,6 +760,7 @@ def lambda_handler(event, context):
 
             # 各種合計値に加算
             total_foc      += float(display_voyage["total_foc"]["S"])
+            eu_actual_total_foc += float(display_voyage["eu_actual_foc"]["S"])
             total_GHG      += tmp_co2_Actual
             total_distance += float(display_voyage["distance"]["S"]) if display_voyage["distance"]["S"] != "" else 0
             total_eua      += float(display_voyage["eua"]["S"])
@@ -795,7 +802,7 @@ def lambda_handler(event, context):
                 "displacement"  : str(round(float(display_voyage["dispracement"]["S"]))) if display_voyage["dispracement"]["S"] != "" else "",
                 "distance"      : str(round(float(display_voyage["distance"]["S"]))) if display_voyage["distance"]["S"] != "" else "",
                 "fuel"          : fuel_list,
-                "foc"           : str(round(float(display_voyage["total_foc"]["S"]), 1)),
+                "foc"           : str(round(float(display_voyage["eu_actual_foc"]["S"]), 1)),
                 "eua"           : str(round(float(display_voyage["eua"]["S"]))),
                 "cb"            : str(round(float(display_voyage["cb"]["S"]) / 1000000, 1))
             }
@@ -834,7 +841,7 @@ def lambda_handler(event, context):
 
         
         VoyageInformationTotal = {
-            "foc"     : round(total_foc),
+            "foc"     : round(eu_actual_total_foc),
             "ghg"     : round(total_GHG),
             "distance": round(total_distance),
             "eua"     : round(total_eua),

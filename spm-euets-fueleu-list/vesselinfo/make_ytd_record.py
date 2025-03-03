@@ -150,6 +150,7 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
         foc       = float(rec["total_foc"]["S"])
+        eu_actual_foc = float(rec["eu_actual_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
@@ -177,7 +178,7 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
             "imo"            : imo,
             "operator"       : operator,
             "distance"       : distance,
-            "foc"            : foc,
+            "foc"            : eu_actual_foc,
             "eua"            : eua,
             "eua_cost"       : eua_cost,
             "cb"             : total_cb,
@@ -484,6 +485,7 @@ def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
         foc       = float(rec["total_foc"]["S"])
+        eu_actual_foc = float(rec["eu_actual_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
@@ -514,7 +516,7 @@ def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
             "ytd_cb"             : "",
             "ytd_cb_cost"        : "",
             "eoy_distance"       : str(round(distance)),
-            "eoy_foc"            : str(round(foc)),
+            "eoy_foc"            : str(round(eu_actual_foc)),
             "eoy_eua"            : str(round(eua)),
             "eoy_eua_cost"       : str(round(eua_cost)),
             "eoy_cb"             : str(round(total_cb / 1000000, 1)),

@@ -195,6 +195,7 @@ def main(imo, timestamp):
         total_mdo      = float(res_voyage[i]["total_mdo"]["S"])
         total_mgo      = float(res_voyage[i]["total_mgo"]["S"])
         total_foc      = float(res_voyage[i]["total_foc"]["S"])
+        eu_actual_foc  = float(res_voyage[i]["eu_actual_foc"]["S"])
         total_energy   = float(res_voyage[i]["total_energy"]["S"])
         eua            = float(res_voyage[i]["eua"]["S"])
 
@@ -222,6 +223,7 @@ def main(imo, timestamp):
                     bk_operator_total_mdo      = operator_total["year_total_mdo"]
                     bk_operator_total_mgo      = operator_total["year_total_mgo"]
                     bk_operator_total_foc      = operator_total["year_total_foc"]
+                    bk_operator_total_eu_actual_foc = operator_total["year_total_eu_actual_foc"]
                     bk_operator_total_energy   = operator_total["year_total_energy"]
                     bk_operator_total_eua      = operator_total["year_total_eua"]
 
@@ -233,6 +235,7 @@ def main(imo, timestamp):
                     operator_total["year_total_mdo"]      = bk_operator_total_mdo + total_mdo
                     operator_total["year_total_mgo"]      = bk_operator_total_mgo + total_mgo
                     operator_total["year_total_foc"]      = bk_operator_total_foc + total_foc
+                    operator_total["year_total_eu_actual_foc"] = bk_operator_total_eu_actual_foc + eu_actual_foc
                     operator_total["year_total_energy"]   = bk_operator_total_energy + total_energy
                     operator_total["year_total_eua"]      = bk_operator_total_eua + eua
 
@@ -257,6 +260,7 @@ def main(imo, timestamp):
                 "year_total_mdo"     : total_mdo,
                 "year_total_mgo"     : total_mgo,
                 "year_total_foc"     : total_foc,
+                "year_total_eu_actual_foc" : eu_actual_foc,
                 "year_total_energy"  : total_energy,
                 "year_total_eua"     : eua
             }
@@ -275,6 +279,7 @@ def main(imo, timestamp):
         operator_total_mdo      = operator_total["year_total_mdo"]
         operator_total_mgo      = operator_total["year_total_mgo"]
         operator_total_foc      = operator_total["year_total_foc"]
+        operator_total_eu_actual_foc = operator_total["year_total_eu_actual_foc"]
         operator_total_energy   = operator_total["year_total_energy"]
         operator_total_eua      = operator_total["year_total_eua"]
 
@@ -385,6 +390,7 @@ def main(imo, timestamp):
         operator_total_mdo      = str(float(operator_total_mdo))
         operator_total_mgo      = str(float(operator_total_mgo))
         operator_total_foc      = str(float(operator_total_foc))
+        operator_total_eu_actual_foc = str(float(operator_total_eu_actual_foc))
         operator_total_eua      = str(float(operator_total_eua))
         operator_total_cb       = str(float(operator_total_cb))
         banking                 = str(float(banking))
@@ -399,6 +405,7 @@ def main(imo, timestamp):
             "total_mdo"   : operator_total_mdo,
             "total_mgo"   : operator_total_mgo,
             "total_foc"   : operator_total_foc,
+            "eu_actual_foc" : operator_total_eu_actual_foc,
             "eua"         : operator_total_eua,
             "cb"          : operator_total_cb,
             "banking"     : banking,

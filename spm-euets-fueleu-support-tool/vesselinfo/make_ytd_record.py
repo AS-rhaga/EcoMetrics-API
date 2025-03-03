@@ -162,6 +162,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
         foc       = float(rec["total_foc"]["S"])
+        eu_actual_foc = float(rec["eu_actual_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         cb        = float(rec["cb"]["S"])
         banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
@@ -187,7 +188,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             "vessel_name"    : vessel_name,
             "operator"       : operator,
             "distance"       : round(distance),
-            "foc"            : round(foc),
+            "foc"            : round(eu_actual_foc),
             "year_to_date"   : round(cb / 1000000, 1),     # 修正。実際のCBを表示するべき
             "last_year"      : round(last_year / 1000000, 1),
             "borrowing_limit": round(borrowing_limit / 1000000),
@@ -312,7 +313,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
                 "vessel_name"        : vessel_name,
                 "operator"           : operator,
                 "distance"           : round(distance),
-                "foc"                : round(foc),
+                "foc"                : round(eu_actual_foc),
                 "end_of_year"        : round(cb / 1000000, 1),
                 "last_year"          : round(last_year / 1000000, 1),
                 "borrowing_limit"    : round(borrowing_limit / 1000000, 1),
@@ -564,6 +565,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         mdo       = float(rec["total_mdo"]["S"])
         mgo       = float(rec["total_mgo"]["S"])
         foc       = float(rec["total_foc"]["S"])
+        eu_actual_foc = float(rec["eu_actual_foc"]["S"])
         distance  = float(rec["distance"]["S"])
         cb        = float(rec["cb"]["S"])
         banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
@@ -598,7 +600,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
             "vessel_name"        : vessel_name,
             "operator"           : operator,
             "distance"           : round(distance),
-            "foc"                : round(foc),
+            "foc"                : round(eu_actual_foc),
             "end_of_year"        : round(cb / 1000000, 1),
             "last_year"          : round(last_year / 1000000, 1),
             "borrowing_limit"    : round(borrowing_limit / 1000000, 1),

@@ -31,6 +31,7 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
     total_methanol_ng = 0
     total_nh3_ef      = 0
     total_foc         = 0
+    total_eu_actual_foc = 0
     total_distance    = 0
     total_eua         = 0
     total_energy      = 0
@@ -53,6 +54,7 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
         total_mdo      += float(thisyear_year_total["total_mdo"]["S"])
         total_mgo      += float(thisyear_year_total["total_mgo"]["S"])
         total_foc      += float(thisyear_year_total["total_foc"]["S"])
+        total_eu_actual_foc += float(thisyear_year_total["eu_actual_foc"]["S"])
         total_distance += float(thisyear_year_total["distance"]["S"])
         total_eua      += float(thisyear_year_total["eua"]["S"])
         total_energy   += ytd_energy
@@ -220,6 +222,7 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
             # 合計用変数に加算する
             total_distance += leg_distance
             total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
+            total_eu_actual_foc += simulation_leg_foc / (leg_eu_rate / 100)
             total_eua      += simulation_leg_eua
         
     # シミュレーション対象のvoyageがある場合のみ
@@ -238,7 +241,7 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
         # Voyage Planのシミュレーション用データ
         dataset = {
             "eoy_distance"   : total_distance,
-            "eoy_foc"        : total_foc,
+            "eoy_foc"        : total_eu_actual_foc,
             "eoy_eua"        : total_eua,
             "eoy_cb"         : total_cb,
             "eoy_cb_cost"    : eoy_cb_cost
@@ -263,6 +266,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
     total_methanol_ng = 0
     total_nh3_ef      = 0
     total_foc         = 0
+    total_eu_actual_foc = 0
     total_distance    = 0
     total_eua         = 0
     total_energy      = 0
@@ -280,6 +284,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         total_mdo      += float(thisyear_year_total["total_mdo"]["S"])
         total_mgo      += float(thisyear_year_total["total_mgo"]["S"])
         total_foc      += float(thisyear_year_total["total_foc"]["S"])
+        total_eu_actual_foc += float(thisyear_year_total["eu_actual_foc"]["S"])
         total_distance += float(thisyear_year_total["distance"]["S"])
         total_eua      += float(thisyear_year_total["eua"]["S"])
         total_energy   += ytd_energy
@@ -421,6 +426,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         # 合計用変数に加算する
         total_distance += total_ballast_laden_distance
         total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
+        total_eu_actual_foc += simulation_leg_foc / (leg_eu_rate / 100)
         total_eua      += simulation_leg_eua
 
         # CB算出
@@ -437,7 +443,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         # Voyage Planのシミュレーション用データ
         dataset = {
             "eoy_distance"   : total_distance,
-            "eoy_foc"        : total_foc,
+            "eoy_foc"        : total_eu_actual_foc,
             "eoy_eua"        : total_eua,
             "eoy_cb"         : total_cb,
             "eoy_cb_cost"    : eoy_cb_cost

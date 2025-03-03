@@ -358,6 +358,7 @@ def lambda_handler(event, context):
     total_methanol_ng = 0
     total_nh3_ef      = 0
     total_foc         = 0
+    total_eu_actual_foc = 0
     total_co2         = 0
     total_distance    = 0
     total_eua         = 0
@@ -464,12 +465,13 @@ def lambda_handler(event, context):
     for i in range(len(this_year_leg_list)):
 
         # 1leg当たりの数値を取得する
-        eu_rate      = int(this_year_leg_list[0]["eu_rate"]["S"])
+        eu_rate      = int(this_year_leg_list[i]["eu_rate"]["S"])
         leg_lng      = float(this_year_leg_list[i]["total_lng"]["S"])
         leg_hfo      = float(this_year_leg_list[i]["total_hfo"]["S"])
         leg_lfo      = float(this_year_leg_list[i]["total_lfo"]["S"])
         leg_mdo      = float(this_year_leg_list[i]["total_mdo"]["S"])
         leg_mgo      = float(this_year_leg_list[i]["total_mgo"]["S"])
+        leg_foc      = float(this_year_leg_list[i]["total_foc"]["S"])
         leg_distance = float(this_year_leg_list[i]["distance"]["S"])
         leg_eua      = float(this_year_leg_list[i]["eua"]["S"])
 
@@ -486,6 +488,7 @@ def lambda_handler(event, context):
         total_mdo      += leg_mdo
         total_mgo      += leg_mgo
         total_foc      += (leg_lng + leg_hfo + leg_lfo + leg_mdo + leg_mgo)
+        total_eu_actual_foc += leg_foc / (eu_rate / 100)
         total_co2      += leg_co2
         total_distance += leg_distance
         total_eua      += leg_eua
@@ -575,7 +578,7 @@ def lambda_handler(event, context):
         # 各項目を取得し、必要項目にはleg_rateを反映する
         displacement           = res_simulation[i]["dispracement"]["S"]
         leg_distance           = float(res_simulation[i]["distance"]["S"]) * leg_rate
-        simularion_leg_eu_rate = int(res_simulation[i]["eu_rate"]["S"])
+        simulation_leg_eu_rate = int(res_simulation[i]["eu_rate"]["S"])
 
         # log_speedを算出
         leg_log_speed = leg_distance / return_leg_total_time
@@ -606,7 +609,7 @@ def lambda_handler(event, context):
             # 1時間あたりのFOC算出
             simulation_foc_per_hour = simulation_foc_per_day / 24
             # Leg内総FOCを算出
-            simulation_leg_foc = simulation_foc_per_hour * return_leg_total_time * simularion_leg_eu_rate / 100
+            simulation_leg_foc = simulation_foc_per_hour * return_leg_total_time * simulation_leg_eu_rate / 100
 
             # 燃料別消費量を算出する
             output_fuel_list = []
@@ -731,6 +734,7 @@ def lambda_handler(event, context):
             # 合計用変数に加算する
             total_distance += leg_distance
             total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
+            total_eu_actual_foc += simulation_leg_foc / (simulation_leg_eu_rate / 100)
             total_co2      += simulation_leg_co2
             total_eua      += simulation_leg_eua
             total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
@@ -750,13 +754,13 @@ def lambda_handler(event, context):
                 "arrival_port"   : res_simulation[i]["arrival_port"]["S"], 
                 "arrival_time"   : return_arrival_time,
                 "total_time"     : str(return_leg_total_time),
-                "eu_rate"        : str(round(simularion_leg_eu_rate)),
+                "eu_rate"        : str(round(simulation_leg_eu_rate)),
                 "displacement"   : res_simulation[i]["dispracement"]["S"],
                 "operator"       : res_simulation[i]["operator"]["S"],
                 "distance"       : str(round(leg_distance)),
                 "log_speed"      : str(round(leg_log_speed, 1)),
                 "fuel"           : output_fuel_list,
-                "foc"            : str(round(simulation_leg_foc, 1)),
+                "foc"            : str(round(simulation_leg_foc / (simulation_leg_eu_rate / 100), 1)),
                 "eua"            : str_eua,
                 "cb"             : str_cb
             }
@@ -786,7 +790,7 @@ def lambda_handler(event, context):
                 "arrival_port"   : res_simulation[0]["arrival_port"]["S"], 
                 "arrival_time"   : return_arrival_time,
                 "total_time"     : str(return_leg_total_time),
-                "eu_rate"        : str(round(simularion_leg_eu_rate)),
+                "eu_rate"        : str(round(simulation_leg_eu_rate)),
                 "displacement"   : res_simulation[0]["displacement"]["S"],
                 "operator"       : res_simulation[i]["operator"]["S"],
                 "distance"       : str(round(leg_distance)),
@@ -834,7 +838,7 @@ def lambda_handler(event, context):
     EUA_graph_data = []
     if res_simulation:
         str_distance = str(round(total_distance)) if total_distance != "" else ""
-        str_foc      = str(round(total_foc, 1))      if total_foc      != "" else ""
+        str_foc      = str(round(total_eu_actual_foc, 1)) if total_eu_actual_foc != "" else ""
         str_co2      = str(round(total_co2))      if total_co2      != "" else ""
         str_eua      = str(round(total_eua, 1))      if total_eua      != "" else ""
         str_eua_cost = str(round(round(total_eua, 1) * eua_price)) if total_eua_cost != "" else ""
