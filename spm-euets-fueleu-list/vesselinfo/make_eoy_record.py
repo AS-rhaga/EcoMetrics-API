@@ -116,12 +116,12 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
         # 各項目を取得
         displacement           = voyage_plan_list[i]["dispracement"]["S"]
         leg_distance        = float(voyage_plan_list[i]["distance"]["S"]) * leg_rate
-        leg_eu_rate         = float(voyage_plan_list[i]["eu_rate"]["S"])
+        leg_eu_rate         = int(voyage_plan_list[i]["eu_rate"]["S"])
 
         # log_speedを算出
         leg_log_speed = leg_distance / leg_total_time
 
-        if res_foc_formulas:
+        if res_foc_formulas and leg_eu_rate != 0:
 
             # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
             auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
@@ -324,7 +324,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
 
     leg_eu_rate = int(speed_plan[0]["eu_rate"]["S"])
 
-    if res_foc_formulas: 
+    if res_foc_formulas and leg_eu_rate != 0:
 
         # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
         auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])

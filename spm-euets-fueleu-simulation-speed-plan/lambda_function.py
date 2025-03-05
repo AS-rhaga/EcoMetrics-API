@@ -550,7 +550,7 @@ def lambda_handler(event, context):
         time_to_end_of_year = Util.calc_time_diff(dt_now, year_end)
 
         # EU Rateを取得
-        simularion_leg_eu_rate = float(res_simulation[0]["eu_rate"]["S"])
+        simulation_leg_eu_rate = float(res_simulation[0]["eu_rate"]["S"])
 
         # 航海時間を算出
         sailing_rate = float(res_simulation[0]["salling_rate"]["S"])
@@ -596,70 +596,103 @@ def lambda_handler(event, context):
             ballast_foc = ballast_foc_per_hour * ballast_sailing_time
             laden_foc = laden_foc_per_hour * ballast_sailing_time
             # Leg内総FOCを算出
-            leg_total_FOC_speed = (ballast_foc + laden_foc) * simularion_leg_eu_rate / 100
+            leg_total_actual_foc = ballast_foc + laden_foc
+            leg_total_FOC_speed  = leg_total_actual_foc * simulation_leg_eu_rate / 100
             
             # 燃料別消費量を算出する
             output_fuel_list = []
             fuel_list = convertFuelOileStringToList(res_simulation[0]["fuel"]["S"])
+
+            # EU Rateを考慮しない燃料消費量
+            simulation_leg_actual_lng_oms = 0
+            simulation_leg_actual_lng_oss = 0
+            simulation_leg_actual_lng_ods = 0
+            simulation_leg_actual_hfo = 0
+            simulation_leg_actual_lfo = 0
+            simulation_leg_actual_mdo = 0
+            simulation_leg_actual_mgo = 0
+            simulation_leg_actual_lpg_p = 0
+            simulation_leg_actual_lpg_b = 0
+            simulation_leg_actual_h2_ng = 0
+            simulation_leg_actual_nh3_ng = 0
+            simulation_leg_actual_methanol_ng = 0
+            simulation_leg_actual_nh3_ef = 0
+
+            # EU Rate考慮済の燃料消費量
+            simulation_leg_lng_oms = 0
+            simulation_leg_lng_oss = 0
+            simulation_leg_lng_ods = 0
+            simulation_leg_hfo = 0
+            simulation_leg_lfo = 0
+            simulation_leg_mdo = 0
+            simulation_leg_mgo = 0
+            simulation_leg_lpg_p = 0
+            simulation_leg_lpg_b = 0
+            simulation_leg_h2_ng = 0
+            simulation_leg_nh3_ng = 0
+            simulation_leg_methanol_ng = 0
+            simulation_leg_nh3_ef = 0
 
             for fuel in fuel_list:
                 fuel_info_list = fuel.split(',')
                 fuel_type = fuel_info_list[0]
                 fuel_rate = fuel_info_list[1]
 
-                simulation_leg_lng_oms = 0
-                simulation_leg_lng_oss = 0
-                simulation_leg_lng_ods = 0
-                simulation_leg_hfo = 0
-                simulation_leg_lfo = 0
-                simulation_leg_mdo = 0
-                simulation_leg_mgo = 0
-                simulation_leg_lpg_p = 0
-                simulation_leg_lpg_b = 0
-                simulation_leg_h2_ng = 0
-                simulation_leg_nh3_ng = 0
-                simulation_leg_methanol_ng = 0
-                simulation_leg_nh3_ef = 0
-
                 if  fuel_type == "LNG(Otto Medium Speed)":
-                    simulation_leg_lng_oms = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_lng_oms     += simulation_leg_lng_oms
+                    simulation_leg_actual_lng_oms = leg_total_actual_foc * int(fuel_rate) / 100
                 elif  fuel_type == "LNG(Otto Slow Speed)":
-                    simulation_leg_lng_oss = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_lng_oss     += simulation_leg_lng_oss
+                    simulation_leg_actual_lng_oss = leg_total_actual_foc * int(fuel_rate) / 100
                 elif  fuel_type == "LNG(Otto Diesel Speed)":
-                    simulation_leg_lng_ods = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_lng_ods     += simulation_leg_lng_ods
+                    simulation_leg_actual_lng_ods = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "HFO":
-                    simulation_leg_hfo = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_hfo          += simulation_leg_hfo
+                    simulation_leg_actual_hfo = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "LFO":
-                    simulation_leg_lfo = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_lfo         += simulation_leg_lfo
+                    simulation_leg_actual_lfo = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "MDO":
-                    simulation_leg_mdo = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_mdo         += simulation_leg_mdo
+                    simulation_leg_actual_mdo = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "MGO":
-                    simulation_leg_mgo = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_mgo         += simulation_leg_mgo
+                    simulation_leg_actual_mgo = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "LPG(Propane)":
-                    simulation_leg_lpg_p = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_lpg_p         += simulation_leg_lpg_p
+                    simulation_leg_actual_lpg_p = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "LPG(Butane)":
-                    simulation_leg_lpg_b = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_lpg_b         += simulation_leg_lpg_b
+                    simulation_leg_actual_lpg_b = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "H2(Natural gas)":
-                    simulation_leg_h2_ng = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_h2_ng         += simulation_leg_h2_ng
+                    simulation_leg_actual_h2_ng = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "NH3(Natural gas)":
-                    simulation_leg_nh3_ng = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_nh3_ng         += simulation_leg_nh3_ng
+                    simulation_leg_actual_nh3_ng = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "Methanol(Natural gas)":
-                    simulation_leg_methanol_ng = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_methanol_ng         += simulation_leg_methanol_ng
+                    simulation_leg_actual_methanol_ng = leg_total_actual_foc * int(fuel_rate) / 100
                 elif fuel_type == "NH3(e-fuel)":
-                    simulation_leg_nh3_ef = leg_total_FOC_speed * int(fuel_rate) / 100
-                    total_nh3_ef         += simulation_leg_nh3_ef
+                    simulation_leg_actual_nh3_ef = leg_total_actual_foc * int(fuel_rate) / 100
+
+                if simulation_leg_eu_rate != 0:
+                    simulation_leg_lng_oms = simulation_leg_actual_lng_oms * simulation_leg_eu_rate / 100
+                    simulation_leg_lng_oss = simulation_leg_actual_lng_oss * simulation_leg_eu_rate / 100
+                    simulation_leg_lng_ods = simulation_leg_actual_lng_ods * simulation_leg_eu_rate / 100
+                    simulation_leg_hfo     = simulation_leg_actual_hfo * simulation_leg_eu_rate / 100
+                    simulation_leg_lfo     = simulation_leg_actual_lfo * simulation_leg_eu_rate / 100
+                    simulation_leg_mdo     = simulation_leg_actual_mdo * simulation_leg_eu_rate / 100
+                    simulation_leg_mgo     = simulation_leg_actual_mgo * simulation_leg_eu_rate / 100
+                    simulation_leg_lpg_p   = simulation_leg_actual_lpg_p * simulation_leg_eu_rate / 100
+                    simulation_leg_lpg_b   = simulation_leg_actual_lpg_b * simulation_leg_eu_rate / 100
+                    simulation_leg_h2_ng   = simulation_leg_actual_h2_ng * simulation_leg_eu_rate / 100
+                    simulation_leg_nh3_ng  = simulation_leg_actual_nh3_ng * simulation_leg_eu_rate / 100
+                    simulation_leg_methanol_ng = simulation_leg_actual_methanol_ng * simulation_leg_eu_rate / 100
+                    simulation_leg_nh3_ef  = simulation_leg_actual_nh3_ef * simulation_leg_eu_rate / 100
+
+                    total_lng_oms     += simulation_leg_lng_oms
+                    total_lng_oss     += simulation_leg_lng_oss
+                    total_lng_ods     += simulation_leg_lng_ods
+                    total_hfo         += simulation_leg_hfo
+                    total_lfo         += simulation_leg_lfo
+                    total_mdo         += simulation_leg_mdo
+                    total_mgo         += simulation_leg_mgo
+                    total_lpg_p       += simulation_leg_lpg_p
+                    total_lpg_b       += simulation_leg_lpg_b
+                    total_h2_ng       += simulation_leg_h2_ng
+                    total_nh3_ng      += simulation_leg_nh3_ng
+                    total_methanol_ng += simulation_leg_actual_methanol_ng
+                    total_nh3_ef      += simulation_leg_nh3_ef
 
                 # 表示用fuel_listに追加
                 output_fuel = {
@@ -668,18 +701,27 @@ def lambda_handler(event, context):
                 }
                 output_fuel_list.append(output_fuel)
 
-            simulation_leg_co2 = calc_co2(now_year, simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+            simulation_leg_co2 = 0
+            simulation_leg_eua = 0
+            simulation_leg_cb  = 0
 
-            # シミュレーション部分のEUAを算出する
-            simulation_leg_eua = calc_eua(now_year, simulation_leg_co2)
-            # EUA Costの算出
-            total_eua_cost = simulation_leg_eua * eua_price
+            # シミュレーション部分で実際に排出したco2を算出する
+            simulation_leg_actual_co2 = calc_co2(now_year, simulation_leg_actual_lng_ods, simulation_leg_actual_lng_oms, simulation_leg_actual_lng_oss, simulation_leg_actual_hfo, simulation_leg_actual_lfo, simulation_leg_actual_mdo, simulation_leg_actual_mgo, simulation_leg_actual_lpg_p, simulation_leg_actual_lpg_b, simulation_leg_actual_nh3_ng, simulation_leg_actual_nh3_ef, simulation_leg_actual_methanol_ng, simulation_leg_actual_h2_ng, fuel_oil_type_info_list)
 
-            # シミュレーション部分のCBを算出する
-            simulation_leg_GHG = calc_GHG_Actual(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
-            simulation_energy  = calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
-            total_energy      += simulation_energy
-            simulation_leg_cb  = calc_cb(now_year, simulation_energy, simulation_leg_GHG)
+            if simulation_leg_eu_rate != 0:
+                # シミュレーション部分で排出したEU Rate考慮済のco2を算出する
+                simulation_leg_co2 = simulation_leg_actual_co2 * simulation_leg_eu_rate / 100
+
+                # シミュレーション部分のEUAを算出する
+                simulation_leg_eua = calc_eua(now_year, simulation_leg_co2)
+                # EUA Costの算出
+                total_eua_cost = simulation_leg_eua * eua_price
+
+                # シミュレーション部分のCBを算出する
+                simulation_leg_GHG = calc_GHG_Actual(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+                simulation_energy  = calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+                total_energy      += simulation_energy
+                simulation_leg_cb  = calc_cb(now_year, simulation_energy, simulation_leg_GHG)
 
             # EUAList_YeartoDateにEUAをセット
             EUAList_Simulation.append([this_year_leg_count + 1, simulation_leg_eua])
@@ -714,8 +756,8 @@ def lambda_handler(event, context):
             # 合計用変数に加算する
             total_distance += total_ballast_laden_distance
             total_foc      += (simulation_leg_lng + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_ethanol + simulation_leg_lpg_b + simulation_leg_methanol)
-            total_eu_actual_foc += leg_total_FOC_speed / (simularion_leg_eu_rate / 100)
-            total_co2      += simulation_leg_co2
+            total_eu_actual_foc += leg_total_actual_foc
+            total_co2      += simulation_leg_actual_co2
             total_eua      += simulation_leg_eua
             total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
 
@@ -738,7 +780,7 @@ def lambda_handler(event, context):
                 "fuel"                         : output_fuel_list,
                 "eu_rate"                      : str(res_simulation[0]["eu_rate"]["S"]),
                 "distance"                     : str(round(total_ballast_laden_distance)),
-                "foc"                          : str(round(leg_total_FOC_speed / (simularion_leg_eu_rate / 100))),
+                "foc"                          : str(round(leg_total_actual_foc)),
                 "eua"                          : str_eua,
                 "cb"                           : str_cb
             }

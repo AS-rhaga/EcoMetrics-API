@@ -131,7 +131,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
         # log_speedを算出
         leg_log_speed = leg_distance / leg_total_time
 
-        if res_foc_formulas:
+        if res_foc_formulas and leg_eu_rate != 0:
 
             # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
             auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
@@ -382,7 +382,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
 
     leg_eu_rate = int(speed_plan[0]["eu_rate"]["S"])
 
-    if res_foc_formulas: 
+    if res_foc_formulas and leg_eu_rate != 0: 
 
         # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
         auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])
