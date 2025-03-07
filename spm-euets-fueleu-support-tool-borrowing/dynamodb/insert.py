@@ -28,6 +28,7 @@ def upsert_year_total(imo, year_and_ope, borrowing, data, timestamp, retry_count
                     "total_mdo"    : {"S": data["total_mdo"]["S"]},
                     "total_mgo"    : {"S": data["total_mgo"]["S"]},
                     "total_foc"    : {"S": data["total_foc"]["S"]},
+                    "eu_actual_foc": {"S": data["eu_actual_foc"]["S"]},
                     "eua"          : {"S": data["eua"]["S"]},
                     "cb"           : {"S": data["cb"]["S"]},
                     "banking"      : {"S": data["banking"]["S"]},

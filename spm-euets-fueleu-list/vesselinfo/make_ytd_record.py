@@ -57,17 +57,6 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         if year_rec["year_and_ope"]["S"][0:4] == year:
             thisyear_year_total_list.append(year_rec)
 
-        # operator = year_rec["year_and_ope"]["S"][4:50]
-
-        # # 現時点ではオペレーターは複数ないので飛ばす
-        # # if operator not in operator_list : # 上限は適当
-        #     # オペレーター毎に振り分ける
-        #     # operator_list.append(operator)
-        #     # index = operator_list.index(operator)
-
-        #     # operator_total_list.append([])
-        # operator_total_list.append(year_rec)
-
     # 各種燃料の消費量と、消費エネルギーの合計値用変数を設定する。
     ytd_lng    = 0
     ytd_hfo    = 0
@@ -165,14 +154,28 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         energy     = calculate_function.calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
 
         # 必要な計算を行う
-        total_cb        = cb + borrowing + banking + last_year
+        total_cb        = cb - borrowing + banking + last_year
         penalty_factor  = (consecutive_years) / 10 + 1
         print(f"penalty_factor:{penalty_factor}")
         print(f"consecutive_years:{consecutive_years}")
 
         cb_cost = 0
-        if cb < 0:
-            cb_cost = abs(cb) * 2400 * penalty_factor / (GHG_Actual * 41000)
+        if total_cb >= 0:
+            cb_cost = 0
+        else:
+            # CBコストの算出場合分け
+            if last_year >= 0:
+                cb_cost    = abs(float(total_cb)) * 2400 / (GHG_Actual * 41000) * penalty_factor
+            else:
+                # 昨年分のGHG強度を算出
+                last_year_lng   = float(last_year_rec["total_lng"]["S"]) if "total_lng" in last_year_rec and last_year_rec["total_lng"]["S"] != "" else 0
+                last_year_hfo   = float(last_year_rec["total_hfo"]["S"]) if "total_hfo" in last_year_rec and last_year_rec["total_hfo"]["S"] != "" else 0
+                last_year_lfo   = float(last_year_rec["total_lfo"]["S"]) if "total_lfo" in last_year_rec and last_year_rec["total_lfo"]["S"] != "" else 0
+                last_year_mdo   = float(last_year_rec["total_mdo"]["S"]) if "total_mdo" in last_year_rec and last_year_rec["total_mdo"]["S"] != "" else 0
+                last_year_mgo   = float(last_year_rec["total_mgo"]["S"]) if "total_mgo" in last_year_rec and last_year_rec["total_mgo"]["S"] != "" else 0
+
+                GHG_last_year   = calculate_function.calc_GHG_Actual(0, last_year_lng, 0, last_year_hfo, last_year_lfo, last_year_mdo, last_year_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
+                cb_cost         = abs(float(total_cb)) * 2400 / (GHG_last_year * 41000) * penalty_factor
 
         ytd_dataset = {
             "imo"            : imo,
@@ -230,31 +233,53 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         # 実測データ有り かつ voyage-planの場合
         if len(ytd_exist_voyage_list) > 0:
             # VoyagePlanのシミュレーション実施
-            eoy_vessel_data = make_eoy_record.make_voyage_plans_data(rec, ytd_exist_voyage_list, res_foc_formulas, fuel_oil_type_list, energy, penalty_factor)
+            eoy_vessel_data_list = make_eoy_record.make_voyage_plans_data(imo, rec, ytd_exist_voyage_list, res_foc_formulas, fuel_oil_type_list, energy, year, total_year_total_list)
 
-            # operatorが一致するytdデータと合わせて、データセットを作成
-            dataset = {
-                "imo"                : ytd_dataset["imo"],
-                "vessel_name"        : vessel_master["VesselName"]["S"],
-                "operator"           : ytd_dataset["operator"],
-                "ytd_distance"       : round(ytd_dataset["distance"]),
-                "ytd_foc"            : round(ytd_dataset["foc"]),
-                "ytd_eua"            : round(ytd_dataset["eua"]),
-                "ytd_eua_cost"       : round(ytd_dataset["eua"] * float(eua_price)),
-                "ytd_cb"             : round(ytd_dataset["cb"] / 1000000, 1),
-                "ytd_cb_cost"        : round(ytd_dataset["cb_cost"]),
-                "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
-                "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
-                "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-                "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
-                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
-                "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
-            }
-            record_data_list.append(dataset)
+            if len(eoy_vessel_data_list) > 0:
+                for i in range(len(eoy_vessel_data_list)):
+                # operatorが一致するytdデータと合わせて、データセットを作成
+                    dataset = {
+                        "imo"                : ytd_dataset["imo"],
+                        "vessel_name"        : vessel_master["VesselName"]["S"],
+                        "operator"           : ytd_dataset["operator"],
+                        "ytd_distance"       : round(ytd_dataset["distance"]),
+                        "ytd_foc"            : round(ytd_dataset["foc"]),
+                        "ytd_eua"            : round(ytd_dataset["eua"]),
+                        "ytd_eua_cost"       : round(ytd_dataset["eua"] * float(eua_price)),
+                        "ytd_cb"             : round(ytd_dataset["cb"] / 1000000, 1),
+                        "ytd_cb_cost"        : round(ytd_dataset["cb_cost"]),
+                        "eoy_distance"       : round(eoy_vessel_data_list[i]["eoy_distance"]),
+                        "eoy_foc"            : round(eoy_vessel_data_list[i]["eoy_foc"]),
+                        "eoy_eua"            : round(eoy_vessel_data_list[i]["eoy_eua"]),
+                        "eoy_eua_cost"       : round(float(eoy_vessel_data_list[i]["eoy_eua"]) * float(eua_price)),
+                        "eoy_cb"             : round(float(eoy_vessel_data_list[i]["eoy_cb"]) / 1000000, 1),
+                        "eoy_cb_cost"        : round(eoy_vessel_data_list[i]["eoy_cb_cost"])
+                    }
+                    record_data_list.append(dataset)
+            else:
+                # 全てのレグが期間外の場合は、ytdと同じ値をeoyに設定
+                dataset = {
+                    "imo"                : ytd_dataset["imo"],
+                    "vessel_name"        : vessel_master["VesselName"]["S"],
+                    "operator"           : ytd_dataset["operator"],
+                    "ytd_distance"       : round(ytd_dataset["distance"]),
+                    "ytd_foc"            : round(ytd_dataset["foc"]),
+                    "ytd_eua"            : round(ytd_dataset["eua"]),
+                    "ytd_eua_cost"       : round(ytd_dataset["eua"] * float(eua_price)),
+                    "ytd_cb"             : round(ytd_dataset["cb"] / 1000000, 1),
+                    "ytd_cb_cost"        : round(ytd_dataset["cb_cost"]),
+                    "eoy_distance"       : round(ytd_dataset["distance"]),
+                    "eoy_foc"            : round(ytd_dataset["foc"]),
+                    "eoy_eua"            : round(ytd_dataset["eua"]),
+                    "eoy_eua_cost"       : round(float(ytd_dataset["eua"]) * float(eua_price)),
+                    "eoy_cb"             : round(float(ytd_dataset["cb"]) / 1000000, 1),
+                    "eoy_cb_cost"        : round(ytd_dataset["cb_cost"])
+                }
+                record_data_list.append(dataset)
 
         # 実測データ有りspeed-plan
         elif len(ytd_exist_speed_list) > 0:
-            eoy_vessel_data = make_eoy_record.make_speed_plans_data(rec, ytd_exist_speed_list, res_foc_formulas, fuel_oil_type_list, energy, penalty_factor)
+            eoy_vessel_data = make_eoy_record.make_speed_plans_data(rec, ytd_exist_speed_list, res_foc_formulas, fuel_oil_type_list, energy, year, total_year_total_list)
 
             dataset = {
                 "imo"                : ytd_dataset["imo"],
@@ -309,33 +334,39 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
     if len(ytd_not_exist_voyage_list) > 0:
 
         # VoyagePlanのシミュレーション実施
-        eoy_vessel_data = make_eoy_record.make_voyage_plans_data(None, ytd_not_exist_voyage_list, res_foc_formulas, fuel_oil_type_list, energy, penalty_factor)
+        eoy_vessel_data_list = make_eoy_record.make_voyage_plans_data(imo, None, ytd_not_exist_voyage_list, res_foc_formulas, fuel_oil_type_list, 0, year, total_year_total_list)
+        print(f"戻り値eoy_vessel_data_list:{(eoy_vessel_data_list)}")
+        print(f"imo:{(imo)} len(eoy_vessel_data_list):{(len(eoy_vessel_data_list))}")
 
-        if len(eoy_vessel_data) > 0:
-            # ytdは0、eoyはSimulation結果を設定
-            dataset = {
-                "imo"                : imo,
-                "vessel_name"        : vessel_master["VesselName"]["S"],
-                "operator"           : ytd_not_exist_voyage_list[0]["operator"]["S"],
-                "ytd_distance"       : "0",
-                "ytd_foc"            : "0",
-                "ytd_eua"            : "0",
-                "ytd_eua_cost"       : "0",
-                "ytd_cb"             : "0",
-                "ytd_cb_cost"        : "0",
-                "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
-                "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
-                "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
-                "eoy_eua_cost"       : round(float(eoy_vessel_data["eoy_eua"]) * float(eua_price)),
-                "eoy_cb"             : round(float(eoy_vessel_data["eoy_cb"]) / 1000000, 1),
-                "eoy_cb_cost"        : round(eoy_vessel_data["eoy_cb_cost"])
-            }
-            record_data_list.append(dataset)
+        if len(eoy_vessel_data_list) > 0:
+            print(f"eoy_vessel_data_list:{(eoy_vessel_data_list)}")
+            print(f"eoy_vessel_data_listは{(len(eoy_vessel_data_list))}オペある")
+            for i in range(len(eoy_vessel_data_list)):
+                # ytdは0、eoyはSimulation結果を設定
+                print(f"eoy_vessel_data_list[{(i)}][operator]:{(eoy_vessel_data_list[i]["operator"])}")
+                dataset = {
+                    "imo"                : imo,
+                    "vessel_name"        : vessel_master["VesselName"]["S"],
+                    "operator"           : eoy_vessel_data_list[i]["operator"],
+                    "ytd_distance"       : "0",
+                    "ytd_foc"            : "0",
+                    "ytd_eua"            : "0",
+                    "ytd_eua_cost"       : "0",
+                    "ytd_cb"             : round(float(eoy_vessel_data_list[i]["last_year"]) / 1000000, 1),
+                    "ytd_cb_cost"        : round(float(eoy_vessel_data_list[i]["last_year_cost"])),
+                    "eoy_distance"       : round(eoy_vessel_data_list[i]["eoy_distance"]),
+                    "eoy_foc"            : round(eoy_vessel_data_list[i]["eoy_foc"]),
+                    "eoy_eua"            : round(eoy_vessel_data_list[i]["eoy_eua"]),
+                    "eoy_eua_cost"       : round(float(eoy_vessel_data_list[i]["eoy_eua"]) * float(eua_price)),
+                    "eoy_cb"             : round(float(eoy_vessel_data_list[i]["eoy_cb"]) / 1000000, 1),
+                    "eoy_cb_cost"        : round(eoy_vessel_data_list[i]["eoy_cb_cost"])
+                }
+                record_data_list.append(dataset)
 
     # 実測データ無しspeed-plan
     if len(ytd_not_exist_speed_list) > 0:
 
-        eoy_vessel_data = make_eoy_record.make_speed_plans_data(None, ytd_not_exist_speed_list, res_foc_formulas, fuel_oil_type_list, energy, penalty_factor)
+        eoy_vessel_data = make_eoy_record.make_speed_plans_data(None, ytd_not_exist_speed_list, res_foc_formulas, fuel_oil_type_list, 0, year, total_year_total_list)
 
         # ytdは0、eoyはSimulation結果を設定
         dataset = {
@@ -346,8 +377,8 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
             "ytd_foc"            : "0",
             "ytd_eua"            : "0",
             "ytd_eua_cost"       : "0",
-            "ytd_cb"             : "0",
-            "ytd_cb_cost"        : "0",
+            "ytd_cb"             : round(float(eoy_vessel_data["last_year"]) / 1000000, 1),
+            "ytd_cb_cost"        : round(float(eoy_vessel_data["last_year_cost"])),
             "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
             "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
             "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
@@ -399,17 +430,6 @@ def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
 
         if year_rec["year_and_ope"]["S"][0:4] == year:
             thisyear_year_total_list.append(year_rec)
-
-        # operator = year_rec["year_and_ope"]["S"][4:50]
-
-        # # 現時点ではオペレーターは複数ないので飛ばす
-        # # if operator not in operator_list : # 上限は適当
-        #     # オペレーター毎に振り分ける
-        #     # operator_list.append(operator)
-        #     # index = operator_list.index(operator)
-
-        #     # operator_total_list.append([])
-        # operator_total_list.append(year_rec)
 
     # 今年分のyear-totalレコード分ループ
     for rec in thisyear_year_total_list:

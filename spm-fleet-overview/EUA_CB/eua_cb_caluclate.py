@@ -501,10 +501,9 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
             dt_time_to    = to_datetime(str_arrival_time)
             leg_part_time = calc_time_diff(dt_time_from, dt_time_to)
 
+            leg_rate              = float(leg_part_time / leg_total_time)
             # 割合を考慮した時間で上書き
             leg_total_time = leg_part_time
-
-            leg_rate              = float(leg_part_time / leg_total_time)
 
         else:
             # print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
@@ -548,24 +547,25 @@ def make_voyage_plans_data(thisyear_year_total, voyage_plan_list, res_foc_formul
             # 燃料別消費量を算出する
             fuel_list = convertFuelOileStringToList(voyage_plan_list[i]["fuel"]["S"])  
 
+            # EU Rate考慮済の燃料消費量
+            simulation_leg_lng_oms = 0
+            simulation_leg_lng_oss = 0
+            simulation_leg_lng_ods = 0
+            simulation_leg_hfo = 0
+            simulation_leg_lfo = 0
+            simulation_leg_mdo = 0
+            simulation_leg_mgo = 0
+            simulation_leg_lpg_p = 0
+            simulation_leg_lpg_b = 0
+            simulation_leg_h2_ng = 0
+            simulation_leg_nh3_ng = 0
+            simulation_leg_methanol_ng = 0
+            simulation_leg_nh3_ef = 0
+
             for fuel in fuel_list:
                 fuel_info_list = fuel.split(',')
                 fuel_type = fuel_info_list[0]
                 fuel_rate = int(fuel_info_list[1])
-
-                simulation_leg_lng_oms = 0
-                simulation_leg_lng_oss = 0
-                simulation_leg_lng_ods = 0
-                simulation_leg_hfo = 0
-                simulation_leg_lfo = 0
-                simulation_leg_mdo = 0
-                simulation_leg_mgo = 0
-                simulation_leg_lpg_p = 0
-                simulation_leg_lpg_b = 0
-                simulation_leg_h2_ng = 0
-                simulation_leg_nh3_ng = 0
-                simulation_leg_methanol_ng = 0
-                simulation_leg_nh3_ef = 0
 
                 if  fuel_type == "LNG(Otto Diesel Speed)":
                     simulation_leg_lng_ods = simulation_leg_foc * int(fuel_rate) / 100
@@ -736,24 +736,25 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         # 燃料別消費量を算出する
         fuel_list = convertFuelOileStringToList(speed_plan[0]["fuel"]["S"]) 
 
+        # EU Rate考慮済の燃料消費量
+        simulation_leg_lng_oms = 0
+        simulation_leg_lng_oss = 0
+        simulation_leg_lng_ods = 0
+        simulation_leg_hfo = 0
+        simulation_leg_lfo = 0
+        simulation_leg_mdo = 0
+        simulation_leg_mgo = 0
+        simulation_leg_lpg_p = 0
+        simulation_leg_lpg_b = 0
+        simulation_leg_h2_ng = 0
+        simulation_leg_nh3_ng = 0
+        simulation_leg_methanol_ng = 0
+        simulation_leg_nh3_ef = 0
+
         for fuel in fuel_list:
             fuel_info_list = fuel.split(',')
             fuel_type = fuel_info_list[0]
             fuel_rate = fuel_info_list[1]
-
-            simulation_leg_lng_oms = 0
-            simulation_leg_lng_oss = 0
-            simulation_leg_lng_ods = 0
-            simulation_leg_hfo = 0
-            simulation_leg_lfo = 0
-            simulation_leg_mdo = 0
-            simulation_leg_mgo = 0
-            simulation_leg_lpg_p = 0
-            simulation_leg_lpg_b = 0
-            simulation_leg_h2_ng = 0
-            simulation_leg_nh3_ng = 0
-            simulation_leg_methanol_ng = 0
-            simulation_leg_nh3_ef = 0
 
             if  fuel_type == "LNG(Otto Diesel Speed)":
                 simulation_leg_lng_ods = simulation_leg_foc * int(fuel_rate) / 100

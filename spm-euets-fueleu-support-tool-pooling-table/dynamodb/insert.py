@@ -64,6 +64,7 @@ def upsert_year_total(data, banking_cb, pooling_group, retry_count: int=42) -> N
                     "total_mdo"   : { "S": data["total_mdo"]["S"] },
                     "total_mgo"   : { "S": data["total_mgo"]["S"] },
                     "total_foc"   : { "S": data["total_foc"]["S"] },
+                    "eu_actual_foc": { "S": data["eu_actual_foc"]["S"]},
                     "eua"         : { "S": data["eua"]["S"] },
                     "cb"          : { "S": data["cb"]["S"] },
                     "banking"     : { "S": str(banking_cb) },
