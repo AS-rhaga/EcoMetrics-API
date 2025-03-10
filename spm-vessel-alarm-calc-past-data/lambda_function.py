@@ -309,6 +309,9 @@ def lambda_handler(event, context):
                 displacement = float(res["displacement"]["S"]) if 'displacement' in res and res["displacement"]["S"] != "" else ""
                 # me_load
                 me_load = float(res["me_load"]["S"]) if 'me_load' in res and res["me_load"]["S"] != "" else ""
+
+                # beaufort
+                beaufort = float(res["beaufort"]["S"]) if 'beaufort' in res and res["beaufort"]["S"] != "" else ""
                 
                 # CO2,foc
                 total_foc = ""
@@ -325,7 +328,7 @@ def lambda_handler(event, context):
                     oneMonth_co2_value += co2 if co2 != "" else 0
                     
                     # 5~23knotの場合だけをフィルタする
-                    if log_speed != "" and me_foc != "" and total_foc != "" and displacement != "" and me_load != "" and 5 <= log_speed and log_speed <= 23:
+                    if log_speed != "" and me_foc != "" and displacement != "" and me_load != "" and beaufort != "" and 5 <= log_speed:
                         oneMonth_count += 1
                         foc_cp = cp_curve["alpha"] * pow(log_speed, cp_curve["a"]) + cp_curve["C"]
                         cp_count += 1 if foc_cp < me_foc else 0
@@ -394,12 +397,10 @@ def lambda_handler(event, context):
                 "rf_to"                  : dt_January_to_str,
                 "VesselName"             : VESSELMASTER[0]["VesselName"]["S"],
             }
-            # print(f"dataSet[{type(dataSet)}]: {dataSet}")
             
             # DB登録
             insert.upsert(imo, dataSet)
 
-        # print(f"The number of ships is {imo_count}. {imo_list}")
     datas = json.dumps(imo_list)
     
     return {
@@ -411,7 +412,3 @@ def lambda_handler(event, context):
         },
         'body': datas
     }
-
-    
-
-    

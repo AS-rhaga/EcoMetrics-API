@@ -331,7 +331,7 @@ def data_formatting(imo, response, fromDisp, toDisp, BallastLaden, fromLogSpeed,
             total_foc = ""
             co2 = ""
             
-        if 'displacement' in res and 'log_speed' in res and 'me_load' in res and 'total_foc' in res and 'me_foc' in res and 'me_load' in res and displacement != "" and log_speed != "" and me_load != "" and total_foc != "" and me_foc != "" and me_load != "":
+        if displacement != "" and log_speed != "" and me_load != "" and me_foc != "" and beaufort != "":
             if min_disp <= displacement_float and displacement_float <= max_disp and fromDisp <= displacement_float and displacement_float <= toDisp and fromLogSpeed <= log_speed_float and log_speed_float <= toLogSpeed and fromEngineLoad <= me_load_float and me_load_float <= toEngineLoad:
                 if checkAdvancedFilters(log_speed_float, me_foc_float):
                     print(f"checkAdvancedFilters: True")
