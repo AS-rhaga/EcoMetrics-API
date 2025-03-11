@@ -1221,7 +1221,7 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
     RESPONSE["FOC"] = FOC
     RESPONSE["FOCAll"] = FOCAll 
     # RESPONSE["FOC_YAXIS"] = {"max": round(max_foc + (max_foc / 2), 0) , "tickInterval":round(max_foc / 5, 0) }
-    RESPONSE["FOC_YAXIS"] = {"max": round(max_foc, 0) , "tickInterval":round(max_foc / 5, 0) }
+    RESPONSE["FOC_YAXIS"] = {"max": round(max_foc, 0) , "tickInterval":Util.maxDigitOnly(round(max_foc / 4))}
     RESPONSE["CIIRATING"] = cii_RatingAll
     RESPONSE["CIILASTYEAR"] = float(VESSELALERM["LastYear_val"])
     RESPONSE["CII"] = CII
