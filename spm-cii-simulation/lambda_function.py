@@ -520,7 +520,13 @@ def lambda_handler(event, context):
                     if target_month == start_month:
                         # startTimeからその月の月末までの時間を算出
                         start_last_day = calendar.monthrange(start_time.year, start_time.month)[1]
-                        start_last_day_dt = datetime(start_time.year, start_month, start_last_day, 23, 59, 59)
+
+                        if diff_month == 0:
+                            # 1LEGが月を跨いでいない場合の考慮
+                            start_last_day_dt = datetime(end_time.year, end_time.month, end_time.day, end_time.hour, end_time.minute, end_time.second)
+                        else:
+                            start_last_day_dt = datetime(start_time.year, start_month, start_last_day, 23, 59, 59)
+                        
                         caluculated_time = calc_time_diff(start_time, start_last_day_dt)
 
                         print(f"target_month:{target_month}, start_last_day:{start_last_day}, start_last_day_dt:{start_last_day_dt}, caluculated_time:{caluculated_time}")
@@ -782,8 +788,7 @@ def lambda_handler(event, context):
 
                 # Leg No 取得
                 tmp_text = item["year_and_serial_number"]["S"]
-                start_index = tmp_text.find('E')
-                leg_no = tmp_text[start_index:]  # 'E' 以降を抽出
+                leg_no = int(tmp_text.split("E")[1])  # 'E' 以降を抽出
 
                 # total time算出
                 # DepartureTime取得
@@ -798,7 +803,7 @@ def lambda_handler(event, context):
                 total_time = calc_time_diff(departure_time, arrival_time)
 
                 # Log Speed算出
-                log_speed = round(float(int(item["distance"]["S"]) / total_time), 1)
+                log_speed = float(item["distance"]["S"]) / total_time
 
                 # fuel
                 output_fuel_list = []
@@ -833,7 +838,7 @@ def lambda_handler(event, context):
                     "distance"          : item["distance"]["S"],
                     "fuel"              : output_fuel_list,
                     "dispracement"      : item["dispracement"]["S"],
-                    "log_speed"         : str(log_speed),
+                    "log_speed"         : str(round(log_speed, 1)),
                     "foc"               : str(foc),
                 }
 

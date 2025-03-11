@@ -80,8 +80,7 @@ def lambda_handler(event, context):
 
         # Leg No 取得
         tmp_text = res_item["year_and_serial_number"]["S"]
-        start_index = tmp_text.find('E')
-        leg_no = tmp_text[start_index:]  # 'E' 以降を抽出
+        leg_no = int(tmp_text.split("E")[1])  # 'E' 以降を抽出
 
         # total time算出
         # DepartureTime取得
