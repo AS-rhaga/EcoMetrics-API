@@ -689,6 +689,8 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
     # 航海時間を算出
     sailing_rate = float(speed_plan[0]["salling_rate"]["S"])
     sailing_time = time_to_end_of_year * (sailing_rate / 100)
+    port_time    = time_to_end_of_year - sailing_time
+    print(f"sailing_time:{(sailing_time)} port_time:{(port_time)}")
 
     # Ballast、Ladenそれぞれの航海距離を算出
     displacement_rate    = float(speed_plan[0]["dispracement_rate"]["S"])
@@ -731,7 +733,10 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         ballast_foc = ballast_foc_per_hour * ballast_sailing_time
         laden_foc = laden_foc_per_hour * ballast_sailing_time
         # Leg内総FOCを算出
-        simulation_leg_foc = (ballast_foc + laden_foc) * leg_eu_rate / 100
+        simulation_salling_foc = (ballast_foc + laden_foc) * leg_eu_rate / 100
+        simulation_port_foc    = auxiliary_equipment / 24 * port_time * leg_eu_rate / 100
+        simulation_leg_foc     = simulation_salling_foc + simulation_port_foc
+        print(f"simulation_leg_foc:{(simulation_leg_foc)}")
         
         # 燃料別消費量を算出する
         fuel_list = convertFuelOileStringToList(speed_plan[0]["fuel"]["S"]) 

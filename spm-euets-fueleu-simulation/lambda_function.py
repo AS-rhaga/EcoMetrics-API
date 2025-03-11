@@ -921,6 +921,8 @@ def lambda_handler(event, context):
             # 航海時間を算出
             sailing_rate = float(res_simulation[0]["salling_rate"]["S"])
             sailing_time = time_to_end_of_year * (sailing_rate / 100)
+            port_time    = time_to_end_of_year - sailing_time
+            print(f"sailing_time:{(sailing_time)} port_time:{(port_time)}")
 
             # Ballast、Ladenそれぞれの航海距離を算出
             displacement_rate    = float(res_simulation[0]["dispracement_rate"]["S"])
@@ -961,9 +963,15 @@ def lambda_handler(event, context):
                 # FOC算出
                 ballast_foc = ballast_foc_per_hour * ballast_sailing_time
                 laden_foc = laden_foc_per_hour * ballast_sailing_time
-                # Leg内総FOCを算出
-                leg_total_actual_foc       = ballast_foc + laden_foc
-                leg_total_FOC_speed = leg_total_actual_foc * simulation_leg_eu_rate / 100
+                # 航海Leg内総FOCを算出
+                leg_total_actual_foc = ballast_foc + laden_foc
+                leg_total_FOC_speed  = leg_total_actual_foc * simulation_leg_eu_rate / 100
+                # 停泊中の総FOCを算出
+                port_total_actual_foc = auxiliary_equipment / 24 * port_time
+                port_total_FOC_speed  = port_total_actual_foc * simulation_leg_eu_rate / 100
+                # 総FOCを算出
+                total_actual_foc = leg_total_actual_foc + port_total_actual_foc
+                total_FOC_speed  = leg_total_FOC_speed + port_total_FOC_speed
                 
                 # 燃料別消費量を算出する
                 output_fuel_list = []
@@ -1005,31 +1013,31 @@ def lambda_handler(event, context):
                     fuel_rate = fuel_info_list[1]
 
                     if  fuel_type == "LNG(Otto Medium Speed)":
-                        simulation_leg_actual_lng_oms = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_lng_oms = total_FOC_speed * int(fuel_rate) / 100
                     elif  fuel_type == "LNG(Otto Slow Speed)":
-                        simulation_leg_actual_lng_oss = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_lng_oss = total_FOC_speed * int(fuel_rate) / 100
                     elif  fuel_type == "LNG(Otto Diesel Speed)":
-                        simulation_leg_actual_lng_ods = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_lng_ods = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "HFO":
-                        simulation_leg_actual_hfo = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_hfo = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "LFO":
-                        simulation_leg_actual_lfo = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_lfo = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "MDO":
-                        simulation_leg_actual_mdo = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_mdo = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "MGO":
-                        simulation_leg_actual_mgo = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_mgo = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "LPG(Propane)":
-                        simulation_leg_actual_lpg_p = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_lpg_p = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "LPG(Butane)":
-                        simulation_leg_actual_lpg_b = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_lpg_b = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "H2(Natural gas)":
-                        simulation_leg_actual_h2_ng = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_h2_ng = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "NH3(Natural gas)":
-                        simulation_leg_actual_nh3_ng = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_nh3_ng = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "Methanol(Natural gas)":
-                        simulation_leg_actual_methanol_ng = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_methanol_ng = total_FOC_speed * int(fuel_rate) / 100
                     elif fuel_type == "NH3(e-fuel)":
-                        simulation_leg_actual_nh3_ef = leg_total_actual_foc * int(fuel_rate) / 100
+                        simulation_leg_actual_nh3_ef = total_FOC_speed * int(fuel_rate) / 100
 
 
                     if simulation_leg_eu_rate != 0:
@@ -1124,7 +1132,7 @@ def lambda_handler(event, context):
                     # 合計用変数に加算する
                     total_distance += total_ballast_laden_distance
                     total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
-                    total_eu_actual_foc += leg_total_actual_foc
+                    total_eu_actual_foc += total_actual_foc
                     total_co2      += simulation_leg_actual_co2
                     total_eua      += simulation_leg_eua
                     total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
@@ -1148,7 +1156,7 @@ def lambda_handler(event, context):
                     "fuel"                         : output_fuel_list,
                     "eu_rate"                      : str(round(simulation_leg_eu_rate)),
                     "distance"                     : str(round(total_ballast_laden_distance)),
-                    "foc"                          : str(round(leg_total_actual_foc)),
+                    "foc"                          : str(round(total_actual_foc)),
                     "eua"                          : str_eua,
                     "cb"                           : str_cb
                 }

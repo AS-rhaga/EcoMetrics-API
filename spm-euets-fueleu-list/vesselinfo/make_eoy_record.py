@@ -480,6 +480,8 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
     # 航海時間を算出
     sailing_rate = float(speed_plan[0]["salling_rate"]["S"])
     sailing_time = time_to_end_of_year * (sailing_rate / 100)
+    port_time    = time_to_end_of_year - sailing_time
+    print(f"sailing_time:{(sailing_time)} port_time:{(port_time)}")
 
     # Ballast、Ladenそれぞれの航海距離を算出
     displacement_rate    = float(speed_plan[0]["dispracement_rate"]["S"])
@@ -519,12 +521,20 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
 
         # 1時間あたりのFOC算出
         ballast_foc_per_hour = ballast_foc_per_day / 24
-        laden_foc_per_hour = laden_foc_per_day / 24
+        laden_foc_per_hour   = laden_foc_per_day / 24
+        port_foc_per_hour    = auxiliary_equipment / 24
         # FOC算出
         ballast_foc = ballast_foc_per_hour * ballast_sailing_time
         laden_foc = laden_foc_per_hour * ballast_sailing_time
-        # Leg内総FOCを算出
-        simulation_leg_foc = (ballast_foc + laden_foc) * leg_eu_rate / 100
+        # 航海Leg内総FOCを算出
+        simulation_leg_actual_foc = ballast_foc + laden_foc
+        simulation_leg_foc        = simulation_leg_actual_foc * leg_eu_rate / 100
+        # 停泊中の総FOCを算出
+        simulation_port_actual_foc = port_foc_per_hour * port_time
+        simulation_port_foc = simulation_port_actual_foc * leg_eu_rate / 100
+        # 総FOCを算出
+        total_actual_foc = simulation_leg_actual_foc + simulation_port_actual_foc
+        total_FOC_speed  = simulation_leg_foc + simulation_port_foc
         
         # 燃料別消費量を算出する
         fuel_list = Util.convertFuelOileStringToList(speed_plan[0]["fuel"]["S"]) 
@@ -550,43 +560,43 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
             fuel_rate = fuel_info_list[1]
 
             if  fuel_type == "LNG(Otto Diesel Speed)":
-                simulation_leg_lng_ods = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_lng_ods = total_FOC_speed * int(fuel_rate) / 100
                 total_lng_ods     += simulation_leg_lng_ods
             elif  fuel_type == "LNG(Otto Medium Speed)":
-                simulation_leg_lng_oms = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_lng_oms = total_FOC_speed * int(fuel_rate) / 100
                 total_lng_oms     += simulation_leg_lng_oms
             elif  fuel_type == "LNG(Otto Slow Speed)":
-                simulation_leg_lng_oss = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_lng_oss = total_FOC_speed * int(fuel_rate) / 100
                 total_lng_oss     += simulation_leg_lng_oss
             elif fuel_type == "HFO":
-                simulation_leg_hfo = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_hfo = total_FOC_speed * int(fuel_rate) / 100
                 total_hfo          += simulation_leg_hfo
             elif fuel_type == "LFO":
-                simulation_leg_lfo = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_lfo = total_FOC_speed * int(fuel_rate) / 100
                 total_lfo         += simulation_leg_lfo
             elif fuel_type == "MDO":
-                simulation_leg_mdo = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_mdo = total_FOC_speed * int(fuel_rate) / 100
                 total_mdo         += simulation_leg_mdo
             elif fuel_type == "MGO":
-                simulation_leg_mgo = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_mgo = total_FOC_speed * int(fuel_rate) / 100
                 total_mgo         += simulation_leg_mgo
             elif fuel_type == "LPG(Propane)":
-                simulation_leg_lpg_p = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_lpg_p = total_FOC_speed * int(fuel_rate) / 100
                 total_lpg_p         += simulation_leg_lpg_p
             elif fuel_type == "LPG(Butane)":
-                simulation_leg_lpg_b = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_lpg_b = total_FOC_speed * int(fuel_rate) / 100
                 total_lpg_b         += simulation_leg_lpg_b
             elif fuel_type == "NH3(Natural gas)":
-                simulation_leg_nh3_ng = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_nh3_ng = total_FOC_speed * int(fuel_rate) / 100
                 total_nh3_ng         += simulation_leg_nh3_ng
             elif fuel_type == "NH3(e-fuel)":
-                simulation_leg_nh3_ef = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_nh3_ef = total_FOC_speed * int(fuel_rate) / 100
                 total_nh3_ef         += simulation_leg_nh3_ef
             elif fuel_type == "Methanol(Natural gas)":
-                simulation_leg_methanol_ng = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_methanol_ng = total_FOC_speed * int(fuel_rate) / 100
                 total_methanol_ng         += simulation_leg_methanol_ng
             elif fuel_type == "H2(Natural gas)":
-                simulation_leg_h2_ng = simulation_leg_foc * int(fuel_rate) / 100
+                simulation_leg_h2_ng = total_FOC_speed * int(fuel_rate) / 100
                 total_h2_ng         += simulation_leg_h2_ng
 
         simulation_leg_co2 = calculate_function.calc_co2(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_list)
@@ -601,7 +611,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         # 合計用変数に加算する
         total_distance += total_ballast_laden_distance
         total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
-        total_eu_actual_foc += simulation_leg_foc / (leg_eu_rate / 100)
+        total_eu_actual_foc += total_actual_foc
         total_eua      += simulation_leg_eua
 
         # 該当オペレーターの過去実績を取得する。

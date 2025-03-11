@@ -567,6 +567,8 @@ def lambda_handler(event, context):
             # 航海時間を算出
             sailing_rate = float(res_simulation[0]["salling_rate"]["S"])
             sailing_time = time_to_end_of_year * (sailing_rate / 100)
+            port_time    = time_to_end_of_year - sailing_time
+            print(f"sailing_time:{(sailing_time)} port_time:{(port_time)}")
 
             # Ballast、Ladenそれぞれの航海距離を算出
             displacement_rate = float(res_simulation[0]["dispracement_rate"]["S"])
@@ -606,7 +608,9 @@ def lambda_handler(event, context):
             ballast_foc = ballast_foc_per_hour * ballast_sailing_time
             laden_foc = laden_foc_per_hour * laden_sailing_time
             # Leg内総FOCを算出
-            leg_total_FOC_speed = ballast_foc + laden_foc
+            leg_total_foc       = ballast_foc + laden_foc
+            port_total_foc      = auxiliary_equipment / 24 * port_time
+            leg_total_FOC_speed = leg_total_foc + port_total_foc
 
             #Fuel取得
             fuel_list = convertFuelOileStringToList(res_simulation[0]["fuel"]["S"])
@@ -645,7 +649,7 @@ def lambda_handler(event, context):
                     caluculated_time = calc_time_diff(end_first_day_dt, end_time)
                 
                 # TotalTimeと算出した時間の割合を算出
-                calc_time_rate = caluculated_time / sailing_time
+                calc_time_rate = (caluculated_time * sailing_rate / 100) / sailing_time
 
                 # 月別集計リストの該当月に加算
                 tmp_distance_speed = total_ballast_laden_distance * calc_time_rate
@@ -848,6 +852,8 @@ def lambda_handler(event, context):
             # 航海時間を算出
             sailing_rate = float(res_simulation[0]["salling_rate"]["S"])
             sailing_time = time_to_end_of_year * (sailing_rate / 100)
+            port_time    = time_to_end_of_year - sailing_time
+            print(f"sailing_time:{(sailing_time)} port_time:{(port_time)}")
 
             # Ballast、Ladenそれぞれの航海距離を算出
             displacement_rate = float(res_simulation[0]["dispracement_rate"]["S"])
@@ -889,8 +895,10 @@ def lambda_handler(event, context):
                 # FOC算出
                 ballast_foc = ballast_foc_per_hour * ballast_sailing_time
                 laden_foc = laden_foc_per_hour * laden_sailing_time
+                port_total_foc = auxiliary_equipment / 24 * port_time
                 # Leg内総FOCを算出
-                leg_total_FOC_speed = round(float(ballast_foc + laden_foc), 1)
+                leg_total_FOC_speed = round(float(ballast_foc + laden_foc + port_total_foc), 1)
+
             else:
                 leg_total_FOC_speed = "-"
 
