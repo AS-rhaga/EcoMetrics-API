@@ -492,6 +492,13 @@ def lambda_handler(event, context):
                 # LogSpeed算出
                 log_speed = float(simulation_leg["distance"]["S"]) / leg_total_time
 
+                # 平均値算出用処理
+                # TotalTimeをに日数に換算
+                day_count = round(leg_total_time / 24)
+                all_log_speed = log_speed * day_count
+                average_data_count_log_speed += day_count
+                average_log_speed_total += all_log_speed
+
                 # Leg内総FOCを算出
                 leg_total_FOC_voyage = calc_foc_using_foc_formulas(res_foc_formulas[0], simulation_leg["dispracement"]["S"], log_speed, leg_total_time)
 
@@ -586,6 +593,15 @@ def lambda_handler(event, context):
             laden_logspeed = float(res_simulation[0]["log_speed_laden"]["S"])
             ballast_ditance = ballast_sailing_time * ballast_logspeed
             laden_ditance = laden_sailing_time * laden_logspeed
+
+            # 平均値算出用処理
+            # TotalTimeをに日数に換算
+            ballast_day_count = round(ballast_sailing_time / 24)
+            laden_day_count = round(laden_sailing_time / 24)
+            ballast_all_log_speed = ballast_logspeed * ballast_day_count
+            laden_all_log_speed = laden_logspeed * laden_day_count
+            average_data_count_log_speed += ballast_day_count + laden_day_count
+            average_log_speed_total += ballast_all_log_speed + laden_all_log_speed
 
             # BallastDisancen、LadenDistanceを加算
             total_ballast_laden_distance = ballast_ditance + laden_ditance
