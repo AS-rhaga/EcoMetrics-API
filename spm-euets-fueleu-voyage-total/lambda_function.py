@@ -1,7 +1,6 @@
 
 # from Tools.reuse import S3ConfigTools, DynamoDBConfigTools
 # import requests
-import os
 import json
 from datetime import datetime
 from dynamodb import select, upsert
@@ -135,9 +134,11 @@ def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, 
     return cb
 
 def check_port_name(port_code):
-    port_record = select.get_port_record(port_code)
-    # print(f"port_record = {(port_record)}")
-    port_name   = port_record[0]["port_name"]["S"]
+    port_name = "N/A"
+    if port_code != "":
+        port_record = select.get_port_record(port_code)
+        # print(f"port_record = {(port_record)}")
+        port_name   = port_record[0]["port_name"]["S"] if len(port_record) > 0 else "N/A"
     return port_name
 
 def calc_EUA(year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):

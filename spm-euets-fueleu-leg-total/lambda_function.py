@@ -1,5 +1,4 @@
 
-import os
 import json
 from datetime import datetime
 from dynamodb import select, upsert
@@ -174,21 +173,31 @@ def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, 
     return cb
 
 def check_eu_rate(port_code, eta_port_code):
+    print(f"departure_port:{(port_code)} arrival_port:{(eta_port_code)}")
     eu_rate = 0
-    departure_port_record  = select.get_port_record(port_code)
-    departure_port_eu_flag = departure_port_record[0]["eu_flg"]["S"] if len(departure_port_record) != 0 else 0
-    arrival_port_record    = select.get_port_record(eta_port_code)
-    arrival_port_eu_flag   = arrival_port_record[0]["eu_flg"]["S"] if len(arrival_port_record) != 0 else 0
+    departure_port_eu_flag = "0"
+    arrival_port_eu_flag   = "0"
+
+    if port_code != "":
+        departure_port_record  = select.get_port_record(port_code)
+        departure_port_eu_flag = departure_port_record[0]["eu_flg"]["S"] if len(departure_port_record) != 0 else "0"
+    if eta_port_code != "":
+        arrival_port_record    = select.get_port_record(eta_port_code)
+        arrival_port_eu_flag   = arrival_port_record[0]["eu_flg"]["S"] if len(arrival_port_record) != 0 else "0"
+    
     if departure_port_eu_flag == "1" and arrival_port_eu_flag == "1":
         eu_rate = 100
     elif departure_port_eu_flag == "1" or arrival_port_eu_flag == "1":
         eu_rate = 50
+
     return eu_rate
 
 def check_port_name(port_code):
-    port_record = select.get_port_record(port_code)
-    # print(f"port_record = {(port_record)}")
-    port_name   = port_record[0]["port_name"]["S"]
+    port_name = "N/A"
+    if port_code != "":
+        port_record = select.get_port_record(port_code)
+        # print(f"port_record = {(port_record)}")
+        port_name   = port_record[0]["port_name"]["S"] if len(port_record) > 0 else "N/A"
     return port_name
 
 def main(imo, timestamp):
@@ -258,6 +267,8 @@ def main(imo, timestamp):
 
     # print(f"fuel_oil_type_info_list[{type(fuel_oil_type_info_list)}]: {fuel_oil_type_info_list}")
 
+    # レグの最初のNoonReportのport_codeを保持しておく
+    keep_departure_port_code = ""
     # NoonReportのレコード数分回す
     print(f"len(res_np):{(len(res_np))}")
     for i in range(len(res_np)):
@@ -309,30 +320,10 @@ def main(imo, timestamp):
         if i == 0:
             print("初回処理")
             keep_state = state
-            last_year = str(int(year_timestamp) - 1)
-            # print(f"last_year_leg_no_start[{type(last_year_leg_no_start)}]: {last_year_leg_no_start}")
-            last_year_leg_list = select.get_leg_total(imo, last_year)
-            # print(f"last_year_leg_list[{type(last_year_leg_list)}]: {last_year_leg_list}")
-
-            # 昨年のleg-totalレコードが存在する場合
-            if last_year_leg_list:
-                last_year_leg_list_sorted = sorted(last_year_leg_list, key=lambda x:x["leg_no"]["S"], reverse=True)
-                # print(f"last_year_leg_list_sorted[{type(last_year_leg_list_sorted)}]: {last_year_leg_list_sorted}")
-
-                eu_rate = last_year_leg_list_sorted[0]["eu_rate"]["S"] if 'eu_rate' in last_year_leg_list_sorted[0] and last_year_leg_list_sorted[0]["eu_rate"]["S"]  != "" else 0
-            # 昨年のleg-totalレコードが存在しない場合
-            else:
-                eu_rate = check_eu_rate(port_code, eta_port_code)
-            print(f"eu_rate[{type(eu_rate)}]: {eu_rate}")
+            keep_departure_port_code = port_code
             
-            # 航海中の場合、出発港を確認する
-            print(f"state[{type(state)}]: {state}")
-            if state == "AT SEA" and last_year_leg_list:
-                departure_port = last_year_leg_list_sorted[0]["arrival_port"]["S"]
-                print(f"last_year_leg_list_sorted[0]: {(last_year_leg_list_sorted[0])}")
-            else:
-                print(f"port_code:{(port_code)}")
-                departure_port = check_port_name(port_code)
+            # 出発港を確認する
+            departure_port = check_port_name(port_code)
             print(f"departure_port[{type(departure_port)}]: {departure_port}")
 
             # データをセット(各leg初回だけ)
@@ -380,6 +371,9 @@ def main(imo, timestamp):
             else:
                 print("Leg終了、登録処理開始")
                 print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
+                
+                # EU Rateを設定する
+                eu_rate = check_eu_rate(keep_departure_port_code, port_code)
                 
                 # 各種燃料消費量にEU Rateを考慮する
                 total_lng = total_lng * float(eu_rate) / 100
@@ -459,6 +453,7 @@ def main(imo, timestamp):
                 departure_port = check_port_name(port_code)
                 departure_time   = formatted_date
                 leg_type         = "Port" if state == "IN PORT" else "Sailing"
+                keep_departure_port_code = port_code
 
                 # 停泊中の場合、出発地点と到着地は同じ
                 if leg_type == "Port":
@@ -466,7 +461,6 @@ def main(imo, timestamp):
 
                 print(f"port_code:{(port_code)}, eta_port_code:{(eta_port_code)}")
                 arrival_port     = check_port_name(eta_port_code) if leg_type == "Sailing" else departure_port
-                eu_rate          = check_eu_rate(port_code, eta_port_code)
                 sum_displacement = 0
                 noonreport_count = 0
 
@@ -536,6 +530,9 @@ def main(imo, timestamp):
 
             print("NoonReport最終レコード。Leg終了、登録処理開始")
             print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
+
+            # EU Rateを設定する
+            eu_rate = check_eu_rate(keep_departure_port_code, eta_port_code)
 
             # 各種燃料消費量にEU Rateを考慮する
             total_lng = total_lng * float(eu_rate) / 100
