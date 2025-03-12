@@ -157,10 +157,10 @@ def lambda_handler(event, context):
         "MGO_info_list"                 : MGO_info_list, 
         "LPG_Propane_info_list"         : LPG_Propane_info_list, 
         "LPG_Butane_info_list"          : LPG_Butane_info_list, 
-        "NH3_Natural_Gas_info_list"     : NH3_Natural_Gas_info_list, 
+        "NH3_Ng_info_list"              : NH3_Natural_Gas_info_list, 
         "NH3_eFuel_info_list"           : NH3_eFuel_info_list, 
-        "Methanol_Natural_Gas_info_list": Methanol_Natural_Gas_info_list, 
-        "H2_Natural_Gas_info_list"      : H2_Natural_Gas_info_list
+        "Methanol_Ng_info_list"         : Methanol_Natural_Gas_info_list, 
+        "H2_Ng_info_list"               : H2_Natural_Gas_info_list
     }
 
     # 現在の西暦4桁を取得する

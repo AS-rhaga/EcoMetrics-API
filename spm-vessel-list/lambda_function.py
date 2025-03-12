@@ -1,11 +1,9 @@
 
 from time import sleep
 from botocore.errorfactory import ClientError
-import boto3
 import json
 from datetime import datetime
 import ast
-import os
 
 from dynamodb import select, upsert
 from vesselinfo import vessel_total
@@ -24,7 +22,7 @@ def make_fuel_oil_type_info_list():
         "LNG_OSS_info_list": [],
         "LNG_ODS_info_list": [],
         "LPG_Butane_info_list": [],
-        "LPG_Puropane_info_list": [],
+        "LPG_Propane_info_list": [],
         "H2_Ng_info_list"       : [],
         "NH3_Ng_info_list"      : [],
         "Methanol_Ng_info_list" : [],
@@ -59,7 +57,7 @@ def make_fuel_oil_type_info_list():
         elif name == "LPG(Butane)":
             fuel_oil_info_list["LPG_Butane_info_list"] = fuel_oil_type_info
         elif name == "LPG(Propane)":
-            fuel_oil_info_list["LPG_Puropane_info_list"] = fuel_oil_type_info
+            fuel_oil_info_list["LPG_Propane_info_list"] = fuel_oil_type_info
         elif name == "H2(Natural gas)":
             fuel_oil_info_list["H2_Ng_info_list"] = fuel_oil_type_info
         elif name == "NH3(Natural gas)":
@@ -102,7 +100,7 @@ def calc_fuel_total_co2(fuel_list, leg_total_FOC, fuel_oil_info_list):
         elif fuel_name == "LPG(Butane)":
             fuel_total_co2 += tmp_fuel_foc * float(fuel_oil_info_list["LPG_Butane_info_list"]["emission_factor"]["S"])
         elif fuel_name == "LPG(Propane)":
-            fuel_total_co2 += tmp_fuel_foc * float(fuel_oil_info_list["LPG_Puropane_info_list"]["emission_factor"]["S"])
+            fuel_total_co2 += tmp_fuel_foc * float(fuel_oil_info_list["LPG_Propane_info_list"]["emission_factor"]["S"])
         elif fuel_name == "H2(Natural gas)":
             fuel_total_co2 += tmp_fuel_foc * float(fuel_oil_info_list["H2_Ng_info_list"]["emission_factor"]["S"])
         elif fuel_name == "NH3(Natural gas)":

@@ -1,9 +1,5 @@
 
-import ast
 import math
-from datetime import datetime
-
-from dynamodb import select
 
 # datetime型のstartとendの時間差を返却。30分以上の場合は繰り上がり。
 def calc_time_diff(start_time, end_time):
@@ -49,7 +45,7 @@ def calc_co2(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3_ng
         mgo_co2_factor =  float(fuel_oil_type_list["MGO_info_list"]["emission_factor"]["S"])
         total_co2 += mgo * mgo_co2_factor
     if lpg_p > 0:
-        lpg_p_co2_factor =  float(fuel_oil_type_list["LPG_Puropane_info_list"]["emission_factor"]["S"])
+        lpg_p_co2_factor =  float(fuel_oil_type_list["LPG_Propane_info_list"]["emission_factor"]["S"])
         total_co2 += lpg_p * lpg_p_co2_factor
     if lpg_b > 0:
         lpg_b_co2_factor =  float(fuel_oil_type_list["LPG_Butane_info_list"]["emission_factor"]["S"])
@@ -110,7 +106,7 @@ def calc_EUA(year, lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, 
         mgo_co2_factor =  float(fuel_oil_type_list["MGO_info_list"]["emission_factor"]["S"])
         total_co2 += mgo * mgo_co2_factor
     if lpg_p > 0:
-        lpg_p_co2_factor =  float(fuel_oil_type_list["LPG_Puropane_info_list"]["emission_factor"]["S"])
+        lpg_p_co2_factor =  float(fuel_oil_type_list["LPG_Propane_info_list"]["emission_factor"]["S"])
         total_co2 += lpg_p * lpg_p_co2_factor
     if lpg_b > 0:
         lpg_b_co2_factor =  float(fuel_oil_type_list["LPG_Butane_info_list"]["emission_factor"]["S"])
@@ -198,7 +194,7 @@ def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b,
         sum_ghg += lpg_b * lpg_b_ghg_intensity
         sum_foc += lpg_b
     if nh3_ng > 0:
-        nh3_ng_ghg_intensity =  float(fuel_oil_type_list["NH3_Natural_Gas_info_list"]["ghg_intensity"]["S"])
+        nh3_ng_ghg_intensity =  float(fuel_oil_type_list["NH3_Ng_info_list"]["ghg_intensity"]["S"])
         sum_ghg += nh3_ng * nh3_ng_ghg_intensity
         sum_foc += nh3_ng
     if nh3_ef > 0:
@@ -206,11 +202,11 @@ def calc_GHG_Actual(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b,
         sum_ghg += nh3_ef * nh3_ef_ghg_intensity
         sum_foc += nh3_ef
     if methanol_ng > 0:
-        methanol_ng_ghg_intensity =  float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["ghg_intensity"]["S"])
+        methanol_ng_ghg_intensity =  float(fuel_oil_type_list["Methanol_Ng_info_list"]["ghg_intensity"]["S"])
         sum_ghg += methanol_ng * methanol_ng_ghg_intensity
         sum_foc += methanol_ng
     if h2_ng > 0:
-        h2_ng_ghg_intensity =  float(fuel_oil_type_list["H2_Natural_Gas_info_list"]["ghg_intensity"]["S"])
+        h2_ng_ghg_intensity =  float(fuel_oil_type_list["H2_Ng_info_list"]["ghg_intensity"]["S"])
         sum_ghg += h2_ng * h2_ng_ghg_intensity
         sum_foc += h2_ng
 
@@ -231,7 +227,7 @@ def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3
         lng_oms_lcv =  float(fuel_oil_type_list["LNG_OMS_info_list"]["lcv"]["S"])
         total_energy += lng_oms * lng_oms_lcv
     if lng_oss > 0:
-        lng_oss_lcv =  float(fuel_oil_type_list["LNG_OMS_info_list"]["lcv"]["S"])
+        lng_oss_lcv =  float(fuel_oil_type_list["LNG_OSS_info_list"]["lcv"]["S"])
         total_energy += lng_oss * lng_oss_lcv
     if hfo > 0:
         hfo_lcv =  float(fuel_oil_type_list["HFO_info_list"]["lcv"]["S"])
@@ -252,16 +248,16 @@ def calc_energy(lng_ods, lng_oms, lng_oss, hfo, lfo, mdo, mgo, lpg_p, lpg_b, nh3
         lpg_b_lcv = float(fuel_oil_type_list["LPG_Butane_info_list"]["lcv"]["S"])
         total_energy += lpg_b * lpg_b_lcv
     if nh3_ng > 0:
-        nh3_ng_lcv = float(fuel_oil_type_list["NH3_Natural_Gas_info_list"]["lcv"]["S"])
+        nh3_ng_lcv = float(fuel_oil_type_list["NH3_Ng_info_list"]["lcv"]["S"])
         total_energy += nh3_ng * nh3_ng_lcv
     if nh3_ef > 0:
         nh3_ef_lcv = float(fuel_oil_type_list["NH3_eFuel_info_list"]["lcv"]["S"])
         total_energy += nh3_ef * nh3_ef_lcv
     if methanol_ng > 0:
-        methanol_ng_lcv = float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["lcv"]["S"])
+        methanol_ng_lcv = float(fuel_oil_type_list["Methanol_Ng_info_list"]["lcv"]["S"])
         total_energy += methanol_ng * methanol_ng_lcv
     if h2_ng > 0:
-        h2_ng_lcv = float(fuel_oil_type_list["Methanol_Natural_Gas_info_list"]["lcv"]["S"])
+        h2_ng_lcv = float(fuel_oil_type_list["H2_Ng_info_list"]["lcv"]["S"])
         total_energy += h2_ng * h2_ng_lcv
 
     return_energy = total_energy

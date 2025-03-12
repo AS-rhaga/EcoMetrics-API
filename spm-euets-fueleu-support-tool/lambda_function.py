@@ -1,8 +1,6 @@
 
 from datetime import datetime
 import json
-import math
-import re
 import ast
 
 from dynamodb import select
@@ -58,10 +56,10 @@ def make_fuel_oil_type_info_list():
         "MGO_info_list"                 : MGO_info_list, 
         "LPG_Propane_info_list"         : LPG_Propane_info_list, 
         "LPG_Butane_info_list"          : LPG_Butane_info_list, 
-        "NH3_Natural_Gas_info_list"     : NH3_Natural_Gas_info_list, 
+        "NH3_Ng_info_list"              : NH3_Natural_Gas_info_list, 
         "NH3_eFuel_info_list"           : NH3_eFuel_info_list, 
-        "Methanol_Natural_Gas_info_list": Methanol_Natural_Gas_info_list, 
-        "H2_Natural_Gas_info_list"      : H2_Natural_Gas_info_list
+        "Methanol_Ng_info_list"         : Methanol_Natural_Gas_info_list, 
+        "H2_Ng_info_list"               : H2_Natural_Gas_info_list
     }
 
     return fuel_oil_type_list
@@ -361,6 +359,7 @@ def lambda_handler(event, context):
                 ytd_not_grouped_vessels_list.append(ytd_vessel_info)
 
                 # ytd_all_vessels_listに追加
+                print(f'aya-ytd_vessel_info["total"]: {ytd_vessel_info["total"]}')
                 ytd_vessel_data = {
                     "imo"           : imo,
                     "vessel_name"   : vessel_name,
@@ -374,6 +373,7 @@ def lambda_handler(event, context):
                 ytd_all_vessels_list.append(ytd_vessel_data)
 
                 # グルーピングされていない船のCB、CB_COSTを足し合わせる。
+                print(f'aya-ytd_vessel_info["total"]: {ytd_vessel_info["total"]}')
                 ytd_not_grouped_vessels_total_cb += ytd_vessel_info["total"]
                 ytd_not_grouped_vessels_total_cb_cost += ytd_vessel_info["cost"]
 
@@ -409,6 +409,8 @@ def lambda_handler(event, context):
                 # グルーピングされていない船のCB、CB_COSTを足し合わせる。
                 eoy_not_grouped_vessels_total_cb += vessel_info["total"]
                 eoy_not_grouped_vessels_total_cb_cost += vessel_info["cost"]
+
+    print(f'aya-ytd_not_grouped_vessels_total_cb_round: {round(ytd_not_grouped_vessels_total_cb, 1)}')
 
     # グルーピングされていない船たちの合計CB、CB costを設定する
     ytd_not_grouped_total = {
@@ -458,10 +460,14 @@ def lambda_handler(event, context):
         ytd_grouped_vessels_total_energy  = pooling_group_datalist[index]["ytd_total_energy"]
 
         ytd_grouped_vessels_total_GHG = calculate_function.calc_GHG_Actual(0, ytd_grouped_vessels_total_lng_oms, 0, ytd_grouped_vessels_total_hfo, ytd_grouped_vessels_total_lfo, ytd_grouped_vessels_total_mdo, ytd_grouped_vessels_total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
+        print(f'aya-ytd_grouped_vessels_total_cb  = (GHG_Max - ytd_grouped_vessels_total_GHG) * ytd_grouped_vessels_total_energy: ytd_grouped_vessels_total_cb  = ({GHG_Max} - {ytd_grouped_vessels_total_GHG}) * {ytd_grouped_vessels_total_energy}')
         ytd_grouped_vessels_total_cb  = (GHG_Max - ytd_grouped_vessels_total_GHG) * ytd_grouped_vessels_total_energy
 
         # 各プーリンググループのCBを足し合わせる。
+        print(f"aya-ytd_grouped_vessels_total_cb: {ytd_grouped_vessels_total_cb}")
+        print(f"aya-ytd_grouped_vessels_total_cb_/10000: {ytd_grouped_vessels_total_cb / 1000000}")
         ytd_total_cb += (ytd_grouped_vessels_total_cb / 1000000)
+        print(f"aya-ytd_total_cb: {ytd_total_cb}")
 
         ytd_grouped_vessels_total_cb_cost = 0
         if ytd_grouped_vessels_total_cb < 0:
@@ -559,12 +565,16 @@ def lambda_handler(event, context):
     
 
     # グルーピング済みと未所属のcb、cb_costについて、Year to Dateの合計値を算出する
+    print(f"aya-ytd_not_grouped_vessels_total_cb: {ytd_not_grouped_vessels_total_cb}")
     ytd_total_cb += ytd_not_grouped_vessels_total_cb
     ytd_total_cb_cost += ytd_not_grouped_vessels_total_cb_cost
 
     # グルーピング済みと未所属のcb、cb_costについて、End of Yearの合計値を算出する
     eoy_total_cb += eoy_not_grouped_vessels_total_cb
     eoy_total_cb_cost += eoy_not_grouped_vessels_total_cb_cost
+
+    print(f"aya-ytd_total_cb: {ytd_total_cb}")
+    print(f"aya-ytd_total_cb_round: {round(ytd_total_cb, 1)}")
 
     ytd_total_list = {
         "total_cb"         : str(round(ytd_total_cb, 1)),
