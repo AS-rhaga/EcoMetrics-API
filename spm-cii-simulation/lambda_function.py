@@ -260,6 +260,17 @@ def convertFuelOileStringToList(text):
 
     return cleaned_matches
 
+# 最大桁の値以外を０に変換する（例：43⇒40、549⇒500）
+def maxDigitOnly(n):
+    # 数値を文字列に変換
+    str_n = str(n)
+    # 最初の桁を取得
+    first_digit = str_n[0]
+    # 残りを0で埋める
+    result = first_digit + '0' * (len(str_n) - 1)
+    # 数値型に変換して返す
+    return int(result)
+
 def lambda_handler(event, context):
     print(f"event{type(event)}: {event}")
     
@@ -1041,7 +1052,7 @@ def lambda_handler(event, context):
         "CiiScore_LastYear"                 : ciiscore_lastyear,
         "VoyageInformationTotal"            : voyage_infomation_total,
         "CII_RATING"                        : cii_rating_list,
-        "FOC_YAXIS"                         :{"max": round(foc_y_axsis, 0) , "tickInterval":round(foc_y_axsis / 5, 0) }
+        "FOC_YAXIS"                         :{"max": round(foc_y_axsis, 0) , "tickInterval":maxDigitOnly(round(foc_y_axsis / 4)) }
     }
 
     datas = json.dumps(datas)
