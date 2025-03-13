@@ -303,6 +303,28 @@ def convertFuelOileStringToList(text):
 
     return cleaned_matches
 
+# 最大桁の値以外を０に変換する（例：43⇒40、549⇒500、0.345→0.3）
+def maxDigitOnly(n):
+    # 数値を文字列に変換
+    print(f"maxDigitOnly input:{(n)}")
+    str_n = str(n)
+    # ゼロ以外の最初の桁を取得
+    count  = 0
+    degits = ""
+    for i in range(len(str_n)):
+        count += 1
+        degits = degits + str_n[i]
+        if str_n[i] != "0" and str_n[i] != ".":
+            break
+    # 整数部分がある場合、整数部分の残りを0で埋める
+    if n > 1:
+        result = degits + '0' * (len(str(round(n))) - count)
+    else:
+        result = degits
+    print(f"maxDigitOnly result:{(result)}")
+    # 数値型に変換して返す
+    return float(result)
+
 def lambda_handler(event, context):
 
     print(f"event{type(event)}: {event}")
@@ -954,16 +976,30 @@ def lambda_handler(event, context):
 
         # Y軸のtickInterval調整
         eua_tickInterval_tmp = math.ceil(round(max_eua / 2, 0) / 100) * 100
-        cb_tickInterval_tmp = math.ceil(round((max_cb + abs(min_cb)) / 2, 0) / 100) * 100
         # 数値の桁数を計算
         eua_digit_count = len(str(eua_tickInterval_tmp))
-        cb_digit_count = len(str(cb_tickInterval_tmp))
         # 最上位桁のみを抽出
         eua_first_digit = int(str(eua_tickInterval_tmp)[0])
-        cb_first_digit = int(str(cb_tickInterval_tmp)[0])
         # 最上位桁以外を0にする
         eua_tickInterval = eua_first_digit * (10 ** (eua_digit_count - 1))
-        cb_tickInterval = cb_first_digit * (10 ** (cb_digit_count - 1))
+
+        # CB_YAXISの桁数を調整する
+        max_cb = max_cb / 1000000
+        min_cb = min_cb / 1000000
+        # max/minについて、プラスマイナス場合分け
+        if max_cb > 0 and min_cb > 0:
+            sub_max_cb = max_cb
+            sub_min_cb = 0
+        elif max_cb < 0 and min_cb < 0:
+            sub_max_cb = 0
+            sub_min_cb = min_cb
+        else:
+            sub_max_cb = max_cb
+            sub_min_cb = min_cb
+
+        # CB範囲(subInterval)桁数によってtickIntervalを設定する
+        subInterval  = abs(sub_max_cb - sub_min_cb)
+        tickInterval = maxDigitOnly(subInterval / 2)
 
     datas = {
         "VESSELMASTER"                      : VESSELMASTER,
@@ -978,7 +1014,7 @@ def lambda_handler(event, context):
         "SimulationResultTotal"             : SimulationResultTotal,
         "XAxisList"                         : XAxisList,
         "EUA_YAXIS"                         :{"max": round(max_eua, 0) , "tickInterval": eua_tickInterval },
-        "CB_YAXIS"                          :{"max": round(max_cb / 1000000, 0) ,"min": round(min_cb / 1000000, 0) , "tickInterval":cb_tickInterval / 1000000  }
+        "CB_YAXIS"                          :{"max": max_cb,"min": min_cb, "tickInterval": tickInterval }
     }
 
     datas = json.dumps(datas)
