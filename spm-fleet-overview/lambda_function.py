@@ -366,7 +366,7 @@ def lambda_handler(event, context):
         logSpeed               = res_noonreport[0].get("log_speed", {}).get("S", "")
         # ToDo vessel_masterにlog_speed_maxが追加されたらべたを削除し、以下のコメントアウトを外す
         # logSpeedMax            = res_vessel_master[0].get("log_speed_max", {}).get("S", "")
-        logSpeedMax            = "18"
+        logSpeedMax            = "20"
         meRPM                  = res_noonreport[0].get("me_rpm", {}).get("S", "")
         # ToDo vessel_masterにme_rpm_maxが追加されたらべたを削除し、以下のコメントアウトを外す
         # meRPMMax               = res_vessel_master[0].get("me_rpm_max", {}).get("S", "")
@@ -381,6 +381,18 @@ def lambda_handler(event, context):
         euaEndOfYear           = res_eua_cb_data["eoy_eua"]
         cbYearToDate           = res_eua_cb_data["ytd_cb"]
         cbEndOfYear            = res_eua_cb_data["eoy_cb"]
+
+        # stateの設定値決定
+        state = ""
+        if "state" in res_noonreport and res_noonreport[0]["state"]["S"] != "":
+            state = res_noonreport[0]["state"]["S"]
+        else:
+            if res_euets_fueleu_leg_total[0]["leg_type"] == "Sailing":
+                state = "AT SEA"
+            elif res_euets_fueleu_leg_total[0]["leg_type"] == "Port":
+                state = "IN PORT"
+            else:
+                state = "-"
         
         print(f"imo:{imo}   lambda_function res_eua_cb_data:{res_eua_cb_data}")
         print(f"imo:{imo}   lambda_function euaEndOfYear:{euaEndOfYear}, cbEndOfYear:{cbEndOfYear}")
@@ -417,6 +429,7 @@ def lambda_handler(event, context):
             "euaEndOfYear"           : euaEndOfYear,
             "cbYearToDate"           : cbYearToDate,
             "cbEndOfYear"            : cbEndOfYear,
+            "state"                  : state,
         }
         
         # お気に入り登録されているImoだけにお気に入り表示するための判定-------------------------------------------------------
