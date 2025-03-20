@@ -223,13 +223,13 @@ def lambda_handler(event, context):
     dt_now = datetime.now() + timedelta(hours=0)
     print(f"dt_now{type(dt_now)}: {dt_now}")
     
-    dt_now_str = dt_now.strftime('%Y-%m-%dT%H:%M:%SZ')
-    # print(f"dt_now_str{type(dt_now_str)}: {dt_now_str}")
+    dt_now_str = dt_now.strftime('%Y-%m-%dT23:59:59Z')
+    print(f"dt_now_str{type(dt_now_str)}: {dt_now_str}")
     
     dt_oneMonth = dt_now + timedelta(hours=0, weeks=-4)
     dt_oneMonth = dt_now + relativedelta(months=-1)
-    dt_oneMonth_str = dt_oneMonth.strftime('%Y-%m-%dT%H:%M:%SZ')
-    # print(f"dt_oneMonth_str{type(dt_oneMonth_str)}: {dt_oneMonth_str}")
+    dt_oneMonth_str = dt_oneMonth.strftime('%Y-%m-%dT00:00:00Z')
+    print(f"dt_oneMonth_str{type(dt_oneMonth_str)}: {dt_oneMonth_str}")
     
     dt_now_year = int(dt_now.year)
     dt_January_from = datetime(year = dt_now_year, month = 1, day = 1)
