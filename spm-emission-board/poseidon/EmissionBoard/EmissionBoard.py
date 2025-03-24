@@ -1,7 +1,4 @@
-import json
-import ast
-import calendar
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 
@@ -149,15 +146,27 @@ def calc_cii(imo, co2, distance, cii_ref, cii_rating, cii_reduction_rate, VESSEL
     return CII_Calculated, CII_Score, CII_Rating
 
 
-def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, cii_ref, cii_rating, cii_reduction_rate, VESSELMASTER, FUELOILTYPE, VESSELALERM):
+def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, cii_ref, cii_rating, cii_reduction_rate, VESSELMASTER, VESSELALERM):
     # print(f"response[{type(response)}]: {response}")
     # print(f"imo: {imo}, VesselName: {VESSELMASTER["VesselName"]}")
     
     RESPONSE = {}
     VALUE_LIST = []
     
+    # HFO、LFO、MDO、MGO、LNG(Otto Medium Speed)のemisson_factor取得
+    fuel_oil_type_hfo = FuelOilType.FuelOilType("HFO")
+    fuel_oil_type_lfo = FuelOilType.FuelOilType("LFO")
+    fuel_oil_type_mdo = FuelOilType.FuelOilType("MDO")
+    fuel_oil_type_mgo = FuelOilType.FuelOilType("MGO")
+    fuel_oil_type_lng_medium = FuelOilType.FuelOilType("LNG(Otto Medium Speed)")
+    co2_factor_hfo = float(fuel_oil_type_hfo["emission_factor"])
+    co2_factor_lfo = float(fuel_oil_type_lfo["emission_factor"])
+    co2_factor_mdo = float(fuel_oil_type_mdo["emission_factor"])
+    co2_factor_mgo = float(fuel_oil_type_mgo["emission_factor"])
+    co2_factor_lng_medium = float(fuel_oil_type_lng_medium["emission_factor"])
+
+    # emission_factor = float(FUELOILTYPE["emission_factor"])
     # DynamoDBから取得してきたレコードをリストに移管 ※利用項目精査必須
-    emission_factor = float(FUELOILTYPE["emission_factor"])
     ballast = float(VESSELMASTER["Ballast"])
     laden = float(VESSELMASTER["Laden"])
     max_displacement = 0
@@ -202,15 +211,77 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
         # swell_direction     = float(res["swell_direction"]["S"]) if 'swell_direction' in res and res["swell_direction"]["S"] != "" else ""
         # ablog_id            = res["ablog_id"]["S"] if 'ablog_id' in res and res["ablog_id"]["S"] != "" else ""
         
-        
-        
-        # CO2,foc
-        total_foc = ""
-        co2 = ""
-        if 'total_foc' in res and res["total_foc"]["S"] != "":
-            total_foc = float(res["total_foc"]["S"])
-            co2 = total_foc * emission_factor
-        
+
+        # 燃料ごとの消費量を取得
+        # M/E BOG
+        me_bog = float(res["me_bog"]["S"]) if 'me_bog' in res and res["me_bog"]["S"] != "" else ""
+        # D/G BOG
+        dg_bog = float(res["dg_bog"]["S"]) if 'dg_bog' in res and res["dg_bog"]["S"] != "" else ""
+        # GCU BOG
+        gcu_bog = float(res["gcu_bog"]["S"]) if 'gcu_bog' in res and res["gcu_bog"]["S"] != "" else ""            
+        # M/E HFO
+        me_hfo = float(res["me_hfo"]["S"]) if 'me_hfo' in res and res["me_hfo"]["S"] != "" else ""
+        # D/G HFO
+        dg_hfo = float(res["dg_hfo"]["S"]) if 'dg_hfo' in res and res["dg_hfo"]["S"] != "" else ""
+        # BOILER HFO
+        boiler_hfo = float(res["boiler_hfo"]["S"]) if 'boiler_hfo' in res and res["boiler_hfo"]["S"] != "" else ""
+        # M/E LSFO
+        me_lsfo = float(res["me_lsfo"]["S"]) if 'me_lsfo' in res and res["me_lsfo"]["S"] != "" else ""
+        # D/G LSFO（SPAS上の名称はge_foc）
+        dg_lsfo = float(res["ge_foc"]["S"]) if 'ge_foc' in res and res["ge_foc"]["S"] != "" else ""
+        # BOILER LSFO（SPAS上の名称はboiler_foc）
+        boiler_lsfo = float(res["boiler_foc"]["S"]) if 'boiler_foc' in res and res["boiler_foc"]["S"] != "" else ""
+        # M/E DO
+        me_do = float(res["me_do"]["S"]) if 'me_do' in res and res["me_do"]["S"] != "" else ""
+        # D/G DO
+        dg_do = float(res["dg_do"]["S"]) if 'dg_do' in res and res["dg_do"]["S"] != "" else ""
+        # BOILER DO
+        boiler_do = float(res["boiler_do"]["S"]) if 'boiler_do' in res and res["boiler_do"]["S"] != "" else ""
+        # M/E LSGO
+        me_lsgo = float(res["me_lsgo"]["S"]) if 'me_lsgo' in res and res["me_lsgo"]["S"] != "" else ""
+        # D/G LSGO
+        dg_lsgo = float(res["dg_lsgo"]["S"]) if 'dg_lsgo' in res and res["dg_lsgo"]["S"] != "" else ""
+        # BOILER LSGO
+        boiler_lsgo = float(res["boiler_lsgo"]["S"]) if 'boiler_lsgo' in res and res["boiler_lsgo"]["S"] != "" else ""
+        # IGG GO
+        igg_go = float(res["igg_go"]["S"]) if 'igg_go' in res and res["igg_go"]["S"] != "" else ""
+        # IGG LSGO
+        igg_lsgo = float(res["igg_lsgo"]["S"]) if 'igg_lsgo' in res and res["igg_lsgo"]["S"] != "" else ""
+
+        # 燃料ごとの合計消費量を算出
+        # BOG
+        total_bog = 0
+        total_bog += me_bog if me_bog != "" else 0
+        total_bog += dg_bog if dg_bog != "" else 0
+        total_bog += gcu_bog if gcu_bog != "" else 0
+        # HFO
+        total_hfo = 0
+        total_hfo += me_hfo if me_hfo != "" else 0
+        total_hfo += dg_hfo if dg_hfo != "" else 0
+        total_hfo += boiler_hfo if boiler_hfo != "" else 0
+        # LFO
+        total_lfo = 0
+        total_lfo += me_lsfo if me_lsfo != "" else 0
+        total_lfo += dg_lsfo if dg_lsfo != "" else 0
+        total_lfo += boiler_lsfo if boiler_lsfo != "" else 0
+        # DO
+        total_do = 0
+        total_do += me_do if me_do != "" else 0
+        total_do += dg_do if dg_do != "" else 0
+        total_do += boiler_do if boiler_do != "" else 0
+        # GO
+        total_go = 0
+        total_go += me_lsgo if me_lsgo != "" else 0
+        total_go += dg_lsgo if dg_lsgo != "" else 0
+        total_go += boiler_lsgo if boiler_lsgo != "" else 0
+        total_go += igg_go if igg_go != "" else 0
+        total_go += igg_lsgo if igg_lsgo != "" else 0
+
+        # total_foc算出 
+        total_foc = total_bog + total_hfo + total_lfo + total_do + total_go
+        # co2排出量算出
+        co2 = total_bog * co2_factor_lng_medium + total_hfo * co2_factor_hfo + total_lfo * co2_factor_lfo + total_do * co2_factor_mdo + total_go * co2_factor_mgo
+               
         # displacement
         displacement = ""
         if 'displacement' in res and res["displacement"]["S"] != "":
@@ -220,12 +291,12 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
         
         VALUE = {}
         VALUE["timestamp"] = utc_date
-        VALUE["foc"] = total_foc if total_foc != "" else None
+        VALUE["foc"] = total_foc
         VALUE["wind_speed"] = wind_speed if wind_speed != "" else None
         VALUE["log_speed"] = log_speed if log_speed != "" else None
         VALUE["displacement"] = displacement if displacement != "" else None
         VALUE["beaufort"] = beaufort if beaufort != "" else None
-        VALUE["co2"] = co2 if co2 != "" else None
+        VALUE["co2"] = co2
         VALUE["distance"] = og_distance if og_distance != "" else None
         VALUE["me_foc"] = me_foc if me_foc != "" else None
         VALUE["me_rpm"] = me_rpm if me_rpm != "" else None
@@ -783,10 +854,10 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
                     
                     # VoyageInfomartion-----------------------------
                     # 集計単位別
-                    Total_FOC           += VALUE['foc'] if VALUE['foc'] != None else 0
+                    Total_FOC           += VALUE['foc']
                     ME_FOC              += VALUE['me_foc'] if VALUE['me_foc'] != None else 0
                     Total_Distance      += VALUE['distance'] if VALUE['distance'] != None else 0
-                    Total_CO2_Emissions += VALUE['co2'] if VALUE['co2'] != None else 0
+                    Total_CO2_Emissions += VALUE['co2']
                     Avg_Wind_Speed      += VALUE['wind_speed'] if VALUE['wind_speed'] != None else 0
                     Avg_LOG_Speed       += VALUE['log_speed'] if VALUE['log_speed'] != None else 0
                     Avg_LOAD            += VALUE['me_load'] if VALUE['me_load'] != None else 0
@@ -795,10 +866,10 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
                     Avg_Beaufort        += VALUE['beaufort'] if VALUE['beaufort'] != None else 0
                     
                     # 全期間
-                    Total_FOCALL           += VALUE['foc'] if VALUE['foc'] != None else 0
+                    Total_FOCALL           += VALUE['foc']
                     ME_FOCALL              += VALUE['me_foc'] if VALUE['me_foc'] != None else 0
                     Total_DistanceALL      += VALUE['distance'] if VALUE['distance'] != None else 0
-                    Total_CO2_EmissionsALL += VALUE['co2'] if VALUE['co2'] != None else 0
+                    Total_CO2_EmissionsALL += VALUE['co2']
                     Avg_Wind_SpeedALL      += VALUE['wind_speed'] if VALUE['wind_speed'] != None else 0
                     Avg_LOG_SpeedALL       += VALUE['log_speed'] if VALUE['log_speed'] != None else 0
                     Avg_LOADALL            += VALUE['me_load'] if VALUE['me_load'] != None else 0
@@ -1243,17 +1314,16 @@ def util_EmissionBoard_main(imo, Timestamp_from, Timestamp_to, response, Unit):
     year = str(dt_now.year)
     
     VESSELMASTER = VesselMaster.VesselMaster(imo)
-    FUELOILTYPE = FuelOilType.FuelOilType(VESSELMASTER["OilType"])
     VESSELALERM = VesselAlerm.VesselAlerm(imo, year)
     cii_ref = dynamodb.get_cii_ref(VESSELMASTER["VesselType"])
     cii_rating = dynamodb.get_cii_rating(VESSELMASTER["VesselType"])
     cii_reduction_rate = dynamodb.get_cii_reduction_rate(Timestamp_to_year)
-    print(f"VESSELMASTER: {VESSELMASTER}, FUELOILTYPE: {FUELOILTYPE}, VESSELALERM: {VESSELALERM}, cii_ref: {cii_ref}, cii_rating: {cii_rating}, cii_reduction_rate: {cii_reduction_rate}")
+    print(f"VESSELMASTER: {VESSELMASTER}, VESSELALERM: {VESSELALERM}, cii_ref: {cii_ref}, cii_rating: {cii_rating}, cii_reduction_rate: {cii_reduction_rate}")
     
     EmissionBoard = {}
     if len(response):
         # 集計単位のタイプ毎に、必要項目の集計結果を取得
-        RESPONSE = util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, cii_ref, cii_rating, cii_reduction_rate, VESSELMASTER, FUELOILTYPE, VESSELALERM)
+        RESPONSE = util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, cii_ref, cii_rating, cii_reduction_rate, VESSELMASTER, VESSELALERM)
         
         # 返却値セット
         EmissionBoard = {
