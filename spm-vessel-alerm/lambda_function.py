@@ -251,17 +251,25 @@ def lambda_handler(event, context):
     
     # IMO番号一覧取得
     res_vessel = select.get_vessel()
-    
-    LIST = []
+
+    # HFO、LFO、MDO、MGO、LNG(Otto Medium Speed)のemisson_factor取得
+    FUELOILTYPE_HFO = select.get_fuel_oil_type("HFO")
+    FUELOILTYPE_LFO = select.get_fuel_oil_type("LFO")
+    FUELOILTYPE_MDO = select.get_fuel_oil_type("MDO")
+    FUELOILTYPE_MGO = select.get_fuel_oil_type("MGO")
+    FUELOILTYPE_LNG_MEDIUM = select.get_fuel_oil_type("LNG(Otto Medium Speed)")
+    CO2FACTOR_HFO = float(FUELOILTYPE_HFO[0]["emission_factor"]["S"])
+    CO2FACTOR_LFO = float(FUELOILTYPE_LFO[0]["emission_factor"]["S"])
+    CO2FACTOR_MDO = float(FUELOILTYPE_MDO[0]["emission_factor"]["S"])
+    CO2FACTOR_MGO = float(FUELOILTYPE_MGO[0]["emission_factor"]["S"])
+    CO2FACTOR_LNG_MEDIUM = float(FUELOILTYPE_LNG_MEDIUM[0]["emission_factor"]["S"])
+
     imo_list = []
     imo_count = 0
     for i in range(len(res_vessel)):
         imo_count += 1
         imo = res_vessel[i]["imo"]["S"]
-        VESSELMASTER =select.get_vesselmaster(imo)
-        FUELOILTYPE = select.get_fuel_oil_type(VESSELMASTER[0]["OilType"]["S"])
-        co2_factor = float(FUELOILTYPE[0]["emission_factor"]["S"])
-        
+        VESSELMASTER = select.get_vesselmaster(imo)      
         
         imo_list.append(imo)
         
@@ -270,8 +278,6 @@ def lambda_handler(event, context):
         # print(f"res_np[{type(res_np)}]: {res_np}")
         
         # スピコンアラート算出用
-        log_speed_real = 0
-        foc_real = 0
         cp_count = 0
         rf_count = 0
         speed_consumption_curve = select.get_speed_consumption_curve(imo)
@@ -322,14 +328,77 @@ def lambda_handler(event, context):
 
             # beaufort
             beaufort = float(res["beaufort"]["S"]) if 'beaufort' in res and res["beaufort"]["S"] != "" else ""
-            
-            # CO2,foc
-            total_foc = ""
-            co2 = ""
-            if 'total_foc' in res and res["total_foc"]["S"] != "":
-                total_foc = float(res["total_foc"]["S"])
-                co2 = total_foc * co2_factor
-                           
+
+            # 燃料ごとの消費量を取得
+            # M/E BOG
+            me_bog = float(res["me_bog"]["S"]) if 'me_bog' in res and res["me_bog"]["S"] != "" else ""
+            # D/G BOG
+            dg_bog = float(res["dg_bog"]["S"]) if 'dg_bog' in res and res["dg_bog"]["S"] != "" else ""
+            # GCU BOG
+            gcu_bog = float(res["gcu_bog"]["S"]) if 'gcu_bog' in res and res["gcu_bog"]["S"] != "" else ""            
+            # M/E HFO
+            me_hfo = float(res["me_hfo"]["S"]) if 'me_hfo' in res and res["me_hfo"]["S"] != "" else ""
+            # D/G HFO
+            dg_hfo = float(res["dg_hfo"]["S"]) if 'dg_hfo' in res and res["dg_hfo"]["S"] != "" else ""
+            # BOILER HFO
+            boiler_hfo = float(res["boiler_hfo"]["S"]) if 'boiler_hfo' in res and res["boiler_hfo"]["S"] != "" else ""
+            # M/E LSFO
+            me_lsfo = float(res["me_lsfo"]["S"]) if 'me_lsfo' in res and res["me_lsfo"]["S"] != "" else ""
+            # D/G LSFO（SPAS上の名称はge_foc）
+            dg_lsfo = float(res["ge_foc"]["S"]) if 'ge_foc' in res and res["ge_foc"]["S"] != "" else ""
+            # BOILER LSFO（SPAS上の名称はboiler_foc）
+            boiler_lsfo = float(res["boiler_foc"]["S"]) if 'boiler_foc' in res and res["boiler_foc"]["S"] != "" else ""
+            # M/E DO
+            me_do = float(res["me_do"]["S"]) if 'me_do' in res and res["me_do"]["S"] != "" else ""
+            # D/G DO
+            dg_do = float(res["dg_do"]["S"]) if 'dg_do' in res and res["dg_do"]["S"] != "" else ""
+            # BOILER DO
+            boiler_do = float(res["boiler_do"]["S"]) if 'boiler_do' in res and res["boiler_do"]["S"] != "" else ""
+            # M/E LSGO
+            me_lsgo = float(res["me_lsgo"]["S"]) if 'me_lsgo' in res and res["me_lsgo"]["S"] != "" else ""
+            # D/G LSGO
+            dg_lsgo = float(res["dg_lsgo"]["S"]) if 'dg_lsgo' in res and res["dg_lsgo"]["S"] != "" else ""
+            # BOILER LSGO
+            boiler_lsgo = float(res["boiler_lsgo"]["S"]) if 'boiler_lsgo' in res and res["boiler_lsgo"]["S"] != "" else ""
+            # IGG GO
+            igg_go = float(res["igg_go"]["S"]) if 'igg_go' in res and res["igg_go"]["S"] != "" else ""
+            # IGG LSGO
+            igg_lsgo = float(res["igg_lsgo"]["S"]) if 'igg_lsgo' in res and res["igg_lsgo"]["S"] != "" else ""
+
+            # 燃料ごとの合計消費量を算出
+            # BOG
+            total_bog = 0
+            total_bog += me_bog if me_bog != "" else 0
+            total_bog += dg_bog if dg_bog != "" else 0
+            total_bog += gcu_bog if gcu_bog != "" else 0
+            # HFO
+            total_hfo = 0
+            total_hfo += me_hfo if me_hfo != "" else 0
+            total_hfo += dg_hfo if dg_hfo != "" else 0
+            total_hfo += boiler_hfo if boiler_hfo != "" else 0
+            # LFO
+            total_lfo = 0
+            total_lfo += me_lsfo if me_lsfo != "" else 0
+            total_lfo += dg_lsfo if dg_lsfo != "" else 0
+            total_lfo += boiler_lsfo if boiler_lsfo != "" else 0
+            # DO
+            total_do = 0
+            total_do += me_do if me_do != "" else 0
+            total_do += dg_do if dg_do != "" else 0
+            total_do += boiler_do if boiler_do != "" else 0
+            # GO
+            total_go = 0
+            total_go += me_lsgo if me_lsgo != "" else 0
+            total_go += dg_lsgo if dg_lsgo != "" else 0
+            total_go += boiler_lsgo if boiler_lsgo != "" else 0
+            total_go += igg_go if igg_go != "" else 0
+            total_go += igg_lsgo if igg_lsgo != "" else 0
+
+            # total_foc算出 
+            total_foc = total_bog + total_hfo + total_lfo + total_do + total_go
+            # co2排出量算出
+            co2 = total_bog * CO2FACTOR_LNG_MEDIUM + total_hfo * CO2FACTOR_HFO + total_lfo * CO2FACTOR_LFO + total_do * CO2FACTOR_MDO + total_go * CO2FACTOR_MGO
+                          
             # print(f"timstamp[{timstamp}],dt_oneMonth[{dt_oneMonth}|{type(dt_oneMonth)}]-dt_now[{dt_now}|{type(dt_now)}]: total_foc: {total_foc}, co2: {co2}")
             # print(f"timstamp[{timstamp}],dt_January_from[{dt_January_from}|{type(dt_January_from)}]-dt_January_to[{dt_January_to}|{type(dt_January_to)}]: total_foc: {total_foc}, co2: {co2}")
             # print(f"timstamp[{timstamp}],dt_last_year_from[{dt_last_year_from}|{type(dt_last_year_from)}]-dt_last_year_to[{dt_last_year_to}|{type(dt_last_year_to)}]: total_foc: {total_foc}, co2: {co2}")
@@ -339,8 +408,8 @@ def lambda_handler(event, context):
             if dt_oneMonth <= timstamp and timstamp <= dt_now:
                 # print(f"dt_oneMonth-dt_now: {dt_oneMonth}-{dt_now}, oneMonth_distance_value: {oneMonth_distance_value}, oneMonth_co2_value: {oneMonth_co2_value}")
                 oneMonth_distance_value += og_distance if og_distance != "" else 0
-                oneMonth_foc_value += total_foc if total_foc != "" else 0
-                oneMonth_co2_value += co2 if co2 != "" else 0
+                oneMonth_foc_value += total_foc
+                oneMonth_co2_value += co2
                 
                 # 5~23knotの場合だけをフィルタする
                 if log_speed != "" and me_foc != "" and displacement != "" and me_load != "" and beaufort != "" and 5 <= log_speed:
@@ -354,15 +423,15 @@ def lambda_handler(event, context):
             # This Year
             if dt_January_from <= timstamp and timstamp <= dt_January_to:
                 Januarytonow_distance_value += og_distance if og_distance != "" else 0
-                Januarytonow_foc_value += total_foc if total_foc != "" else 0
-                Januarytonow_co2_value += co2 if co2 != "" else 0
+                Januarytonow_foc_value += total_foc
+                Januarytonow_co2_value += co2
             
             # Last Year
             if dt_last_year_from <= timstamp and timstamp <= dt_last_year_to:
                 # print(f"Test: timstamp[{timstamp}],dt_last_year_from[{dt_last_year_from}]-dt_last_year_to[{dt_last_year_to}]: total_foc: {total_foc}, co2: {co2}")
                 LastYear_distance_value += og_distance if og_distance != "" else 0
-                LastYear_foc_value += total_foc if total_foc != "" else 0
-                LastYear_co2_value += co2 if co2 != "" else 0
+                LastYear_foc_value += total_foc
+                LastYear_co2_value += co2
             
         # データベースから抽出したレコード数をチェック
         print(f"The number of records that contain data is {np_count}.")

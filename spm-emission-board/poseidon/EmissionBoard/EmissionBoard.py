@@ -154,16 +154,16 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
     VALUE_LIST = []
     
     # HFO、LFO、MDO、MGO、LNG(Otto Medium Speed)のemisson_factor取得
-    fuel_oil_type_hfo = FuelOilType.FuelOilType("HFO")
-    fuel_oil_type_lfo = FuelOilType.FuelOilType("LFO")
-    fuel_oil_type_mdo = FuelOilType.FuelOilType("MDO")
-    fuel_oil_type_mgo = FuelOilType.FuelOilType("MGO")
-    fuel_oil_type_lng_medium = FuelOilType.FuelOilType("LNG(Otto Medium Speed)")
-    co2_factor_hfo = float(fuel_oil_type_hfo["emission_factor"])
-    co2_factor_lfo = float(fuel_oil_type_lfo["emission_factor"])
-    co2_factor_mdo = float(fuel_oil_type_mdo["emission_factor"])
-    co2_factor_mgo = float(fuel_oil_type_mgo["emission_factor"])
-    co2_factor_lng_medium = float(fuel_oil_type_lng_medium["emission_factor"])
+    FUELOILTYPE_HFO = FuelOilType.FuelOilType("HFO")
+    FUELOILTYPE_LFO = FuelOilType.FuelOilType("LFO")
+    FUELOILTYPE_MDO = FuelOilType.FuelOilType("MDO")
+    FUELOILTYPE_MGO = FuelOilType.FuelOilType("MGO")
+    FUELOILTYPE_LNG_MEDIUM = FuelOilType.FuelOilType("LNG(Otto Medium Speed)")
+    CO2FACTOR_HFO = float(FUELOILTYPE_HFO["emission_factor"])
+    CO2FACTOR_LFO = float(FUELOILTYPE_LFO["emission_factor"])
+    CO2FACTOR_MDO = float(FUELOILTYPE_MDO["emission_factor"])
+    CO2FACTOR_MGO = float(FUELOILTYPE_MGO["emission_factor"])
+    CO2FACTOR_LNG_MEDIUM = float(FUELOILTYPE_LNG_MEDIUM["emission_factor"])
 
     # emission_factor = float(FUELOILTYPE["emission_factor"])
     # DynamoDBから取得してきたレコードをリストに移管 ※利用項目精査必須
@@ -280,7 +280,7 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
         # total_foc算出 
         total_foc = total_bog + total_hfo + total_lfo + total_do + total_go
         # co2排出量算出
-        co2 = total_bog * co2_factor_lng_medium + total_hfo * co2_factor_hfo + total_lfo * co2_factor_lfo + total_do * co2_factor_mdo + total_go * co2_factor_mgo
+        co2 = total_bog * CO2FACTOR_LNG_MEDIUM + total_hfo * CO2FACTOR_HFO + total_lfo * CO2FACTOR_LFO + total_do * CO2FACTOR_MDO + total_go * CO2FACTOR_MGO
                
         # displacement
         displacement = ""
