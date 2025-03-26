@@ -38,18 +38,20 @@ def get_user(user_id):
     
     return data
 
-def get_favolite_table(user_id):
+def get_favorite(user_id):
     data = []
     response = __dynamodb_client.query(
-        TableName = __table_name_favorite,
-        ExpressionAttributeNames = {
-            '#name0': 'user_id'
+        TableName=__table_name_favorite,
+        ExpressionAttributeNames={
+            '#name0': 'user_id',
         },
-        ExpressionAttributeValues = {
-            ':value0': {'S': user_id}
+        ExpressionAttributeValues={
+            ':value0': {'S': user_id},
         },
-        KeyConditionExpression = '#name0 = :value0'
+        KeyConditionExpression='#name0 = :value0'
     )
+    data = response['Items']
+    
     return data
 
 def get_foc_formulas(imo):

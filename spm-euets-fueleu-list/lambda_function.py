@@ -214,6 +214,9 @@ def lambda_handler(event, context):
     new_rows = sorted(rows, key=lambda x: x['vessel_name'])
     new_imoList = sorted(imoList, key=lambda x: x['VesselName'])
 
+    # 選択肢の先頭にFavoriteを追加
+    gidList.insert(0, "Favorite")
+
     total_list = {
         "ytd_total_eua"     : ytd_total_eua,
         "ytd_total_eua_cost": ytd_total_eua_cost,
