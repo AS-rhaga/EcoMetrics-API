@@ -155,7 +155,6 @@ def make_leg_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_list,
     dataset = []
 
     leg_count             = 0
-    leg_no                = ""
     eu_rate               = leg_info["eu_rate"]["S"]
     noonreport_count      = 0
     sum_displacement      = 0
@@ -260,7 +259,6 @@ def make_leg_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_list,
 
             # DB登録用データセットを作成、更新する。
             leg_count       += 1
-            leg_no           = year_timestamp_from + "{:0>3}".format(leg_count)
 
             avg_displacement = str(float(sum_displacement / noonreport_count))
             total_distance   = str(float(total_distance))
@@ -275,7 +273,7 @@ def make_leg_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_list,
 
             dataset = {
                 "imo": imo,
-                "leg_no": leg_no,
+                "leg_no": leg_info["leg_no"]["S"],
                 "departure_port": leg_info["departure_port"]["S"],
                 "departure_time": Timestamp_from,
                 "arrival_port": leg_info["arrival_port"]["S"],

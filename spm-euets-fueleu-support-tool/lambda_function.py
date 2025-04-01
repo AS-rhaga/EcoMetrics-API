@@ -157,7 +157,8 @@ def lambda_handler(event, context):
             "eoy_total_nh3_ng"     : 0,
             "eoy_total_methanol_ng": 0,
             "eoy_total_nh3_ef"     : 0,
-            "eoy_total_energy"     : 0
+            "eoy_total_energy"     : 0,
+            "last_year_cb"         : 0
         }
         pooling_group_datalist.append(data)
 
@@ -201,10 +202,10 @@ def lambda_handler(event, context):
                     # 1船舶あたりの年間情報と実測データを算出する
                     if year_now == para_year:
                         # 当年分の処理の場合
-                        ytd_grouped_vessel_info, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed(imo, vessel_name, year_now, para_year, fuel_oil_type_info_list)
+                        ytd_grouped_vessel_info, last_year_cb, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed(imo, vessel_name, year_now, para_year, fuel_oil_type_info_list)
                     else:
                         # 過去年分の処理の場合
-                        ytd_grouped_vessel_info, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed_past(imo, vessel_name, para_year, fuel_oil_type_info_list)
+                        ytd_grouped_vessel_info, last_year_cb, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed_past(imo, vessel_name, para_year, fuel_oil_type_info_list)
 
                     print(f"imo:{(imo)}, ytd_grouped_vessel_info:{(ytd_grouped_vessel_info)}, eoy_grouped_vessel_info:{(eoy_grouped_vessel_info)}")
                     # グルーピングされている船の情報を出力用リストに追加する
@@ -214,29 +215,9 @@ def lambda_handler(event, context):
                         append_data = [group_name, ytd_grouped_vessel_info[j]]
                         sub_ytd_grouped_vessels_list.append(append_data)
 
-                        # Year to Dateのbanking, borrowingの確認をする
-                        tmp_ytd_banking_cb   = ytd_grouped_vessel_info[j]["banking"]
-                        tmp_ytd_borrowing_cb = ytd_grouped_vessel_info[j]["borrowing"]
-                        if tmp_ytd_banking_cb > 0:
-                            count_ytd_banking_vessels += 1
-                            ytd_banking_cb            += tmp_ytd_banking_cb
-                        # elif tmp_ytd_borrowing_cb > 0:
-                        #     count_ytd_borrowing_vessels += 1
-                        #     ytd_borrowing_cb            += tmp_ytd_borrowing_cb
-
                         # sub_eoy_grouped_vessels_listに追加
                         append_data = [group_name, eoy_grouped_vessel_info[j]]
                         sub_eoy_grouped_vessels_list.append(append_data)
-
-                        # banking, borrowingの確認をする
-                        tmp_eoy_banking_cb   = eoy_grouped_vessel_info[j]["banking"]
-                        tmp_eoy_borrowing_cb = eoy_grouped_vessel_info[j]["borrowing"]
-                        if tmp_eoy_banking_cb > 0:
-                            count_eoy_banking_vessels += 1
-                            eoy_banking_cb            += tmp_eoy_banking_cb
-                        # elif tmp_eoy_borrowing_cb > 0:
-                        #     count_eoy_borrowing_vessels += 1
-                        #     eoy_borrowing_cb            += tmp_eoy_borrowing_cb
 
                         # ytd_all_vessels_listに追加
                         ytd_vessel_data = {
@@ -293,6 +274,7 @@ def lambda_handler(event, context):
                             bk_eoy_total_methanol_ng = pooling_group_data["eoy_total_methanol_ng"]
                             bk_eoy_total_nh3_ef      = pooling_group_data["eoy_total_nh3_ef"]
                             bk_eoy_total_energy      = pooling_group_data["eoy_total_energy"]
+                            bk_last_year_cb          = pooling_group_data["last_year_cb"]
 
                             # プーリンググループの合計値を加算した値に書き換える。
                             pooling_group_data["ytd_total_hfo"]     = bk_ytd_total_hfo + ytd_hfo
@@ -320,6 +302,7 @@ def lambda_handler(event, context):
                             pooling_group_data["eoy_total_methanol_ng"] = bk_eoy_total_methanol_ng + eoy_methanol_ng
                             pooling_group_data["eoy_total_nh3_ef"]      = bk_eoy_total_nh3_ef + eoy_nh3_ef
                             pooling_group_data["eoy_total_energy"]      = bk_eoy_total_energy + ytd_energy + eoy_energy
+                            pooling_group_data["last_year_cb"]          = bk_last_year_cb + last_year_cb
 
                             # リストを更新する。
                             pooling_group_datalist[list_index] = pooling_group_data
@@ -338,10 +321,10 @@ def lambda_handler(event, context):
             # 1船舶あたりの年間情報と実測データを算出する
             if year_now == para_year:
                 # 当年分の処理の場合
-                ytd_not_grouped_vessel_info, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_not_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed(imo, vessel_name, year_now, para_year, fuel_oil_type_info_list)
+                ytd_not_grouped_vessel_info, last_year_cb, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_not_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed(imo, vessel_name, year_now, para_year, fuel_oil_type_info_list)
             else:
                 # 過去年分の処理の場合
-                ytd_not_grouped_vessel_info, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_not_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed_past(imo, vessel_name, para_year, fuel_oil_type_info_list)
+                ytd_not_grouped_vessel_info, last_year_cb, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_not_grouped_vessel_info, eoy_hfo, eoy_lfo, eoy_mdo, eoy_mgo, eoy_lng_oms, eoy_lng_oss, eoy_lng_ods, eoy_lpg_p, eoy_lpg_b, eoy_h2_ng, eoy_nh3_ng, eoy_methanol_ng, eoy_nh3_ef, eoy_energy = make_ytd_record.make_recoed_past(imo, vessel_name, para_year, fuel_oil_type_info_list)
 
             # Year to Dateについて
             # グルーピングされていない船の情報をリストに追加する
@@ -359,7 +342,6 @@ def lambda_handler(event, context):
                 ytd_not_grouped_vessels_list.append(ytd_vessel_info)
 
                 # ytd_all_vessels_listに追加
-                print(f'aya-ytd_vessel_info["total"]: {ytd_vessel_info["total"]}')
                 ytd_vessel_data = {
                     "imo"           : imo,
                     "vessel_name"   : vessel_name,
@@ -373,7 +355,6 @@ def lambda_handler(event, context):
                 ytd_all_vessels_list.append(ytd_vessel_data)
 
                 # グルーピングされていない船のCB、CB_COSTを足し合わせる。
-                print(f'aya-ytd_vessel_info["total"]: {ytd_vessel_info["total"]}')
                 ytd_not_grouped_vessels_total_cb += ytd_vessel_info["total"]
                 ytd_not_grouped_vessels_total_cb_cost += ytd_vessel_info["cost"]
 
@@ -384,10 +365,10 @@ def lambda_handler(event, context):
                 # banking, borrowingの確認をする
                 banking_cb   = vessel_info["banking"]
                 borrowing_cb = vessel_info["borrowing"]
-                if banking_cb > 0:
+                if banking_cb != "" and banking_cb > 0:
                     count_eoy_banking_vessels += 1
                     eoy_banking_cb            += banking_cb
-                if borrowing_cb > 0:
+                if banking_cb != "" and borrowing_cb > 0:
                     count_eoy_borrowing_vessels += 1
                     eoy_borrowing_cb            += borrowing_cb
 
@@ -410,7 +391,6 @@ def lambda_handler(event, context):
                 eoy_not_grouped_vessels_total_cb += vessel_info["total"]
                 eoy_not_grouped_vessels_total_cb_cost += vessel_info["cost"]
 
-    print(f'aya-ytd_not_grouped_vessels_total_cb_round: {round(ytd_not_grouped_vessels_total_cb, 1)}')
 
     # グルーピングされていない船たちの合計CB、CB costを設定する
     ytd_not_grouped_total = {
@@ -459,20 +439,20 @@ def lambda_handler(event, context):
         ytd_grouped_vessels_total_mgo     = pooling_group_datalist[index]["ytd_total_mgo"]
         ytd_grouped_vessels_total_energy  = pooling_group_datalist[index]["ytd_total_energy"]
 
+        grouped_last_year_cb = pooling_group_datalist[index]["last_year_cb"]
+
         ytd_grouped_vessels_total_GHG = calculate_function.calc_GHG_Actual(0, ytd_grouped_vessels_total_lng_oms, 0, ytd_grouped_vessels_total_hfo, ytd_grouped_vessels_total_lfo, ytd_grouped_vessels_total_mdo, ytd_grouped_vessels_total_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
-        print(f'aya-ytd_grouped_vessels_total_cb  = (GHG_Max - ytd_grouped_vessels_total_GHG) * ytd_grouped_vessels_total_energy: ytd_grouped_vessels_total_cb  = ({GHG_Max} - {ytd_grouped_vessels_total_GHG}) * {ytd_grouped_vessels_total_energy}')
-        ytd_grouped_vessels_total_cb  = (GHG_Max - ytd_grouped_vessels_total_GHG) * ytd_grouped_vessels_total_energy
+        ytd_grouped_vessels_total_cb  = (GHG_Max - ytd_grouped_vessels_total_GHG) * ytd_grouped_vessels_total_energy + grouped_last_year_cb
+
+        print(f"ytd_grouped_vessels_total_cb:{(ytd_grouped_vessels_total_cb)}, ({((GHG_Max - ytd_grouped_vessels_total_GHG) * ytd_grouped_vessels_total_energy )}, {(grouped_last_year_cb)}) ")
 
         # 各プーリンググループのCBを足し合わせる。
-        print(f"aya-ytd_grouped_vessels_total_cb: {ytd_grouped_vessels_total_cb}")
-        print(f"aya-ytd_grouped_vessels_total_cb_/10000: {ytd_grouped_vessels_total_cb / 1000000}")
-        ytd_total_cb += (ytd_grouped_vessels_total_cb / 1000000)
-        print(f"aya-ytd_total_cb: {ytd_total_cb}")
+        ytd_total_cb += round((ytd_grouped_vessels_total_cb / 1000000), 1)
 
         ytd_grouped_vessels_total_cb_cost = 0
-        if ytd_grouped_vessels_total_cb < 0:
+        if ytd_grouped_vessels_total_cb < 0 and ytd_grouped_vessels_total_GHG != 0:
             ytd_grouped_vessels_total_cb_cost = abs(ytd_grouped_vessels_total_cb) * 2400 / (ytd_grouped_vessels_total_GHG * 41000)
-            ytd_total_cb_cost += ytd_grouped_vessels_total_cb_cost
+            ytd_total_cb_cost += round(ytd_grouped_vessels_total_cb_cost)
 
         # Year to Date
         for grouped_vessel in sub_ytd_grouped_vessels_list:
@@ -522,15 +502,16 @@ def lambda_handler(event, context):
 
         print(f"pooling_group_datalist[index]:{(pooling_group_datalist[index])}")
         eoy_grouped_vessels_total_GHG = calculate_function.calc_GHG_Actual(eoy_grouped_vessels_total_lng_ods, eoy_grouped_vessels_total_lng_oms, eoy_grouped_vessels_total_lng_oss, eoy_grouped_vessels_total_hfo, eoy_grouped_vessels_total_lfo, eoy_grouped_vessels_total_mdo, eoy_grouped_vessels_total_mgo, eoy_grouped_vessels_total_lpg_p, eoy_grouped_vessels_total_lpg_b, eoy_grouped_vessels_total_nh3_ng, eoy_grouped_vessels_total_nh3_ef, eoy_grouped_vessels_total_methanol_ng, eoy_grouped_vessels_total_h2_ng, fuel_oil_type_info_list)
-        eoy_grouped_vessels_total_cb  = (GHG_Max - eoy_grouped_vessels_total_GHG) * eoy_grouped_vessels_total_energy
+        eoy_grouped_vessels_total_cb  = (GHG_Max - eoy_grouped_vessels_total_GHG) * eoy_grouped_vessels_total_energy + grouped_last_year_cb
+        print(f"eoy_grouped_vessels_total_cb:{(eoy_grouped_vessels_total_cb)} eoy_grouped_vessels_total_GHG:{(eoy_grouped_vessels_total_GHG)} eoy_grouped_vessels_total_energy:{(eoy_grouped_vessels_total_energy)} grouped_last_year_cb:{(grouped_last_year_cb)}")
 
         # 各プーリンググループのCBを足し合わせる。
-        eoy_total_cb += (eoy_grouped_vessels_total_cb / 1000000)
+        eoy_total_cb += round((eoy_grouped_vessels_total_cb / 1000000), 1)
 
         eoy_grouped_vessels_total_cb_cost = 0
         if eoy_grouped_vessels_total_cb < 0:
             eoy_grouped_vessels_total_cb_cost = abs(eoy_grouped_vessels_total_cb) * 2400 / (eoy_grouped_vessels_total_GHG * 41000)
-            eoy_total_cb_cost += eoy_grouped_vessels_total_cb_cost
+            eoy_total_cb_cost += round(eoy_grouped_vessels_total_cb_cost)
 
         # End of Year
         for grouped_vessel in sub_eoy_grouped_vessels_list:
@@ -538,17 +519,35 @@ def lambda_handler(event, context):
 
             # 外ループのグループ名と船舶の所属するグループ名が一致する時
             if vessels_group_name == pooling_group_name:
-                append_data = {
-                    "vessel_name"     : grouped_vessel[1]["vessel_name"],
-                    "operator"        : grouped_vessel[1]["operator"],
-                    "distance"        : grouped_vessel[1]["distance"],
-                    "foc"             : grouped_vessel[1]["foc"],
-                    "end_of_year"     : grouped_vessel[1]["end_of_year"],
-                    "last_year"       : grouped_vessel[1]["last_year"],
-                    "total"           : round(grouped_vessel[1]["end_of_year"] + grouped_vessel[1]["last_year"], 1),
-                    "penalty_factor"  : grouped_vessel[1]["penalty_factor"]
-                }
-                eoy_this_group_vessels.append(append_data)
+                
+                # 今年分にはbanking不要
+                if para_year == year_now:
+                    append_data = {
+                        "vessel_name"     : grouped_vessel[1]["vessel_name"],
+                        "operator"        : grouped_vessel[1]["operator"],
+                        "distance"        : grouped_vessel[1]["distance"],
+                        "foc"             : grouped_vessel[1]["foc"],
+                        "end_of_year"     : grouped_vessel[1]["end_of_year"],
+                        "last_year"       : grouped_vessel[1]["last_year"],
+                        "total"           : round(grouped_vessel[1]["end_of_year"] + grouped_vessel[1]["last_year"], 1),
+                        "penalty_factor"  : grouped_vessel[1]["penalty_factor"]
+                    }
+                    eoy_this_group_vessels.append(append_data)
+                
+                # 前年以前分にはbanking必要
+                else:
+                    append_data = {
+                        "vessel_name"     : grouped_vessel[1]["vessel_name"],
+                        "operator"        : grouped_vessel[1]["operator"],
+                        "distance"        : grouped_vessel[1]["distance"],
+                        "foc"             : grouped_vessel[1]["foc"],
+                        "end_of_year"     : grouped_vessel[1]["end_of_year"],
+                        "last_year"       : grouped_vessel[1]["last_year"],
+                        "banking"         : round(grouped_vessel[1]["banking"], 2),
+                        "total"           : round(grouped_vessel[1]["end_of_year"] + grouped_vessel[1]["last_year"], 1),
+                        "penalty_factor"  : grouped_vessel[1]["penalty_factor"]
+                    }
+                    eoy_this_group_vessels.append(append_data)
 
         # eoy_this_group_vesselsをソート
         if len(eoy_this_group_vessels) != 0:
@@ -565,16 +564,13 @@ def lambda_handler(event, context):
     
 
     # グルーピング済みと未所属のcb、cb_costについて、Year to Dateの合計値を算出する
-    print(f"aya-ytd_not_grouped_vessels_total_cb: {ytd_not_grouped_vessels_total_cb}")
-    ytd_total_cb += ytd_not_grouped_vessels_total_cb
-    ytd_total_cb_cost += ytd_not_grouped_vessels_total_cb_cost
+    ytd_total_cb += round(ytd_not_grouped_vessels_total_cb, 1)
+    ytd_total_cb_cost += round(ytd_not_grouped_vessels_total_cb_cost)
 
     # グルーピング済みと未所属のcb、cb_costについて、End of Yearの合計値を算出する
-    eoy_total_cb += eoy_not_grouped_vessels_total_cb
-    eoy_total_cb_cost += eoy_not_grouped_vessels_total_cb_cost
+    eoy_total_cb += round(eoy_not_grouped_vessels_total_cb, 1)
+    eoy_total_cb_cost += round(eoy_not_grouped_vessels_total_cb_cost)
 
-    print(f"aya-ytd_total_cb: {ytd_total_cb}")
-    print(f"aya-ytd_total_cb_round: {round(ytd_total_cb, 1)}")
 
     ytd_total_list = {
         "total_cb"         : str(round(ytd_total_cb, 1)),

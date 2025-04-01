@@ -476,9 +476,17 @@ def lambda_handler(event, context):
         from_to_leg_mdo = 0
         from_to_leg_mgo = 0
 
+        # 数値保持用
+        keep_year = display_leg_list_sorted[0]["leg_no"]["S"][0:4]
+        keep_total_cb      = 0
+        keep_total_cb_cost = 0
+
         # 画面表示用に整形
         for display_leg in display_leg_list_sorted:
 
+            # leg_noから西暦4桁を取得
+            leg_year = display_leg["leg_no"]["S"][0:4]
+            
             # 各legの燃料消費量
             tmp_total_lng = float(display_leg["total_lng"]["S"])
             tmp_total_hfo = float(display_leg["total_hfo"]["S"])
@@ -522,11 +530,35 @@ def lambda_handler(event, context):
             total_cb       += tmp_cb
             total_cb_cost  += tmp_total_cb_cost
 
-            from_to_leg_lng += tmp_total_lng
-            from_to_leg_hfo += tmp_total_hfo
-            from_to_leg_lfo += tmp_total_lfo
-            from_to_leg_mdo += tmp_total_mdo
-            from_to_leg_mgo += tmp_total_mgo
+            # レグの開始時刻の年をkeep_yearと比較し、from_to_leg（GHG強度上限削減率が同じ期間）の燃料消費量に加算する
+            if leg_year == keep_year:
+                from_to_leg_lng += tmp_total_lng
+                from_to_leg_hfo += tmp_total_hfo
+                from_to_leg_lfo += tmp_total_lfo
+                from_to_leg_mdo += tmp_total_mdo
+                from_to_leg_mgo += tmp_total_mgo
+
+            else:
+                # 2025年～2050年の間、5年ごとにGHG強度上限の削減率が変わる
+                if int(leg_year) % 5 == 0 and int(leg_year) <= 2050:
+                    keep_total_cb      = from_to_leg_total_cb
+                    keep_total_cb_cost = from_to_leg_total_cb_cost
+                    print(f"leg_count:{(leg_count)} keep_total_cb:{(keep_total_cb)} keep_total_cb_cost:{(keep_total_cb_cost)}")
+                    from_to_leg_lng = tmp_total_lng
+                    from_to_leg_hfo = tmp_total_hfo
+                    from_to_leg_lfo = tmp_total_lfo
+                    from_to_leg_mdo = tmp_total_mdo
+                    from_to_leg_mgo = tmp_total_mgo
+
+                # 新しい年もGHG強度上限の削減率が変わらない
+                else:
+                    from_to_leg_lng += tmp_total_lng
+                    from_to_leg_hfo += tmp_total_hfo
+                    from_to_leg_lfo += tmp_total_lfo
+                    from_to_leg_mdo += tmp_total_mdo
+                    from_to_leg_mgo += tmp_total_mgo
+            
+            keep_year = leg_year 
 
             # 通番を設定する
             leg_count      += 1
@@ -572,14 +604,16 @@ def lambda_handler(event, context):
 
             print(f"【from_to_leg】lng:{(from_to_leg_lng)}, hfo:{(from_to_leg_hfo)}, lfo:{(from_to_leg_lfo)}, mdo:{(from_to_leg_mdo)}, mgo:{(from_to_leg_mgo)}")
             from_to_leg_energy = calc_energy(from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
-            from_to_leg_cb, from_to_leg_cb_cost = calc_cb(int(year_from), from_to_leg_energy, from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
-            cb_data  = [leg_count, from_to_leg_cb / 1000000]
+            from_to_leg_cb, from_to_leg_cb_cost = calc_cb(int(leg_year), from_to_leg_energy, from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
+            from_to_leg_total_cb      = from_to_leg_cb      + keep_total_cb
+            from_to_leg_total_cb_cost = from_to_leg_cb_cost + keep_total_cb_cost
+            cb_data  = [leg_count, from_to_leg_total_cb / 1000000]
             CBList.append(cb_data)
 
             # Y軸設定用にMax値、Min値を取得
             max_eua = float(display_leg["eua"]["S"]) if max_eua < float(display_leg["eua"]["S"]) else max_eua
-            max_cb = from_to_leg_cb if max_cb < from_to_leg_cb else max_cb
-            min_cb = from_to_leg_cb if min_cb > from_to_leg_cb else min_cb
+            max_cb = from_to_leg_total_cb if max_cb < from_to_leg_total_cb else max_cb
+            min_cb = from_to_leg_total_cb if min_cb > from_to_leg_total_cb else min_cb
 
             # 各LEGの開始時刻（timestamp）のリストを作成する。
             # timestamp_departure_time = pd.Timestamp(display_leg["departure_time"]["S"])
@@ -603,8 +637,8 @@ def lambda_handler(event, context):
             "distance": round(total_distance),
             "eua"     : round(total_eua),
             "eua_cost": round(total_eua * eua_price),
-            "cb"      : round(from_to_leg_cb / 1000000, 1),
-            "cb_cost" : round(from_to_leg_cb_cost)
+            "cb"      : round(from_to_leg_total_cb / 1000000, 1),
+            "cb_cost" : round(from_to_leg_total_cb_cost)
         }
 
 
@@ -742,9 +776,17 @@ def lambda_handler(event, context):
         from_to_voyage_mdo = 0
         from_to_voyage_mgo = 0
 
+        # 数値保持用
+        keep_year = display_voyage_list_sorted[0]["voyage_no"]["S"][0:4]
+        keep_total_cb      = 0
+        keep_total_cb_cost = 0
+
+        print(f"display_voyage_list_sorted:{(display_voyage_list_sorted)}")
         # 画面表示用に整形
         for display_voyage in display_voyage_list_sorted:
 
+            # voyage_noから西暦4桁を取得
+            voyage_year = display_voyage["voyage_no"]["S"][0:4]
             # GHG強度算出
             tmp_total_lng = float(display_voyage["total_lng"]["S"])
             tmp_total_hfo = float(display_voyage["total_hfo"]["S"])
@@ -789,11 +831,34 @@ def lambda_handler(event, context):
             total_cb       += tmp_cb
             total_cb_cost  += tmp_total_cb_cost
 
-            from_to_voyage_lng += tmp_total_lng
-            from_to_voyage_hfo += tmp_total_hfo
-            from_to_voyage_lfo += tmp_total_lfo
-            from_to_voyage_mdo += tmp_total_mdo
-            from_to_voyage_mgo += tmp_total_mgo
+            # レグの開始時刻の年をkeep_yearと比較し、from_to_voyage（GHG強度上限削減率が同じ期間）の燃料消費量に加算する            
+            if voyage_year == keep_year:
+                from_to_voyage_lng += tmp_total_lng
+                from_to_voyage_hfo += tmp_total_hfo
+                from_to_voyage_lfo += tmp_total_lfo
+                from_to_voyage_mdo += tmp_total_mdo
+                from_to_voyage_mgo += tmp_total_mgo
+            else:
+                # 2025年～2050年の間、5年ごとにGHG強度上限の削減率が変わる
+                print(f"voyage_count:{(voyage_count)} voyage_year:{(voyage_year)}")
+                if int(voyage_year) % 5 == 0 and int(voyage_year) <= 2050:
+                    keep_total_cb      = from_to_voyage_total_cb
+                    keep_total_cb_cost = from_to_voyage_total_cb_cost
+                    print(f"voyage_count:{(voyage_count)} keep_total_cb:{(keep_total_cb)} keep_total_cb_cost:{(keep_total_cb_cost)}")
+                    from_to_voyage_lng = tmp_total_lng
+                    from_to_voyage_hfo = tmp_total_hfo
+                    from_to_voyage_lfo = tmp_total_lfo
+                    from_to_voyage_mdo = tmp_total_mdo
+                    from_to_voyage_mgo = tmp_total_mgo
+                # 新しい年もGHG強度上限の削減率が変わらない
+                else:
+                    from_to_voyage_lng += tmp_total_lng
+                    from_to_voyage_hfo += tmp_total_hfo
+                    from_to_voyage_lfo += tmp_total_lfo
+                    from_to_voyage_mdo += tmp_total_mdo
+                    from_to_voyage_mgo += tmp_total_mgo
+
+            keep_year = voyage_year
 
             # 通番を設定する
             voyage_count      += 1
@@ -836,14 +901,16 @@ def lambda_handler(event, context):
 
             print(f"【from_to_voyage】lng:{(from_to_voyage_lng)}, hfo:{(from_to_voyage_hfo)}, lfo:{(from_to_voyage_lfo)}, mdo:{(from_to_voyage_mdo)}, mgo:{(from_to_voyage_mgo)}")
             from_to_voyage_energy = calc_energy(from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
-            from_to_voyage_cb, from_to_voyage_cb_cost = calc_cb(int(year_from), from_to_voyage_energy, from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
-            cb_data  = [voyage_count, from_to_voyage_cb / 1000000]
+            from_to_voyage_cb, from_to_voyage_cb_cost = calc_cb(int(voyage_year), from_to_voyage_energy, from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
+            from_to_voyage_total_cb      = from_to_voyage_cb      + keep_total_cb
+            from_to_voyage_total_cb_cost = from_to_voyage_cb_cost + keep_total_cb_cost
+            cb_data  = [voyage_count, from_to_voyage_total_cb / 1000000]
             CBList.append(cb_data)
 
             # Y軸設定用にMax値、Min値を取得
             max_eua = float(display_voyage["eua"]["S"]) if max_eua < float(display_voyage["eua"]["S"]) else max_eua
-            max_cb = from_to_voyage_cb if max_cb < from_to_voyage_cb else max_cb
-            min_cb = from_to_voyage_cb if min_cb > from_to_voyage_cb else min_cb
+            max_cb = from_to_voyage_total_cb if max_cb < from_to_voyage_total_cb else max_cb
+            min_cb = from_to_voyage_total_cb if min_cb > from_to_voyage_total_cb else min_cb
 
             # 各VOYAGEの開始時刻（timestamp）のリストを作成する。
             # timestamp_departure_time = pd.Timestamp(display_voyage["departure_time"]["S"])
@@ -868,8 +935,8 @@ def lambda_handler(event, context):
             "distance": round(total_distance),
             "eua"     : round(total_eua),
             "eua_cost": round(total_eua * eua_price),
-            "cb"      : round(from_to_voyage_cb / 1000000, 1),
-            "cb_cost" : round(from_to_voyage_cb_cost)
+            "cb"      : round(from_to_voyage_total_cb / 1000000, 1),
+            "cb_cost" : round(from_to_voyage_total_cb_cost)
         }
 
     # その他のグラフデータ取得（CII EmissionBoardから流用）

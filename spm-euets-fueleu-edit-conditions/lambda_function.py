@@ -556,7 +556,7 @@ def lambda_handler(event, context):
         data_list.append(data)
 
     # ソート実行-------------------------------------------------------
-    new_data_list = sorted(data_list, key=lambda x: x['leg_no'])
+    new_data_list = sorted(data_list, key=lambda x: x['departure_time'])
 
     datas = {
         "datas": new_data_list

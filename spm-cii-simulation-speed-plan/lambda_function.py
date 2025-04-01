@@ -361,6 +361,10 @@ def lambda_handler(event, context):
         "co2_emission"      : 0,
         "cii_value"         : 0,
         "cii_score"         : "",
+        "log_speed_total"   : 0,
+        "count_log_speed"   : 0,
+        "displacement_total": 0,
+        "count_displacement": 0
     }
     # 1～12月までの12個をListにセット
     monthly_total_list = [monthly_total.copy() for _ in range(12)]
@@ -370,15 +374,24 @@ def lambda_handler(event, context):
 
     # NoonReportの取得件数分繰り返し
     for nr in res_nr_list:
+
+        # timestampから月を特定
+        nr_timestamp = nr["timestamp"]["S"]
+        nr_timestamp_dt = datetime.fromisoformat(nr_timestamp.replace("Z", "+00:00"))
+        nr_month = nr_timestamp_dt.month
         
         # Average計算用に加算
         if ('log_speed' in nr and nr["log_speed"]["S"] != ""):
             average_log_speed_total += float(nr["log_speed"]["S"])
             average_data_count_log_speed += 1
+            monthly_total_list[nr_month - 1]["log_speed_total"] += float(nr["log_speed"]["S"])
+            monthly_total_list[nr_month - 1]["count_log_speed"] += 1
         
         if ('displacement' in nr and nr["displacement"]["S"] != ""):
             average_displacement_total += float(nr["displacement"]["S"])    
             average_data_count_displaement += 1      
+            monthly_total_list[nr_month - 1]["displacement_total"] += float(nr["displacement"]["S"])
+            monthly_total_list[nr_month - 1]["count_displacement"] += 1 
 
         # 燃料ごとの消費量を取得
         # M/E BOG
@@ -449,11 +462,6 @@ def lambda_handler(event, context):
         total_foc = total_bog + total_hfo + total_lfo + total_do + total_go
         # co2排出量算出
         co2 = total_bog * __co2_factor_lng_medium + total_hfo * __co2_factor_hfo + total_lfo * __co2_factor_lfo + total_do * __co2_factor_mdo + total_go * __co2_factor_mgo
-        
-        # timestampから月を特定
-        nr_timestamp = nr["timestamp"]["S"]
-        nr_timestamp_dt = datetime.fromisoformat(nr_timestamp.replace("Z", "+00:00"))
-        nr_month = nr_timestamp_dt.month
 
         # 月別集計リストの該当月に加算
         monthly_total_list[nr_month - 1]["distance"] += float(nr["og_distance"]["S"]) if 'og_distance' in nr and nr["og_distance"]["S"] != "" else 0
@@ -567,16 +575,21 @@ def lambda_handler(event, context):
             caluculated_time = calc_time_diff(end_first_day_dt, end_time)
         
         # TotalTimeと算出した時間の割合を算出
-        calc_time_rate = (caluculated_time * sailing_rate / 100) / sailing_time
+        calc_time_rate = 0
+        if time_to_end_of_year != 0:
+            calc_time_rate = caluculated_time / time_to_end_of_year
 
         # 月別集計リストの該当月に加算
         tmp_distance_speed = total_ballast_laden_distance * calc_time_rate
         tmp_foc_speed = leg_total_FOC_speed * calc_time_rate
         tmp_co2_emission_speed = leg_total_co2_emission_speed * calc_time_rate
+        tmp_log_speed_total = ballast_logspeed * round(ballast_sailing_time * calc_time_rate / 24) + laden_logspeed * round(laden_sailing_time * calc_time_rate / 24)
         monthly_total_list[target_month - 1]["distance"] += tmp_distance_speed
         monthly_total_list[target_month - 1]["foc"] += tmp_foc_speed
         monthly_total_list[target_month - 1]["co2_emission"] += tmp_co2_emission_speed
-    
+        monthly_total_list[target_month - 1]["log_speed_total"] += tmp_log_speed_total
+        monthly_total_list[target_month - 1]["count_log_speed"] += round(ballast_sailing_time * calc_time_rate / 24) + round(laden_sailing_time * calc_time_rate / 24)
+
     # 変数定義
     cii_score_transition_list = []
     simulation_result_cii_score = ""
@@ -733,6 +746,7 @@ def lambda_handler(event, context):
     foclist_simulation = []
     ciiscore_lastyear = ""
     voyage_infomation_total = {}
+    voyage_infomation_unit = []
 
     # Simulationが実施された場合のみ設定する
 
@@ -764,6 +778,24 @@ def lambda_handler(event, context):
             total_ciiscorelist_yeartodate.append([monthly_total_list[i]["timestamp_float"], cii_score_transition_list[i]])
             total_ciiscorelist_simulation.append([monthly_total_list[i]["timestamp_float"], cii_score_transition_list[i]])
 
+        # 各レグをクリックした時のSimulation Result用Listに追加
+        avg_log_speed    = 0
+        avg_displacement = 0
+        if monthly_total_list[i]["count_log_speed"] != 0:
+            avg_log_speed = monthly_total_list[i]["log_speed_total"] / monthly_total_list[i]["count_log_speed"]
+        if monthly_total_list[i]["count_displacement"] != 0:
+            avg_displacement = monthly_total_list[i]["displacement_total"] / monthly_total_list[i]["count_displacement"]
+
+        voyage_infomation_data = {
+            "CiiScore"           : monthly_total_list[i]["cii_score"],
+            "total_foc"          : round(monthly_total_list[i]["foc"], 1),
+            "total_co2_emissions": round(monthly_total_list[i]["co2_emission"]),
+            "total_distance"     : round(monthly_total_list[i]["distance"]),
+            "avg_log_speed"      : round(avg_log_speed, 2),
+            "avg_displacement"   : round(avg_displacement),
+        }
+        voyage_infomation_unit.append(voyage_infomation_data)
+
     ciiscore_lastyear = last_year_cii_value
 
     voyage_infomation_total = {
@@ -785,6 +817,7 @@ def lambda_handler(event, context):
         "FOCList_Simulation"                : foclist_simulation,
         "CiiScore_LastYear"                 : ciiscore_lastyear,
         "VoyageInformationTotal"            : voyage_infomation_total,
+        "VoyageInformationUnit"             : voyage_infomation_unit,
         "CII_RATING"                        : cii_ration,
         "FOC_YAXIS"                         :{"max": round(max_foc, 0) , "tickInterval":maxDigitOnly(round(max_foc / 4)) }
     }

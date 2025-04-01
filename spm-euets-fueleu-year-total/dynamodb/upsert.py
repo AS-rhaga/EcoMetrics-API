@@ -37,6 +37,7 @@ def upsert_year_total(data, retry_count: int=42) -> None:
                     "cb"          : { "S": data["cb"] },
                     "banking"     : { "S": data["banking"] },
                     "borrowing"   : { "S": data["borrowing"] },
+                    "eoy_borrowing": { "S": data["eoy_borrowing"] },
                     "fine_flag"   : { "S": data["fine_flag"] },
                     "pooling_group": { "S": data["pooling_group"]},
                     "timestamp"   : { "S": data["timestamp"] }

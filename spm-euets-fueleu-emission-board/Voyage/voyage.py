@@ -397,7 +397,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
 
         dataset = {
             "imo"           : imo,
-            "voyage_no"     : "",
+            "voyage_no"     : voyage_info["voyage_no"]["S"],
             "departure_port": voyage_info["departure_port"]["S"],
             "departure_time": voyage_info["departure_time"]["S"],
             "arrival_port"  : voyage_info["arrival_port"]["S"],

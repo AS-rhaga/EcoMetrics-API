@@ -168,6 +168,7 @@ def lambda_handler(event, context):
         total_mdo    = 0
         total_mgo    = 0
         total_energy = 0
+        last_year_total_cb = 0
 
         for loop_imo in imoList:
 
@@ -179,6 +180,7 @@ def lambda_handler(event, context):
 
             # imo, yearをキーに、
             year_total_list = select.get_year_total_by_year(loop_imo, input_year)
+            last_year_total_list = select.get_year_total_by_year(loop_imo, str(int(input_year) - 1))
 
             for year_total in year_total_list:
 
@@ -201,15 +203,28 @@ def lambda_handler(event, context):
                 total_mgo    += mgo
                 total_energy += energy
 
+            # last_yearを確認
+            for last_year_total in last_year_total_list:
+
+                # 各項目を取得する
+                last_year_banking   = float(last_year_total["banking"]["S"]) if "banking" in last_year_total and last_year_total["banking"]["S"] != "" else 0
+                last_year_borrowing = float(last_year_total["borrowing"]["S"]) if "borrowing" in last_year_total and last_year_total["borrowing"]["S"] != "" else 0
+            
+                last_year_total_cb += (last_year_banking - last_year_borrowing * 1.1)
+
         # プーリンググループ合計のCBを算出する
-        total_cb     = calc_cb(input_year, total_energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
-        str_total_cb = str(round(total_cb / 1000000, 1))
+        year_total_cb = calc_cb(input_year, total_energy, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
+        total_cb      = year_total_cb + last_year_total_cb
+        str_total_cb  = str(round(total_cb / 1000000, 1))
 
         # CBがマイナスの場合、コストを算出する
         if total_cb < 0:
             total_GHG_Actual  = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_type_info_list)
-            total_cb_cost     = abs(total_cb) / total_GHG_Actual * 2400 / 41000
-            str_total_cb_cost = str(round(total_cb_cost))
+            if total_GHG_Actual != 0:
+                total_cb_cost     = abs(total_cb) / total_GHG_Actual * 2400 / 41000
+                str_total_cb_cost = str(round(total_cb_cost))
+            else:
+                str_total_cb_cost    = "0"
         else:
             str_total_cb_cost    = "0"
 

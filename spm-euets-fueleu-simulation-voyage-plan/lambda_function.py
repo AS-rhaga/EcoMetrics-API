@@ -317,7 +317,7 @@ def maxDigitOnly(n):
         if str_n[i] != "0" and str_n[i] != ".":
             break
     # 整数部分がある場合、整数部分の残りを0で埋める
-    if n > 1:
+    if n >= 1:
         result = degits + '0' * (len(str(round(n))) - count)
     else:
         result = degits
@@ -364,6 +364,7 @@ def lambda_handler(event, context):
     CBList_YeartoDate  = []
     EUAList_Simulation = []
     CBList_Simulation  = []
+    SimulationResultUnit = []
 
     # 各種合計値用変数のセット
     total_lng_oms     = 0
@@ -439,6 +440,7 @@ def lambda_handler(event, context):
 
     # 最新のeco-eu-simulation-cond-voyage-plan取得
     res_simulation = select.get_simulation_voyage(imo, now_year)
+    res_simulation = sorted(res_simulation, key=lambda x: x["departure_time"]["S"])
     print(f"res_simulation{type(res_simulation)}: {res_simulation}")
 
     # VesselMaster取得
@@ -496,12 +498,18 @@ def lambda_handler(event, context):
         leg_foc      = float(this_year_leg_list[i]["total_foc"]["S"])
         leg_distance = float(this_year_leg_list[i]["distance"]["S"])
         leg_eua      = float(this_year_leg_list[i]["eua"]["S"])
+        leg_cb       = float(this_year_leg_list[i]["cb"]["S"])
 
         # EUAList_YeartoDateにEUAをセット
         EUAList_YeartoDate.append([i + 1, leg_eua])
 
         # このlegで排出したco2量を算出
         leg_co2 = calc_co2(now_year, 0, leg_lng, 0, leg_hfo, leg_lfo, leg_mdo, leg_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
+        # このlegのGHG強度、CBコストを算出する
+        leg_GHG = calc_GHG_Actual(0, leg_lng, 0, leg_hfo, leg_lfo, leg_mdo, leg_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
+        leg_cb_cost = 0
+        if leg_cb < 0:
+            leg_cb_cost = abs(float(leg_cb)) * 2400 / (leg_GHG * 41000)
 
         # 合計用変数に加算する
         total_lng_oms  += leg_lng
@@ -532,6 +540,18 @@ def lambda_handler(event, context):
         # 最後のleg分だけ、CBのシミュレーション用データセットに追加（折れ線ブラフ描画のため）
         if i == len(this_year_leg_list) - 1:
             CBList_Simulation.append([i + 1, float(to_thisLeg_cb)])
+
+        # 各レグをクリックした時のSimulation Result用Listに追加
+        simulation_result_data = {
+            "distance": str(round(leg_distance)),
+            "foc"     : str(round(leg_foc / (eu_rate / 100), 1)),
+            "ghg"     : str(round(leg_co2)),
+            "eua"     : str(round(leg_eua, 1)),
+            "eua_cost": str(round(leg_eua * eua_price)),
+            "cb"      : str(round(leg_cb / 1000000, 1)),
+            "cb_cost" : str(round(leg_cb_cost))
+        }
+        SimulationResultUnit.append(simulation_result_data)
 
     # ---------- this_year_leg_listループ終了 ---------
 
@@ -700,36 +720,6 @@ def lambda_handler(event, context):
                 elif fuel_type == "NH3(e-fuel)":
                     simulation_leg_actual_nh3_ef = leg_total_actual_foc * int(fuel_rate) / 100
 
-
-                if simulation_leg_eu_rate != 0:
-                    simulation_leg_lng_oms = simulation_leg_actual_lng_oms * simulation_leg_eu_rate / 100
-                    simulation_leg_lng_oss = simulation_leg_actual_lng_oss * simulation_leg_eu_rate / 100
-                    simulation_leg_lng_ods = simulation_leg_actual_lng_ods * simulation_leg_eu_rate / 100
-                    simulation_leg_hfo     = simulation_leg_actual_hfo * simulation_leg_eu_rate / 100
-                    simulation_leg_lfo     = simulation_leg_actual_lfo * simulation_leg_eu_rate / 100
-                    simulation_leg_mdo     = simulation_leg_actual_mdo * simulation_leg_eu_rate / 100
-                    simulation_leg_mgo     = simulation_leg_actual_mgo * simulation_leg_eu_rate / 100
-                    simulation_leg_lpg_p   = simulation_leg_actual_lpg_p * simulation_leg_eu_rate / 100
-                    simulation_leg_lpg_b   = simulation_leg_actual_lpg_b * simulation_leg_eu_rate / 100
-                    simulation_leg_h2_ng   = simulation_leg_actual_h2_ng * simulation_leg_eu_rate / 100
-                    simulation_leg_nh3_ng  = simulation_leg_actual_nh3_ng * simulation_leg_eu_rate / 100
-                    simulation_leg_methanol_ng = simulation_leg_actual_methanol_ng * simulation_leg_eu_rate / 100
-                    simulation_leg_nh3_ef  = simulation_leg_actual_nh3_ef * simulation_leg_eu_rate / 100
-
-                    total_lng_oms     += simulation_leg_lng_oms
-                    total_lng_oss     += simulation_leg_lng_oss
-                    total_lng_ods     += simulation_leg_lng_ods
-                    total_hfo         += simulation_leg_hfo
-                    total_lfo         += simulation_leg_lfo
-                    total_mdo         += simulation_leg_mdo
-                    total_mgo         += simulation_leg_mgo
-                    total_lpg_p       += simulation_leg_lpg_p
-                    total_lpg_b       += simulation_leg_lpg_b
-                    total_h2_ng       += simulation_leg_h2_ng
-                    total_nh3_ng      += simulation_leg_nh3_ng
-                    total_methanol_ng += simulation_leg_actual_methanol_ng
-                    total_nh3_ef      += simulation_leg_nh3_ef  
-
                 # 表示用fuel_listに追加
                 output_fuel = {
                     "fuel_type" : fuel_type,
@@ -737,9 +727,39 @@ def lambda_handler(event, context):
                 }
                 output_fuel_list.append(output_fuel)
 
+            if simulation_leg_eu_rate != 0:
+                simulation_leg_lng_oms = simulation_leg_actual_lng_oms * simulation_leg_eu_rate / 100
+                simulation_leg_lng_oss = simulation_leg_actual_lng_oss * simulation_leg_eu_rate / 100
+                simulation_leg_lng_ods = simulation_leg_actual_lng_ods * simulation_leg_eu_rate / 100
+                simulation_leg_hfo     = simulation_leg_actual_hfo * simulation_leg_eu_rate / 100
+                simulation_leg_lfo     = simulation_leg_actual_lfo * simulation_leg_eu_rate / 100
+                simulation_leg_mdo     = simulation_leg_actual_mdo * simulation_leg_eu_rate / 100
+                simulation_leg_mgo     = simulation_leg_actual_mgo * simulation_leg_eu_rate / 100
+                simulation_leg_lpg_p   = simulation_leg_actual_lpg_p * simulation_leg_eu_rate / 100
+                simulation_leg_lpg_b   = simulation_leg_actual_lpg_b * simulation_leg_eu_rate / 100
+                simulation_leg_h2_ng   = simulation_leg_actual_h2_ng * simulation_leg_eu_rate / 100
+                simulation_leg_nh3_ng  = simulation_leg_actual_nh3_ng * simulation_leg_eu_rate / 100
+                simulation_leg_methanol_ng = simulation_leg_actual_methanol_ng * simulation_leg_eu_rate / 100
+                simulation_leg_nh3_ef  = simulation_leg_actual_nh3_ef * simulation_leg_eu_rate / 100
+
+                total_lng_oms     += simulation_leg_lng_oms
+                total_lng_oss     += simulation_leg_lng_oss
+                total_lng_ods     += simulation_leg_lng_ods
+                total_hfo         += simulation_leg_hfo
+                total_lfo         += simulation_leg_lfo
+                total_mdo         += simulation_leg_mdo
+                total_mgo         += simulation_leg_mgo
+                total_lpg_p       += simulation_leg_lpg_p
+                total_lpg_b       += simulation_leg_lpg_b
+                total_h2_ng       += simulation_leg_h2_ng
+                total_nh3_ng      += simulation_leg_nh3_ng
+                total_methanol_ng += simulation_leg_actual_methanol_ng
+                total_nh3_ef      += simulation_leg_nh3_ef  
+
             simulation_leg_co2 = 0
             simulation_leg_eua = 0
             simulation_leg_cb  = 0
+            simulation_leg_cb_cost = 0
 
             # シミュレーション部分で実際に排出したco2を算出する
             simulation_leg_actual_co2 = calc_co2(now_year, simulation_leg_actual_lng_ods, simulation_leg_actual_lng_oms, simulation_leg_actual_lng_oss, simulation_leg_actual_hfo, simulation_leg_actual_lfo, simulation_leg_actual_mdo, simulation_leg_actual_mgo, simulation_leg_actual_lpg_p, simulation_leg_actual_lpg_b, simulation_leg_actual_nh3_ng, simulation_leg_actual_nh3_ef, simulation_leg_actual_methanol_ng, simulation_leg_actual_h2_ng, fuel_oil_type_info_list)
@@ -755,9 +775,13 @@ def lambda_handler(event, context):
 
                 # シミュレーション部分のCBを算出する
                 simulation_leg_GHG = calc_GHG_Actual(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
+                print(f"simulation_leg_GHG→{(simulation_leg_lng_ods)}, {(simulation_leg_lng_oms)}, {(simulation_leg_lng_oss)}, {(simulation_leg_hfo)}, {(simulation_leg_lfo)}, {(simulation_leg_mdo)}, {(simulation_leg_mgo)}, {(simulation_leg_lpg_p)}, {(simulation_leg_lpg_b)}, {(simulation_leg_nh3_ng)}, {(simulation_leg_nh3_ef)}, {(simulation_leg_methanol_ng)}, {(simulation_leg_h2_ng)}")
                 simulation_energy  = calc_energy(simulation_leg_lng_ods, simulation_leg_lng_oms, simulation_leg_lng_oss, simulation_leg_hfo, simulation_leg_lfo, simulation_leg_mdo, simulation_leg_mgo, simulation_leg_lpg_p, simulation_leg_lpg_b, simulation_leg_nh3_ng, simulation_leg_nh3_ef, simulation_leg_methanol_ng, simulation_leg_h2_ng, fuel_oil_type_info_list)
                 total_energy      += simulation_energy
                 simulation_leg_cb  = calc_cb(now_year, simulation_energy, simulation_leg_GHG)
+                # このlegのCBコストを算出する
+                if simulation_leg_cb < 0:
+                    simulation_leg_cb_cost = abs(float(simulation_leg_cb)) * 2400 / (simulation_leg_GHG * 41000)
 
                 print(f"simulatiuon:::::simulation_leg_GHG:{simulation_leg_GHG}, simulation_energy:{simulation_energy}, simulation_leg_cb:{simulation_leg_cb},")
 
@@ -767,6 +791,7 @@ def lambda_handler(event, context):
 
             # 実測データを足したこのlegまでのCBを算出する
             year_to_leg_GHG = calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_info_list)
+            print(f"year_to_leg_GHG→{(total_lng_ods)}, {(total_lng_oms)}, {(total_lng_oss)}, {(total_hfo)}, {(total_lfo)}, {(total_mdo)}, {(total_mgo)}, {(total_lpg_p)}, {(total_lpg_b)}, {(total_nh3_ng)}, {(total_nh3_ef)}, {(total_methanol_ng)}, {(total_h2_ng)}")
             year_to_leg_energy  = total_energy
             year_to_leg_cb  = calc_cb(now_year, year_to_leg_energy, year_to_leg_GHG)
 
@@ -775,7 +800,7 @@ def lambda_handler(event, context):
             # CBList_YeartoDateに通年CBをセット
             CBList_Simulation.append([this_year_leg_count + i + 1, float(year_to_leg_cb) / 1000000])
 
-            # CB Costの算出
+            # Year to LegのCB Costの算出
             if float(year_to_leg_cb) >= 0:
                 total_cb_cost = 0
             else:
@@ -808,9 +833,22 @@ def lambda_handler(event, context):
             max_cb = float(year_to_leg_cb) if max_cb < float(year_to_leg_cb) else max_cb
             min_cb = float(year_to_leg_cb) if min_cb > float(year_to_leg_cb) else min_cb
 
+            # 各レグをクリックした時のSimulation Result用Listに追加
+            simulation_result_data = {
+                "distance": str(round(leg_distance)),
+                "foc"     : str(round(leg_total_actual_foc, 1)),
+                "ghg"     : str(round(simulation_leg_actual_co2)),
+                "eua"     : str(round(simulation_leg_eua, 1)),
+                "eua_cost": str(round(simulation_leg_eua * eua_price)),
+                "cb"      : str(round(simulation_leg_cb / 1000000, 1)),
+                "cb_cost" : str(round(simulation_leg_cb_cost))
+            }
+            SimulationResultUnit.append(simulation_result_data)
+
             # Voyage Planのシミュレーション用データ
             str_eua = str(round(simulation_leg_eua, 1))
             str_cb  = str(round(float(simulation_leg_cb) / 1000000, 1))
+            print(f"str_cb:{(str_cb)} simulation_leg_cb:{(simulation_leg_cb)}")
 
             simulation_data = {
                 "departure_port" : res_simulation[i]["departure_port"]["S"], 
@@ -870,6 +908,9 @@ def lambda_handler(event, context):
 
     # departure timeでソート
     SimulationInformation_VoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["departure_time"])
+
+    print(f"CBList_Simulation:{(CBList_Simulation)}")
+    print(f"SimulationInformation_VoyageList:{(SimulationInformation_VoyageList)}")
 
     # 通番を設定する
     num = 0
@@ -1012,6 +1053,7 @@ def lambda_handler(event, context):
         "CBList_YeartoDate"                 : CBList_YeartoDate,
         "CBList_Simulation"                 : CBList_Simulation,
         "SimulationResultTotal"             : SimulationResultTotal,
+        "SimulationResultUnit"              : SimulationResultUnit,
         "XAxisList"                         : XAxisList,
         "EUA_YAXIS"                         :{"max": round(max_eua, 0) , "tickInterval": eua_tickInterval },
         "CB_YAXIS"                          :{"max": max_cb,"min": min_cb, "tickInterval": tickInterval }

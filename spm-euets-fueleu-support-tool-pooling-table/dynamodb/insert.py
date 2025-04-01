@@ -45,7 +45,7 @@ def upsert_pooling_table(data, retry_count:int=42) -> None:
         retry_count -= 1
         sleep(0.5)
 
-def upsert_year_total(data, banking_cb, pooling_group, retry_count: int=42) -> None:
+def upsert_year_total(data, banking_cb, fine_flag, pooling_group, retry_count: int=42) -> None:
 
     while retry_count:
         try:
@@ -68,7 +68,7 @@ def upsert_year_total(data, banking_cb, pooling_group, retry_count: int=42) -> N
                     "eua"         : { "S": data["eua"]["S"] },
                     "cb"          : { "S": data["cb"]["S"] },
                     "banking"     : { "S": str(banking_cb) },
-                    "fine_flag"   : { "S": data["fine_flag"]["S"] },
+                    "fine_flag"   : { "S": fine_flag },
                     "pooling_group": { "S": pooling_group },
                     "timestamp"   : { "S": data["timestamp"]["S"] }
                 },

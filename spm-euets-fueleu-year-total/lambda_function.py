@@ -289,6 +289,19 @@ def main(imo, timestamp):
 
         year_and_ope = year_timestamp + operator
 
+        # 更新前のyear-totalレコードを取得し、既存のborrowingを保持する
+        bk_str_borrowing = ""
+        bk_year_total = select.get_year_total(imo, year_and_ope)
+        print(f"bk_year_total:{(bk_year_total)}")
+        bk_str_borrowing = ""
+        this_year_borrowing = 0
+        if bk_year_total:
+            bk_str_borrowing     = bk_year_total[0]["borrowing"]["S"] if "borrowing" in bk_year_total[0] and bk_year_total[0]["borrowing"]["S"] != "" else "0.0"
+            bk_str_eoy_borrowing = bk_year_total[0]["eoy_borrowing"]["S"] if "eoy_borrowing" in bk_year_total[0] and bk_year_total[0]["eoy_borrowing"]["S"] != "" else "0.0"
+
+            this_year_borrowing = float(bk_str_borrowing)
+            print(f"bk_str_borrowing:{(bk_str_borrowing)}")
+
         # 去年分のyearレコードを取得する
         last_year_and_ope = str(int(year_timestamp) - 1) + operator
         last_year_record = select.get_year_total(imo, last_year_and_ope)
@@ -300,36 +313,33 @@ def main(imo, timestamp):
             last_year_borrowing_cb = float(last_year_record[0]["borrowing"]["S"]) if "borrowing" in last_year_record[0] and last_year_record[0]["borrowing"]["S"] != "" else 0.0
             last_year_banking_cb   = float(last_year_record[0]["banking"]["S"]) if "banking" in last_year_record[0] and last_year_record[0]["banking"]["S"] != "" else 0.0
 
-            if last_year_borrowing_cb > 0:
-                if operator_total_cb - last_year_borrowing_cb * 1.1 > 0:
-                    banking = operator_total_cb - last_year_borrowing_cb * 1.1
-                else:
-                    banking = 0
-                    fine_flag = "1"
-            
-            elif last_year_banking_cb > 0:
-                if last_year_banking_cb + operator_total_cb > 0:
-                    banking = last_year_banking_cb + operator_total_cb
-                else:
-                    banking = 0
-                    fine_flag = "1"
-
-            elif operator_total_cb > 0:
-                banking = operator_total_cb
+        # 今年のborrowing, 昨年のbanking, borrrowingと合わせて罰金フラグを確認する
+        if last_year_borrowing_cb > 0:
+            if operator_total_cb - last_year_borrowing_cb * 1.1 > 0:
+                banking = operator_total_cb - last_year_borrowing_cb * 1.1
+            else:
+                banking = 0
+                fine_flag = "1"
+        
+        elif last_year_banking_cb > 0:
+            if last_year_banking_cb + this_year_borrowing + operator_total_cb > 0:
+                banking = last_year_banking_cb + this_year_borrowing + operator_total_cb
             else:
                 banking = 0
                 fine_flag = "1"
 
-        # 更新前のyear-totalレコードを取得し、既存のborrowingを保持する
-        bk_str_borrowing = ""
-        bk_year_total = select.get_year_total(imo, year_and_ope)
-        print(f"bk_year_total:{(bk_year_total)}")
+        # 前年分のbanking, borrowingがない場合
+        else:
+            # 今年のborrowingがある場合
+            if this_year_borrowing > 0:
+                if operator_total_cb + this_year_borrowing < 0:
+                    fine_flag = "1"
+            else:
+                if operator_total_cb > 0:
+                    banking = operator_total_cb
 
         bk_pooling_info = ""
         if bk_year_total:
-            bk_str_borrowing = bk_year_total[0]["borrowing"]["S"] if "borrowing" in bk_year_total[0] and bk_year_total[0]["borrowing"]["S"] != "" else "0.0"
-            print(f"bk_str_borrowing:{(bk_str_borrowing)}")
-
             # プーリンググループを取得する
             bk_pooling_info = bk_year_total[0]["pooling_group"]["S"] if "pooling_group" in bk_year_total[0] and bk_year_total[0]["pooling_group"]["S"] != "" else ""
             print(f"bk_pooling_info{type(bk_pooling_info)}:{(bk_pooling_info)}")
@@ -376,8 +386,11 @@ def main(imo, timestamp):
                     # プーリンググループの中にimoがない（プーリンググループから外されている）場合
                     else:
                         bk_pooling_info = ""
-                        if operator_total_cb + last_year_banking_cb - last_year_borrowing_cb * 1.1 > 0:
+                        sub_banking = operator_total_cb + this_year_borrowing + last_year_banking_cb - last_year_borrowing_cb * 1.1
+                        if sub_banking < 0:
                             fine_flag = "1"
+                        else:
+                            banking = sub_banking
 
                 # プーリンググループが取得できない（そのグループがなくなっている）場合
                 else:
@@ -410,6 +423,7 @@ def main(imo, timestamp):
             "cb"          : operator_total_cb,
             "banking"     : banking,
             "borrowing"   : bk_str_borrowing,
+            "eoy_borrowing": bk_str_eoy_borrowing,
             "fine_flag"   : fine_flag,
             "pooling_group": bk_pooling_info,
             "timestamp"   : dt_now_str

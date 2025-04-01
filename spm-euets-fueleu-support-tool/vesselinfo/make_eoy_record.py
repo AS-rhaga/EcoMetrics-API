@@ -318,6 +318,9 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
 
             year_count += 1
 
+        # End of Yearにborrowingができるかどうかのフラグを設定
+        endofYear_borrowing = True
+
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         if len(last_year_rec) != 0:
             last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
@@ -326,7 +329,7 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
 
             if last_year_borrowing > 0:
                 last_year = last_year_borrowing * (-1.1)
-                thisYear_borrowing = False
+                endofYear_borrowing = False
             elif last_year_banking > 0:
                 last_year = last_year_borrowing
             else:
@@ -375,11 +378,10 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
             # print(f"レコード作成用データ  imo:{(imo)} eoy_total_lfo:{(total_lfo)}, eoy_total_mgo:{(total_mgo)}, eoy_total_energy:{(total_energy)}")
             eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
 
-            # banking, borrowingを取得
-            banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
-            borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
+            # eoy_borrowingを取得
+            eoy_borrowing = float(thisyear_year_total["eoy_borrowing"]["S"]) if thisyear_year_total and "eoy_borrowing" in thisyear_year_total and thisyear_year_total["eoy_borrowing"]["S"] != "" else 0
 
-            total_cb  = eoy_cb + borrowing + last_year
+            total_cb  = eoy_cb + eoy_borrowing + last_year
             print(f"total_cb:{(total_cb)}, last_year:{(last_year)}")
 
             # CB Costの算出
@@ -408,7 +410,12 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
                 else:
                     eoy_cb_cost = abs(float(total_cb)) * 2400 / (GHG_last_year * 41000) * penalty_factor
 
-            borrowing_limit = calculate_function.calc_borrowing_limit(True, now_year, total_energy)
+            borrowing_limit = calculate_function.calc_borrowing_limit(endofYear_borrowing, now_year, total_energy)
+
+            # banking確認
+            eoy_banking = 0
+            if total_cb > 0:
+                eoy_banking = total_cb
 
             # Voyage Planのシミュレーション用データ
             dataset = {
@@ -419,11 +426,12 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
                 "foc"            : round(total_eu_actual_foc),
                 "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
                 "last_year"      : round(last_year / 1000000, 1),
+                "last_year_noadjust": last_year,
                 "last_year_cost" : round(last_year_cost),
                 "borrowing_limit": round(borrowing_limit / 1000000),
-                "borrowing"      : round(borrowing / 1000000, 1),
-                "banking"        : round(banking / 1000000, 1),
-                "total"          : round(float(total_cb) / 1000000, 1),
+                "borrowing"      : round(eoy_borrowing / 1000000, 1),
+                "banking"        : round(eoy_banking / 1000000, 1),
+                "total"          : round((total_cb - eoy_banking) / 1000000, 1),
                 "penalty_factor" : penalty_factor,
                 "cost"           : round(eoy_cb_cost, 0)
             }
@@ -699,6 +707,9 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
             
             year_count += 1
 
+        # End of Yearにborrowingができるかどうかのフラグを設定
+        endofYear_borrowing = True
+
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         last_year = 0
         if len(last_year_rec) != 0:
@@ -707,7 +718,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
 
             if last_year_borrowing > 0:
                 last_year = last_year_borrowing * (-1.1)
-                thisYear_borrowing = False
+                endofYear_borrowing = False
             elif last_year_banking > 0:
                 last_year = last_year_borrowing
             else:
@@ -717,11 +728,10 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
         eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
 
-        # banking, borrowingを取得
-        banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
-        borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
+        # eoy_borrowingを取得
+        eoy_borrowing = float(thisyear_year_total["eoy_borrowing"]["S"]) if thisyear_year_total and "eoy_borrowing" in thisyear_year_total and thisyear_year_total["eoy_borrowing"]["S"] != "" else 0
 
-        total_cb  = eoy_cb + borrowing + last_year
+        total_cb  = eoy_cb + eoy_borrowing + last_year
         # print(f"imo:{(imo)} total_cb:{(total_cb)}, eoy_cb:{(eoy_cb)}, borrowing:{(borrowing)}, last_year:{(last_year)}")
 
         # CB Costの算出
@@ -758,7 +768,12 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
                 GHG_last_year = calculate_function.calc_GHG_Actual(0, last_year_lng, 0, last_year_hfo, last_year_lfo, last_year_mdo, last_year_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
                 eoy_cb_cost = abs(float(total_cb)) * 2400 / (GHG_last_year * 41000) * penalty_factor
 
-    borrowing_limit = calculate_function.calc_borrowing_limit(True, year, total_energy)
+    borrowing_limit = calculate_function.calc_borrowing_limit(endofYear_borrowing, year, total_energy)
+
+    # banking確認
+    eoy_banking = 0
+    if total_cb > 0:
+        eoy_banking = total_cb
 
     # Speed Planのシミュレーション用データ
     dataset = {
@@ -769,11 +784,12 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         "foc"            : round(total_eu_actual_foc),
         "end_of_year"    : round(float(eoy_cb) / 1000000, 1),
         "last_year"      : round(last_year / 1000000, 1),
+        "last_year_noadjust":  last_year,
         "last_year_cost" : round(last_year_cost),
         "borrowing_limit": round(borrowing_limit / 1000000, 1),
-        "borrowing"      : round(borrowing / 1000000, 1),
-        "banking"        : round(banking / 1000000, 1),
-        "total"          : round(float(total_cb) / 1000000, 1),
+        "borrowing"      : round(eoy_borrowing / 1000000, 1),
+        "banking"        : round(eoy_banking / 1000000, 1),
+        "total"          : round((total_cb - eoy_banking) / 1000000, 1),
         "penalty_factor" : penalty_factor,
         "cost"           : round(eoy_cb_cost)
     }

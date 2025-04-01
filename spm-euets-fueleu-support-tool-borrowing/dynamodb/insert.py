@@ -9,7 +9,7 @@ __dynamodb_client = boto3.client('dynamodb')
 
 __table_name_year_total = os.environ['YEAR_TOTAL']
 
-def upsert_year_total(imo, year_and_ope, borrowing, data, timestamp, retry_count:int=42) -> None:
+def upsert_year_total(imo, year_and_ope, borrowing, eoy_borrowing, fine_flag, data, timestamp, retry_count:int=42) -> None:
 
     while retry_count:
         try:
@@ -33,7 +33,8 @@ def upsert_year_total(imo, year_and_ope, borrowing, data, timestamp, retry_count
                     "cb"           : {"S": data["cb"]["S"]},
                     "banking"      : {"S": data["banking"]["S"]},
                     "borrowing"    : {"S": borrowing},
-                    "fine_flag"    : {"S": data["fine_flag"]["S"]},
+                    "eoy_borrowing": {"S": eoy_borrowing},
+                    "fine_flag"    : {"S": fine_flag},
                     "timestamp"    : {"S": timestamp},
                 },
                 ReturnValues="NONE",

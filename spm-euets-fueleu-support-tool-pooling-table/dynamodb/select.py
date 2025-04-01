@@ -6,6 +6,7 @@ __dynamodb_client = boto3.client('dynamodb')
 __table_name_user          = os.environ['USER']
 __table_name_pooling_table = os.environ['POOLING_TABLE']
 __table_name_year_total    = os.environ['YEAR_TOTAL']
+__table_name_fuel_oil_type = os.environ['FUEL_OIL_TYPE']
 
 def get_user(user_id):
     data = []
@@ -127,4 +128,19 @@ def get_year_total_by_year(imo, year):
         data.extend(response['Items'])
         count += 1
 
+    return data
+
+def get_fuel_oil_type(fuel_oil_type):
+    data = []
+    response = __dynamodb_client.query(
+        TableName=__table_name_fuel_oil_type,
+        ExpressionAttributeNames={
+            '#name0': 'fuel_oil_type',
+        },
+        ExpressionAttributeValues={
+            ':value0': {'S': fuel_oil_type},
+        },
+        KeyConditionExpression='#name0 = :value0'
+    )
+    data = response['Items']
     return data

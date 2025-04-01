@@ -72,6 +72,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
     ytd_mdo    = 0
     ytd_mgo    = 0
     ytd_energy = 0
+    last_year_cb = 0
 
     # 今年分のyear-totalレコード分ループ
     for rec in thisyear_year_total_list:
@@ -155,13 +156,14 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         cb        = float(rec["cb"]["S"])
         banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
         borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec and rec["borrowing"]["S"] != "" else "0")
+        eoy_borrowing = float(rec["eoy_borrowing"]["S"] if "eoy_borrowing" in rec and rec["eoy_borrowing"]["S"] != "" else "0")
 
         # 消費量エネルギー（EU Rate考慮済）を算出する
         GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
         energy     = calculate_function.calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_info_list)
 
         # 必要な計算を行う
-        total_cb        = cb + borrowing + banking + last_year
+        total_cb        = cb + borrowing - banking + last_year
         borrowing_limit = calculate_function.calc_borrowing_limit(thisYear_borrowing, year, energy)
         penalty_factor  = (consecutive_years) / 10 + 1
         print(f"penalty_factor:{penalty_factor}")
@@ -200,7 +202,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             "penalty_factor" : penalty_factor,
             "cost"           : round(cost)
         }
-
+        last_year_cb += last_year
         ytd_grouped_vessel_info.append(dataset)
 
         # 合計用変数に加算する。
@@ -298,8 +300,8 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
                     "end_of_year"        : round(cb / 1000000, 1),
                     "last_year"          : round(last_year / 1000000, 1),
                     "borrowing_limit"    : round(borrowing_limit / 1000000, 1),
-                    "borrowing"          : round(borrowing / 1000000, 1),
-                    "banking"            : round(banking / 1000000, 1),
+                    "borrowing"          : round(eoy_borrowing / 1000000, 1),
+                    "banking"            : "",
                     "total"              : round(total_cb / 1000000, 1),
                     "penalty_factor"     : penalty_factor,
                     "cost"               : round(cost)
@@ -341,6 +343,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
                 "end_of_year"        : round(cb / 1000000, 1),
                 "last_year"          : round(last_year / 1000000, 1),
                 "borrowing_limit"    : round(borrowing_limit / 1000000, 1),
+                "borrowing"          : round(eoy_borrowing / 1000000, 1),
                 "borrowing"          : round(borrowing / 1000000, 1),
                 "banking"            : round(banking / 1000000, 1),
                 "total"              : round(total_cb / 1000000, 1),
@@ -384,6 +387,10 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
                 total_eoy_energy      += total_fuel_list[i]["simulation_energy"]
 
                 # 空のytd_grouped_vessel_dataレコードを追加
+                ytd_banking = 0
+                if eoy_grouped_vessel_data_list[i]["last_year"] > 0:
+                    ytd_banking = eoy_grouped_vessel_data_list[i]["last_year"]
+
                 ytd_grouped_vessel_data_zero = {
                     "imo"            : imo,
                     "vessel_name"    : vessel_name,
@@ -394,11 +401,12 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
                     "last_year"      : eoy_grouped_vessel_data_list[i]["last_year"],
                     "borrowing_limit": 0,
                     "borrowing"      : 0,
-                    "banking"        : 0,
-                    "total"          : eoy_grouped_vessel_data_list[i]["last_year"],
+                    "banking"        : ytd_banking,
+                    "total"          : eoy_grouped_vessel_data_list[i]["last_year"] - ytd_banking,
                     "penalty_factor" : eoy_grouped_vessel_data_list[i]["penalty_factor"],
                     "cost"           : eoy_grouped_vessel_data_list[i]["last_year_cost"]
                 }
+                last_year_cb += eoy_grouped_vessel_data_list[i]["last_year_noadjust"]
                 ytd_grouped_vessel_info.append(ytd_grouped_vessel_data_zero)
 
     # 実測データ無しspeed-plan
@@ -423,6 +431,10 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
         total_eoy_energy += total_fuel_list["simulation_energy"]
 
         # 空のytd_grouped_vessel_dataレコードを追加
+        ytd_banking = 0
+        if eoy_grouped_vessel_data["last_year"] > 0:
+            ytd_banking = eoy_grouped_vessel_data["last_year"]
+
         ytd_grouped_vessel_data_zero = {
             "imo"            : imo,
             "vessel_name"    : vessel_name,
@@ -433,11 +445,12 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             "last_year"      : eoy_grouped_vessel_data["last_year"],
             "borrowing_limit": 0,
             "borrowing"      : 0,
-            "banking"        : 0,
-            "total"          : eoy_grouped_vessel_data["last_year"],
+            "banking"        : ytd_banking,
+            "total"          : eoy_grouped_vessel_data["last_year"] - ytd_banking,
             "penalty_factor" : eoy_grouped_vessel_data["penalty_factor"],
             "cost"           : eoy_grouped_vessel_data["last_year_cost"]
         }
+        last_year_cb += eoy_grouped_vessel_data["last_year_noadjust"]
         ytd_grouped_vessel_info.append(ytd_grouped_vessel_data_zero)
 
     # 実測値なし、シミュレーションもなし
@@ -470,20 +483,21 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             "last_year"          : 0,
             "borrowing_limit"    : 0,
             "borrowing"          : 0,
-            "banking"            : 0,
+            "banking"            : "",
             "total"              : 0,
             "penalty_factor"     : 1.0,
             "cost"               : 0
         }
         eoy_grouped_vessel_info.append(dataset_eoy)
 
-    return ytd_grouped_vessel_info, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_grouped_vessel_info, total_eoy_hfo, total_eoy_lfo, total_eoy_mdo, total_eoy_mgo, total_eoy_lng_oms, total_eoy_lng_oss, total_eoy_lng_ods, total_eoy_lpg_p, total_eoy_lpg_b, total_eoy_h2_ng, total_eoy_nh3_ng, total_eoy_methanol_ng, total_eoy_nh3_ef, total_eoy_energy
+    return ytd_grouped_vessel_info, last_year_cb, ytd_lng, ytd_hfo, ytd_lfo, ytd_mdo, ytd_mgo, ytd_energy, eoy_grouped_vessel_info, total_eoy_hfo, total_eoy_lfo, total_eoy_mdo, total_eoy_mgo, total_eoy_lng_oms, total_eoy_lng_oss, total_eoy_lng_ods, total_eoy_lpg_p, total_eoy_lpg_b, total_eoy_h2_ng, total_eoy_nh3_ng, total_eoy_methanol_ng, total_eoy_nh3_ef, total_eoy_energy
 
 # 前年以前のデータ取得
 def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
 
     # 必要な変数・リストを作成
     last_year = 0
+    last_year_cb = 0
 
     thisyear_year_total_list = []
     operator_total_list      = []
@@ -556,6 +570,9 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
             
             year_count += 1
 
+        # 今年borrowingができるかどうかのフラグを設定
+        thisYear_borrowing = True
+
         # オペレーター別リストの中に昨年のレコードがあるかを確認する
         last_year = 0
         if len(last_year_rec) != 0:
@@ -567,7 +584,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
                 last_year += last_year_borrowing * (-1.1)
                 thisYear_borrowing = False
             elif last_year_banking > 0:
-                last_year += last_year_borrowing
+                last_year += last_year_banking
             else:
                 last_year += 0
 
@@ -597,7 +614,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         total_energy += energy
 
         # 必要な計算を行う
-        total_cb        = (cb + borrowing + banking + last_year)
+        total_cb        = (cb + borrowing - banking + last_year)
         penalty_factor  = (consecutive_years) / 10 + 1
 
         cb_cost = 0
@@ -617,7 +634,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
 
                 cb_cost = abs(float(total_cb)) * 2400 / (GHG_last_year * 41000) * penalty_factor
 
-        borrowing_limit = calculate_function.calc_borrowing_limit(True, year, energy)
+        borrowing_limit = calculate_function.calc_borrowing_limit(thisYear_borrowing, year, energy)
 
         # 全てゼロのytdデータを合わせて、データセットを作成
         # End of Yearには、Year to Dateと同じ値を設定
@@ -636,6 +653,7 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
             "penalty_factor"     : penalty_factor,
             "cost"               : round(cb_cost)
         }
+        last_year_cb += last_year
         eoy_grouped_vessel_info.append(dataset)
 
         # ytdとeoyで同じ数の要素が入っている必要があるため、ytdにも設定（過去年を指定され場合、当年データは画面には表示しない）
@@ -692,4 +710,4 @@ def make_recoed_past(imo, vessel_name, year, fuel_oil_type_list):
         }
         eoy_grouped_vessel_info.append(eoy_dataset)
 
-    return ytd_grouped_vessel_info, 0, 0, 0, 0, 0, 0, eoy_grouped_vessel_info, total_hfo, total_lfo, total_mdo, total_mgo, total_lng, 0, 0, 0, 0, 0, 0, 0, 0, total_energy
+    return ytd_grouped_vessel_info, last_year_cb, 0, 0, 0, 0, 0, 0, eoy_grouped_vessel_info, total_hfo, total_lfo, total_mdo, total_mgo, total_lng, 0, 0, 0, 0, 0, 0, 0, 0, total_energy
