@@ -468,6 +468,8 @@ def lambda_handler(event, context):
         total_eua      = 0
         total_cb       = 0
         total_cb_cost  = 0
+        from_to_leg_total_cb = 0
+        from_to_leg_total_cb_cost = 0 
 
         # CB折れ線グラフ用
         from_to_leg_lng = 0
@@ -477,7 +479,8 @@ def lambda_handler(event, context):
         from_to_leg_mgo = 0
 
         # 数値保持用
-        keep_year = display_leg_list_sorted[0]["leg_no"]["S"][0:4]
+        # keep_year = display_leg_list_sorted[0]["leg_no"]["S"][0:4]
+        keep_year = display_leg_list_sorted[0].get("leg_no", {}).get("S", "")[:4] if display_leg_list_sorted else ""
         keep_total_cb      = 0
         keep_total_cb_cost = 0
 
@@ -768,6 +771,8 @@ def lambda_handler(event, context):
         total_eua      = 0
         total_cb       = 0
         total_cb_cost  = 0
+        from_to_voyage_total_cb = 0
+        from_to_voyage_total_cb_cost = 0
 
         # CB折れ線グラフ用
         from_to_voyage_lng = 0
@@ -777,7 +782,9 @@ def lambda_handler(event, context):
         from_to_voyage_mgo = 0
 
         # 数値保持用
-        keep_year = display_voyage_list_sorted[0]["voyage_no"]["S"][0:4]
+        # keep_year = display_voyage_list_sorted[0]["voyage_no"]["S"][0:4]
+        keep_year = display_voyage_list_sorted[0].get("voyage_no", {}).get("S", "")[:4] if display_voyage_list_sorted else ""
+
         keep_total_cb      = 0
         keep_total_cb_cost = 0
 

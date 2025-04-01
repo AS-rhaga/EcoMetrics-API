@@ -304,6 +304,8 @@ def lambda_handler(event, context):
         oneMonth_cii_value = 0
         oneMonth_cii_Score = ""
         oneMonth_count = 0
+
+        dt_latest_update = ""
         
         np_count = 0
         for res in res_np:
@@ -461,10 +463,12 @@ def lambda_handler(event, context):
         rf_check = "out" if rf_count > 5 else "ok"
         # print(f"cp_count: {cp_count}, rf_count: {rf_count}")
         
-        year = str(dt_latest_update.year)
-        month = str(dt_latest_update.month) if len(str(dt_latest_update.month)) > 1 else "0" + str(dt_latest_update.month)
-        day = str(dt_latest_update.day) if len(str(dt_latest_update.day)) > 1 else "0" + str(dt_latest_update.day)
-        latest_update = f"{year}/{month}/{day}"
+        latest_update = ""
+        if dt_latest_update != "":
+            year = str(dt_latest_update.year)
+            month = str(dt_latest_update.month) if len(str(dt_latest_update.month)) > 1 else "0" + str(dt_latest_update.month)
+            day = str(dt_latest_update.day) if len(str(dt_latest_update.day)) > 1 else "0" + str(dt_latest_update.day)
+            latest_update = f"{year}/{month}/{day}"
         # print(f"latest_update: type{type(latest_update)}, timestamp: {latest_update}.")
         
         # imo = ""
