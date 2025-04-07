@@ -94,7 +94,9 @@ def make_voyage_plans_data(imo, thisyear_year_total, voyage_plan_list, res_foc_f
             dt_time_to    = Util.to_datetime(str_arrival_time)
             leg_part_time = Util.calc_time_diff(dt_time_from, dt_time_to)
 
-            leg_rate              = float(leg_part_time / leg_total_time)
+            leg_rate = 0
+            if leg_total_time != 0:
+                leg_rate              = float(leg_part_time / leg_total_time)
 
             # 割合を考慮した時間で上書き
             leg_total_time = leg_part_time
@@ -111,7 +113,9 @@ def make_voyage_plans_data(imo, thisyear_year_total, voyage_plan_list, res_foc_f
         leg_eu_rate  = int(voyage_plan_list[i]["eu_rate"]["S"])
 
         # log_speedを算出
-        leg_log_speed = leg_distance / leg_total_time
+        leg_log_speed = 0
+        if leg_total_time != 0:
+            leg_log_speed = leg_distance / leg_total_time
 
         # if res_foc_formulas and leg_eu_rate != 0:    ←EU Rateゼロのレグしかない時にEnd of Yearが作られない
         if res_foc_formulas:
@@ -440,9 +444,12 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
     total_foc         = 0
     total_eu_actual_foc = 0
     total_distance    = 0
+    last_year         = 0
+    last_year_cost    = 0
     total_eua         = 0
     total_energy      = 0
     eoy_cb            = 0
+    eoy_cb_cost       = 0
     total_cb          = 0
 
     # 処理実施時の年、日付を取得
@@ -500,7 +507,8 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
     leg_eu_rate = int(speed_plan[0]["eu_rate"]["S"])
     operator    = speed_plan[0]["operator"]["S"]
 
-    if res_foc_formulas and leg_eu_rate != 0:
+    # if res_foc_formulas and leg_eu_rate != 0:    ←EU Rateゼロのレグしかない時にEnd of Yearが作られない
+    if res_foc_formulas:
 
         # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
         auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])

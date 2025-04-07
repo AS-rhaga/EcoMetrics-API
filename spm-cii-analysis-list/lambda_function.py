@@ -319,7 +319,9 @@ def lambda_handler(event, context):
                         # 現在時間からArrivalTimeまでの時間算出
                         calculated_sailing_time = calc_time_diff(dt_now, arrival_time)
                         # Leg内航海時間との割合を算出し、その分のDistanceを切り出して使用
-                        tmp_ratio =  calculated_sailing_time / leg_sailing_time
+                        tmp_ratio = 0
+                        if leg_sailing_time != 0:
+                            tmp_ratio =  calculated_sailing_time / leg_sailing_time
                         calculated_distance = float(res_simulation_voyage[i]["distance"]["S"]) * tmp_ratio
 
                     else:
@@ -330,7 +332,9 @@ def lambda_handler(event, context):
                     all_distance_simulation += calculated_distance
 
                     # LogSpeed算出
-                    log_speed = calculated_distance / calculated_sailing_time
+                    log_speed = 0
+                    if calculated_sailing_time != 0:
+                        log_speed = calculated_distance / calculated_sailing_time
 
                     # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
                     auxiliary_equipment = float(res_foc_formulas[0]["auxiliary_equipment"]["S"])

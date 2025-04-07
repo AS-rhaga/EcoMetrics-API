@@ -44,7 +44,7 @@ def make_fuel_oil_type_info_list():
 
     return fuel_oil_info_list
 
-def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
+def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
     energy_lng = 0
     energy_hfo = 0
     energy_lfo = 0
@@ -67,7 +67,7 @@ def calc_energy(eu_rate, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, 
         mgo_lcv =  float(fuel_oil_info_list["MGO_info_list"]["lcv"]["S"])
         energy_mgo += total_mgo * mgo_lcv
 
-    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo) * float(eu_rate) / 100
+    energy = (energy_lng + energy_hfo + energy_lfo + energy_mdo + energy_mgo)
     return energy
 
 def calc_GHG_Max(year):
@@ -224,7 +224,7 @@ def main(imo, timestamp):
                     bk_operator_total_mgo      = operator_total["year_total_mgo"]
                     bk_operator_total_foc      = operator_total["year_total_foc"]
                     bk_operator_total_eu_actual_foc = operator_total["year_total_eu_actual_foc"]
-                    bk_operator_total_energy   = operator_total["year_total_energy"]
+                    # bk_operator_total_energy   = operator_total["year_total_energy"]
                     bk_operator_total_eua      = operator_total["year_total_eua"]
 
                     # プーリンググループの合計値を加算した値に書き換える。
@@ -236,7 +236,7 @@ def main(imo, timestamp):
                     operator_total["year_total_mgo"]      = bk_operator_total_mgo + total_mgo
                     operator_total["year_total_foc"]      = bk_operator_total_foc + total_foc
                     operator_total["year_total_eu_actual_foc"] = bk_operator_total_eu_actual_foc + eu_actual_foc
-                    operator_total["year_total_energy"]   = bk_operator_total_energy + total_energy
+                    # operator_total["year_total_energy"]   = bk_operator_total_energy + total_energy
                     operator_total["year_total_eua"]      = bk_operator_total_eua + eua
 
                     # リストを更新する。
@@ -261,7 +261,7 @@ def main(imo, timestamp):
                 "year_total_mgo"     : total_mgo,
                 "year_total_foc"     : total_foc,
                 "year_total_eu_actual_foc" : eu_actual_foc,
-                "year_total_energy"  : total_energy,
+                # "year_total_energy"  : total_energy,
                 "year_total_eua"     : eua
             }
             operator_total_list.append(data_list)
@@ -280,11 +280,12 @@ def main(imo, timestamp):
         operator_total_mgo      = operator_total["year_total_mgo"]
         operator_total_foc      = operator_total["year_total_foc"]
         operator_total_eu_actual_foc = operator_total["year_total_eu_actual_foc"]
-        operator_total_energy   = operator_total["year_total_energy"]
+        # operator_total_energy   = operator_total["year_total_energy"]
         operator_total_eua      = operator_total["year_total_eua"]
 
         # CBの算出
-        operator_total_cb     = calc_cb(year_timestamp, operator_total_energy, operator_total_lng, operator_total_hfo, operator_total_lfo, operator_total_mdo, operator_total_mgo, fuel_oil_type_info_list)
+        operator_total_energy_from_foc = calc_energy(operator_total_lng, operator_total_hfo, operator_total_lfo, operator_total_mdo, operator_total_mgo, fuel_oil_type_info_list)
+        operator_total_cb     = calc_cb(year_timestamp, operator_total_energy_from_foc, operator_total_lng, operator_total_hfo, operator_total_lfo, operator_total_mdo, operator_total_mgo, fuel_oil_type_info_list)
         print(f"year_total_cb[{type(operator_total_cb)}]: {operator_total_cb}")
 
         year_and_ope = year_timestamp + operator
@@ -351,13 +352,14 @@ def main(imo, timestamp):
 
                 print(f"company_id: {(company_id)}")
                 company_and_year = year_timestamp + company_id
-                pooling_record = select.get_pooling_table(company_and_year, group_name)[0]
-                print(f"pooling_record:{(pooling_record)}")
+                res_pooling_record = select.get_pooling_table(company_and_year, group_name)
+                print(f"pooling_record:{(res_pooling_record)}")
 
                 total_cb_plus = 0
                 total_cb      = 0
                 
-                if len(pooling_record)> 0:
+                if len(res_pooling_record)> 0:
+                    pooling_record = res_pooling_record[0]
                     imo_list = ast.literal_eval(pooling_record["imo_list"]["S"])
                     imo_list = list(set(imo_list))
 

@@ -82,7 +82,9 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
             dt_time_to    = Util.to_datetime(str_arrival_time)
             leg_part_time = Util.calc_time_diff(dt_time_from, dt_time_to)
 
-            leg_rate              = float(leg_part_time / leg_total_time)
+            leg_rate = 0
+            if leg_total_time != 0:
+                leg_rate = float(leg_part_time / leg_total_time)
 
             # 割合を考慮した時間で上書き
             leg_total_time = leg_part_time
@@ -101,7 +103,9 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
         leg_eu_rate  = int(voyage_plan_list[i]["eu_rate"]["S"])
 
         # log_speedを算出
-        leg_log_speed = leg_distance / leg_total_time
+        leg_log_speed = 0
+        if leg_total_time != 0:
+            leg_log_speed = leg_distance / leg_total_time
 
         # if res_foc_formulas and leg_eu_rate != 0:    ←EU Rateゼロのレグしかない時にEnd of Yearが作られない
         if res_foc_formulas:

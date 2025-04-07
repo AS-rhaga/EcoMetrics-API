@@ -15,8 +15,6 @@ logger.setLevel(logging.INFO)
 def make_voyage_plans_data(voyage_plan_list, res_foc_formulas, fuel_oil_type_info_list):
 
     # 変数の設定
-    leg_rate                   = 0
-
     leg_total_time             = 0
 
     simulation_total_lng_ods     = 0
@@ -76,7 +74,6 @@ def make_voyage_plans_data(voyage_plan_list, res_foc_formulas, fuel_oil_type_inf
         # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
         if str_now <= str_departure_time:
             print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
-            leg_rate              = 1
             leg_part_time = leg_total_time
 
         elif str_now <= str_arrival_time:
@@ -84,7 +81,6 @@ def make_voyage_plans_data(voyage_plan_list, res_foc_formulas, fuel_oil_type_inf
             dt_time_from  = Util.to_datetime(str_now)
             dt_time_to    = Util.to_datetime(str_arrival_time)
             leg_part_time = Util.calc_time_diff(dt_time_from, dt_time_to)
-            leg_rate              = float(leg_part_time / leg_total_time)
 
         else:
             leg_part_time = leg_total_time
@@ -96,7 +92,9 @@ def make_voyage_plans_data(voyage_plan_list, res_foc_formulas, fuel_oil_type_inf
         eu_rate                = int(voyage_plan["eu_rate"]["S"])
 
         # log_speedを算出
-        leg_log_speed = distance / leg_total_time
+        leg_log_speed = 0
+        if leg_total_time != 0:
+            leg_log_speed = distance / leg_total_time
 
         if res_foc_formulas:
 

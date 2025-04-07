@@ -510,7 +510,8 @@ def lambda_handler(event, context):
 
         eoy_grouped_vessels_total_cb_cost = 0
         if eoy_grouped_vessels_total_cb < 0:
-            eoy_grouped_vessels_total_cb_cost = abs(eoy_grouped_vessels_total_cb) * 2400 / (eoy_grouped_vessels_total_GHG * 41000)
+            if eoy_grouped_vessels_total_GHG != 0:
+                eoy_grouped_vessels_total_cb_cost = abs(eoy_grouped_vessels_total_cb) * 2400 / (eoy_grouped_vessels_total_GHG * 41000)
             eoy_total_cb_cost += round(eoy_grouped_vessels_total_cb_cost)
 
         # End of Year

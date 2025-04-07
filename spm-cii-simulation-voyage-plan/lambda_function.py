@@ -303,7 +303,9 @@ def lambda_handler(event, context):
 
     # 処理実施時の年取得
     dt_now = datetime.now()
+    str_now  = dt_now.strftime('%Y/%m/%d %H:%M')
     now_year = str(dt_now.year)
+    datetime_now = datetime.strptime(str_now, "%Y/%m/%d %H:%M")
 
     # CII算出のため、各種マスタを取得
     cii_ref = select.get_cii_ref(res_vesselmaster[0]["VesselType"]["S"])
@@ -494,10 +496,10 @@ def lambda_handler(event, context):
             arrival_time = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
 
             # start_timeを決める。
-            if departure_time >= latest_timestamp_dt:
+            if departure_time >= datetime_now:
                 start_time = departure_time
-            elif arrival_time > latest_timestamp_dt:
-                start_time = latest_timestamp_dt
+            elif arrival_time > datetime_now:
+                start_time = datetime_now
             else:
                 # 上記以外の場合、すでに日付が過ぎているLegになるため次の要素へスキップ
                 continue
@@ -507,19 +509,31 @@ def lambda_handler(event, context):
 
             # DepartureTimeからArrivalTimeまでのTotalTimeを算出
             leg_total_time = calc_time_diff(departure_time, arrival_time)
+            leg_actual_time = calc_time_diff(start_time, end_time)
+            print(f"leg_total_time:{(leg_total_time)} start_time:{(start_time)} end_time:{(end_time)}")
 
-            # LogSpeed算出
-            log_speed = float(simulation_leg["distance"]["S"]) / leg_total_time
+            # 登録されたVoyageの期間で、処理時刻よりも未来の時間の割合、log_speedを算出する
+            leg_time_rate = 0
+            if leg_total_time != 0:
+                leg_time_rate = leg_actual_time / leg_total_time
+            print(f"leg_time_rate:{(leg_time_rate)}")
+
+            log_speed = 0
+            if leg_total_time != 0:
+                log_speed = float(simulation_leg["distance"]["S"]) / leg_total_time
+
+            # voyageのdistanceのうち、未来期間に航海する距離を求める。
+            actual_distance = float(simulation_leg["distance"]["S"]) * leg_time_rate
 
             # 平均値算出用処理
             # TotalTimeをに日数に換算
-            day_count = round(leg_total_time / 24)
-            all_log_speed = log_speed * day_count
-            average_data_count_log_speed += day_count
+            actual_day_count = round(leg_total_time / 24)
+            all_log_speed = log_speed * actual_day_count
+            average_data_count_log_speed += actual_day_count
             average_log_speed_total += all_log_speed
 
             # Leg内総FOCを算出
-            leg_total_FOC_voyage = calc_foc_using_foc_formulas(res_foc_formulas[0], simulation_leg["dispracement"]["S"], log_speed, leg_total_time)
+            leg_total_FOC_voyage = calc_foc_using_foc_formulas(res_foc_formulas[0], simulation_leg["dispracement"]["S"], log_speed, leg_actual_time)
 
             #Fuel取得
             fuel_list = convertFuelOileStringToList(simulation_leg["fuel"]["S"])
@@ -572,7 +586,12 @@ def lambda_handler(event, context):
                 tmp_co2_emission_voyage = leg_total_co2_emission * calc_time_rate
                 tmp_log_speed_total = log_speed * round(caluculated_time / 24)
                 monthly_total_list[target_month - 1]["distance"] += tmp_distance_voyage
+
+                print(f"【before】monthly_total_list[{(target_month - 1)}][foc]:{(monthly_total_list[target_month - 1]["foc"])}")
+                print(f"tmp_foc_voyage:{(tmp_foc_voyage)}")
                 monthly_total_list[target_month - 1]["foc"] += tmp_foc_voyage
+                print(f"【after】monthly_total_list[{(target_month - 1)}][foc]:{(monthly_total_list[target_month - 1]["foc"])}")
+
                 monthly_total_list[target_month - 1]["co2_emission"] += tmp_co2_emission_voyage
                 monthly_total_list[target_month - 1]["log_speed_total"] += tmp_log_speed_total
                 monthly_total_list[target_month - 1]["count_log_speed"] += round(caluculated_time / 24)
@@ -706,7 +725,9 @@ def lambda_handler(event, context):
                 total_time = calc_time_diff(departure_time, arrival_time)
 
                 # Log Speed算出
-                log_speed = float(item["distance"]["S"]) / total_time
+                log_speed = 0
+                if total_time != 0:
+                    log_speed = float(item["distance"]["S"]) / total_time
 
                 # fuel
                 output_fuel_list = []
@@ -734,11 +755,11 @@ def lambda_handler(event, context):
                 data = {
                     "leg_no"            : leg_no,
                     "departure_port"    : item["departure_port"]["S"],
-                    "departure_time"    : item["departure_time"]["S"],
+                    "departure_time"    : start_time.strftime('%Y/%m/%d %H:%M'),
                     "arrival_port"      : item["arrival_port"]["S"],
                     "arrival_time"      : item["arrival_time"]["S"],
                     "total_time"        : str(total_time),
-                    "distance"          : item["distance"]["S"],
+                    "distance"          : str(round(actual_distance)),
                     "fuel"              : output_fuel_list,
                     "dispracement"      : item["dispracement"]["S"],
                     "log_speed"         : str(round(log_speed, 1)),
@@ -748,7 +769,26 @@ def lambda_handler(event, context):
                 tmp_simulation_infomation_voyage_list.append(data)
             
             # Leg Noでソート
-            simulation_infomation_voyage_list = sorted(tmp_simulation_infomation_voyage_list, key=lambda x: x['leg_no'])
+            tmp_simulation_infomation_voyage_list_sorted = sorted(tmp_simulation_infomation_voyage_list, key=lambda x: x['leg_no'])
+
+            # 通番を設定する
+            num = 0
+            for voyage_data in tmp_simulation_infomation_voyage_list_sorted:
+                num += 1
+                data = {
+                    "leg_no"            : str(num),
+                    "departure_port"    : voyage_data["departure_port"],
+                    "departure_time"    : voyage_data["departure_time"],
+                    "arrival_port"      : voyage_data["arrival_port"],
+                    "arrival_time"      : voyage_data["arrival_time"],
+                    "total_time"        : voyage_data["total_time"],
+                    "distance"          : voyage_data["distance"],
+                    "fuel"              : voyage_data["fuel"],
+                    "dispracement"      : voyage_data["dispracement"],
+                    "log_speed"         : voyage_data["log_speed"],
+                    "foc"               : voyage_data["foc"],
+                }
+                simulation_infomation_voyage_list.append(data)
 
     # グラフエリアに表示する情報
     total_ciiscorelist_yeartodate = []

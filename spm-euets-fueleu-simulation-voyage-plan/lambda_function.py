@@ -395,7 +395,7 @@ def lambda_handler(event, context):
     min_cb = 0
     max_cb = 0
     eua_tickInterval = 0
-    cb_tickInterval = 0
+    tickInterval = 0
 
     company_id = ""
     eua_price  = 0
@@ -594,12 +594,12 @@ def lambda_handler(event, context):
 
         # 各legの期間から、反映割合を算出する
         # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
+        leg_part_time = leg_total_time
         if str_now <= str_departure_time:
             print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
             return_departure_time = str_departure_time
             return_arrival_time   = str_arrival_time
             return_leg_total_time = leg_total_time
-            leg_rate              = 1
 
         elif str_now <= str_arrival_time:
             print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは現在進行中")
@@ -611,11 +611,16 @@ def lambda_handler(event, context):
             return_departure_time = str_now
             return_arrival_time   = str_arrival_time
             return_leg_total_time = leg_part_time
-            leg_rate              = float(leg_part_time / leg_total_time)
+
         else:
             print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
             # 以降の処理は行わず、次のlegを確認
             continue
+
+        leg_rate = 0
+        if leg_total_time != 0:
+            leg_rate = float(leg_part_time / leg_total_time)
+        print(f"leg_rate:{(leg_rate)} leg_part_time:{(leg_part_time)} leg_total_time:{(leg_total_time)}")
 
         # 各項目を取得し、必要項目にはleg_rateを反映する
         displacement           = res_simulation[i]["dispracement"]["S"]
@@ -623,7 +628,9 @@ def lambda_handler(event, context):
         simulation_leg_eu_rate = int(res_simulation[i]["eu_rate"]["S"])
 
         # log_speedを算出
-        leg_log_speed = leg_distance / return_leg_total_time
+        leg_log_speed = 0
+        if return_leg_total_time != 0:
+            leg_log_speed = leg_distance / return_leg_total_time
 
         # FOC Formulasがある場合
         if res_foc_formulas:
