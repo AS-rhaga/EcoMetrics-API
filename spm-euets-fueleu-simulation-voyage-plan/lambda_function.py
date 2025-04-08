@@ -440,7 +440,6 @@ def lambda_handler(event, context):
 
     # 最新のeco-eu-simulation-cond-voyage-plan取得
     res_simulation = select.get_simulation_voyage(imo, now_year)
-    res_simulation = sorted(res_simulation, key=lambda x: x["departure_time"]["S"])
     print(f"res_simulation{type(res_simulation)}: {res_simulation}")
 
     # VesselMaster取得
@@ -579,6 +578,10 @@ def lambda_handler(event, context):
         return_departure_time   = ""
         return_arrival_time     = ""
         return_leg_total_time   = 0
+
+        # Leg No 取得
+        tmp_text = res_simulation[i]["year_and_serial_number"]["S"]
+        leg_no = int(tmp_text.split("E")[1])  # 'E' 以降を抽出
 
         # legの開始・終了時刻を取得する
         str_departure_time = res_simulation[i]["departure_time"]["S"]     # "2024-12-10 12:30"
@@ -858,6 +861,7 @@ def lambda_handler(event, context):
             print(f"str_cb:{(str_cb)} simulation_leg_cb:{(simulation_leg_cb)}")
 
             simulation_data = {
+                "leg_no"         : leg_no,
                 "departure_port" : res_simulation[i]["departure_port"]["S"], 
                 "departure_time" : return_departure_time,
                 "arrival_port"   : res_simulation[i]["arrival_port"]["S"], 
@@ -894,6 +898,7 @@ def lambda_handler(event, context):
                 output_fuel_list.append(output_fuel)
 
             simulation_data = {
+                "leg_no"         : leg_no,
                 "departure_port" : res_simulation[0]["departure_port"]["S"], 
                 "departure_time" : return_departure_time,
                 "arrival_port"   : res_simulation[0]["arrival_port"]["S"], 
@@ -913,8 +918,10 @@ def lambda_handler(event, context):
 
     # ---------- res_simulationループ終了 ---------
 
-    # departure timeでソート
-    SimulationInformation_VoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["departure_time"])
+    print(f"EUAList_Simulation:{(EUAList_Simulation)}")
+
+    # leg_noでソート
+    SimulationInformation_VoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["leg_no"])
 
     print(f"CBList_Simulation:{(CBList_Simulation)}")
     print(f"SimulationInformation_VoyageList:{(SimulationInformation_VoyageList)}")

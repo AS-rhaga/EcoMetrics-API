@@ -724,10 +724,32 @@ def lambda_handler(event, context):
                 # Leg航海時間算出
                 total_time = calc_time_diff(departure_time, arrival_time)
 
+                # start_timeを決める。
+                if datetime_now <= departure_time:
+                    start_time = departure_time
+                elif datetime_now <= arrival_time:
+                    start_time = datetime_now
+                else:
+                    # 上記以外の場合、すでに日付が過ぎているLegになるため次の要素へスキップ
+                    continue
+
+                # endTimeにArrivalTimeを設定
+                end_time = arrival_time
+
+                # DepartureTimeからArrivalTimeまでのTotalTimeを算出
+                voyage_total_time = calc_time_diff(departure_time, arrival_time)
+                total_time = calc_time_diff(start_time, end_time)
+                # Leg内航海時間との割合を算出し、その分のDistanceを切り出して使用
+                tmp_ratio = 0
+                if voyage_total_time != 0:
+                    tmp_ratio =  total_time / voyage_total_time
+                calculated_distance = float(item["distance"]["S"]) * tmp_ratio
+                print(f"calculated_distance:{(calculated_distance)} item[distance][S]:{(item["distance"]["S"])} tmp_ratio:{(tmp_ratio)}")
+
                 # Log Speed算出
                 log_speed = 0
                 if total_time != 0:
-                    log_speed = float(item["distance"]["S"]) / total_time
+                    log_speed = float(item["distance"]["S"]) / voyage_total_time
 
                 # fuel
                 output_fuel_list = []
@@ -748,10 +770,12 @@ def lambda_handler(event, context):
 
                 # FOC算出（FOC Formulasが取得出来なかった場合は計算しない）
                 if res_foc_formulas:
-                    foc = calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, total_time)
+                    tmp_foc = calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, total_time)
+                    foc = round(tmp_foc, 1)
                 else:
                     foc = "-"
                 
+                print(f"start_time{type(start_time)}:{(start_time)}")
                 data = {
                     "leg_no"            : leg_no,
                     "departure_port"    : item["departure_port"]["S"],
@@ -759,7 +783,7 @@ def lambda_handler(event, context):
                     "arrival_port"      : item["arrival_port"]["S"],
                     "arrival_time"      : item["arrival_time"]["S"],
                     "total_time"        : str(total_time),
-                    "distance"          : str(round(actual_distance)),
+                    "distance"          : str(round(calculated_distance)),
                     "fuel"              : output_fuel_list,
                     "dispracement"      : item["dispracement"]["S"],
                     "log_speed"         : str(round(log_speed, 1)),

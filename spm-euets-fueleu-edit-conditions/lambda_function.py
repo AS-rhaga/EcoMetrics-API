@@ -512,8 +512,7 @@ def lambda_handler(event, context):
 
             # Leg No 取得
             tmp_text = res_item["year_and_serial_number"]["S"]
-            start_index = tmp_text.find('E')
-            leg_no = tmp_text[start_index:]  # 'E' 以降を抽出
+            leg_no = int(tmp_text.split("E")[1])  # 'E' 以降を抽出
 
             # total time算出
             # DepartureTime取得
@@ -542,8 +541,8 @@ def lambda_handler(event, context):
                 output_fuel_list.append(output_fuel)
 
             data = {
-                "leg_no"  : leg_no,
-                "operator" : res_item["operator"]["S"],
+                "leg_no"         : leg_no,
+                "operator"       : res_item["operator"]["S"],
                 "departure_port" : res_item["departure_port"]["S"],
                 "departure_time" : res_item["departure_time"]["S"],
                 "arrival_port"   : res_item["arrival_port"]["S"],
@@ -562,10 +561,14 @@ def lambda_handler(event, context):
             data_list.append(data)
 
         # ソート実行-------------------------------------------------------
-        new_data_list = sorted(data_list, key=lambda x: x['departure_time'])
+        sorted_data_list = sorted(data_list, key=lambda x: x['leg_no'])
+
+        # leg_noに"E"を付ける
+        for i in range(len(sorted_data_list)):
+            sorted_data_list[i]["leg_no"] = "E" + str(sorted_data_list[i]["leg_no"])
 
         datas = {
-            "datas": new_data_list
+            "datas": sorted_data_list
         }
 
     else:

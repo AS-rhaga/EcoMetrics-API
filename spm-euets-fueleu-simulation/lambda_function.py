@@ -456,7 +456,6 @@ def lambda_handler(event, context):
     if plan == "Voyage":
         # eco-eu-simulation-cond-voyage-plan取得
         res_simulation = select.get_simulation_voyage(imo, now_year)
-        res_simulation = sorted(res_simulation, key=lambda x: x["departure_time"]["S"])
     else:
         # eco-eu-simulation-cond-speed-plan取得
         res_simulation = select.get_simulation_speed(imo, now_year)
@@ -589,6 +588,10 @@ def lambda_handler(event, context):
             return_arrival_time     = ""
             return_leg_total_time   = 0
 
+            # Leg No 取得
+            tmp_text = res_simulation[i]["year_and_serial_number"]["S"]
+            leg_no = int(tmp_text.split("E")[1])  # 'E' 以降を抽出
+            
             # legの開始・終了時刻を取得する
             str_departure_time = res_simulation[i]["departure_time"]["S"]     # "2024-12-10 12:30"形式
             str_arrival_time   = res_simulation[i]["arrival_time"]["S"]       # "2024-12-19 17:30"形式
@@ -871,6 +874,7 @@ def lambda_handler(event, context):
                 str_cb  = str(round(float(simulation_leg_cb) / 1000000, 1))
 
                 simulation_data = {
+                    "leg_no"         : leg_no,
                     "departure_port" : res_simulation[i]["departure_port"]["S"], 
                     "departure_time" : return_departure_time,
                     "arrival_port"   : res_simulation[i]["arrival_port"]["S"], 
@@ -907,6 +911,7 @@ def lambda_handler(event, context):
                     output_fuel_list.append(output_fuel)
 
                 simulation_data = {
+                    "leg_no"         : leg_no,
                     "departure_port" : res_simulation[i]["departure_port"]["S"], 
                     "departure_time" : return_departure_time,
                     "arrival_port"   : res_simulation[i]["arrival_port"]["S"], 
@@ -927,7 +932,7 @@ def lambda_handler(event, context):
         # ---------- res_simulationループ終了 ---------
 
         # departure timeでソート
-        SimulationInformation_VoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["departure_time"])
+        SimulationInformation_VoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["leg_no"])
 
         # 通番を設定する
         num = 0

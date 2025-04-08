@@ -934,7 +934,8 @@ def lambda_handler(event, context):
                 tmp_simulation_infomation_voyage_list.append(data)
             
             # departure timeでソート
-            tmp_simulation_infomation_voyage_list_sorted = sorted(tmp_simulation_infomation_voyage_list, key=lambda x: x['departure_time'])
+            print(f"tmp_simulation_infomation_voyage_list:{(tmp_simulation_infomation_voyage_list)}")
+            tmp_simulation_infomation_voyage_list_sorted = sorted(tmp_simulation_infomation_voyage_list, key=lambda x: x['leg_no'])
 
             # 通番を設定する
             num = 0
