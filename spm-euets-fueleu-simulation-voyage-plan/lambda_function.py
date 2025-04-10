@@ -387,8 +387,6 @@ def lambda_handler(event, context):
     total_eua         = 0
     total_eua_cost    = 0
     total_energy      = 0
-    total_cb          = 0
-    total_cb_cost     = 0
 
     # Y軸設定用の変数定義
     max_eua = 0
@@ -810,33 +808,13 @@ def lambda_handler(event, context):
             # CBList_YeartoDateに通年CBをセット
             CBList_Simulation.append([this_year_leg_count + i + 1, float(year_to_leg_cb) / 1000000])
 
-            # Year to LegのCB Costの算出
-            if float(year_to_leg_cb) >= 0:
-                total_cb_cost = 0
-            else:
-                # ペナルティーファクターを調べる
-                # 同一imoのyear-totalテーブルを取得（複数オペになったらどうする？）
-                res_year_total_list    = select.get_year_total(imo)
-                year_total_list_sorted = sorted(res_year_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-                # 今年を含め、直近何年連続で罰金フラグが立っているかを確認する
-                flag_count = 0
-                for year in year_total_list_sorted:
-                    fine_flag = year["fine_flag"]["S"]
-                    if fine_flag == "1":
-                        flag_count += 1
-                    else:
-                        break
-                penalty_factor = 1 + (flag_count) / 10
-                total_cb_cost  = abs(float(year_to_leg_cb)) * penalty_factor * 2400 / (year_to_leg_GHG * 41000)
-
             # 合計用変数に加算する
             total_distance += leg_distance
             total_foc      += (simulation_leg_lng_ods + simulation_leg_lng_oms + simulation_leg_lng_oss + simulation_leg_hfo + simulation_leg_lfo + simulation_leg_mdo + simulation_leg_mgo + simulation_leg_lpg_p + simulation_leg_lpg_b + simulation_leg_nh3_ng + simulation_leg_nh3_ef + simulation_leg_methanol_ng + simulation_leg_h2_ng)
             total_eu_actual_foc += leg_total_actual_foc
             total_co2      += simulation_leg_actual_co2
             total_eua      += simulation_leg_eua
-            total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
+            # total_cb        = float(year_to_leg_cb) # 最終的な値を保持したいため、足さない。
 
             # Y軸設定用の変数に値を設定
             max_eua = simulation_leg_eua if max_eua < simulation_leg_eua else max_eua
@@ -950,6 +928,44 @@ def lambda_handler(event, context):
         SimulationInformationVoyageList.append(list_data)
 
     # 返却値を作成していく。
+    # Total CBの算出
+    total_GHG_Actual = calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_info_list)
+    total_cb         = calc_cb(now_year, total_energy, total_GHG_Actual)
+
+    # Total CB Costの算出
+    total_cb_cost = 0
+    if total_cb < 0:
+        # ペナルティーファクターを調べる
+        # 同一imoのyear-totalテーブルを取得（複数オペになったらどうする？）
+        res_year_total_list    = select.get_year_total(imo)
+        year_total_list_sorted = sorted(res_year_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
+
+        # 初期値設定
+        consecutive_years = 0
+        year_count = 0
+
+        for year_total in year_total_list_sorted:
+            # 先頭要素はスキップ（先頭要素は今年のレコード、前年以前を見たいため、スキップで良い）
+            if year_count == 0:
+                year_count += 1
+                continue
+
+            # １年ずつさかのぼる（年が飛んだ時点で確認不要のためbreak）
+            if year_total["year_and_ope"]["S"][0:4] == str(int(now_year) - year_count):
+                # 罰金フラグの確認
+                fine_flag = year_total["fine_flag"]["S"]
+                if fine_flag == "1":
+                    consecutive_years += 1
+                else:
+                    break
+            else:
+                break
+
+            year_count += 1
+
+        penalty_factor = 1 + (consecutive_years) / 10
+        if total_GHG_Actual != 0:
+            total_cb_cost  = abs(float(total_cb)) * penalty_factor * 2400 / (total_GHG_Actual * 41000)
 
     # Simulation Resultの右側とX軸のラベル作成
     SimulationResultTotal = None
@@ -961,8 +977,8 @@ def lambda_handler(event, context):
         str_co2      = str(round(total_co2))      if total_co2      != "" else ""
         str_eua      = str(round(total_eua, 1))      if total_eua      != "" else ""
         str_eua_cost = str(round(round(total_eua, 1) * eua_price)) if total_eua_cost != "" else ""
-        str_cb       = str(round(total_cb / 1000000, 1))       if total_cb       != "" else ""
-        str_cb_cost  = str(round(total_cb_cost))  if total_cb_cost  != "" else ""
+        str_cb       = str(round(total_cb / 1000000, 1))
+        str_cb_cost  = str(round(total_cb_cost))
 
         SimulationResultTotal = {
             "distance": str_distance,
