@@ -578,7 +578,9 @@ def lambda_handler(event, context):
                     caluculated_time = calc_time_diff(end_first_day_dt, end_time)
                 
                 # TotalTimeと算出した時間の割合を算出
-                calc_time_rate = caluculated_time / leg_total_time
+                calc_time_rate = 0
+                if leg_total_time != 0:
+                    calc_time_rate = caluculated_time / leg_total_time
 
                 # 月別集計リストの該当月に加算
                 tmp_distance_voyage = float(simulation_leg["distance"]["S"]) * calc_time_rate
