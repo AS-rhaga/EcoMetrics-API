@@ -411,7 +411,7 @@ def lambda_handler(event, context):
                 # 1時間あたりのFOC算出
                 foc_per_hour = foc_per_day / 24
                 # 総FOCを算出
-                foc = foc_per_hour * total_time * eu_rate / 100
+                foc = foc_per_hour * total_time
                 foc_str = str(round(foc, 1))
                 print(f"foc: {(foc)}")
 

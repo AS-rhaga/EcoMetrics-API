@@ -324,7 +324,7 @@ def lambda_handler(event, context):
     res_group = select.get_group_one_record(res_user[0]["company_id"]["S"], "admin")
 
     # EUA単価を取得
-    eua_price = float(res_group[0]["eua_price"]["S"]) if "eua_price" in res_group[0] else 0
+    eua_price = int(res_group[0]["eua_price"]["S"]) if "eua_price" in res_group[0] else 0
 
     # Y軸設定用の変数定義
     max_eua = 0
@@ -639,7 +639,7 @@ def lambda_handler(event, context):
             "ghg"     : round(total_GHG),
             "distance": round(total_distance),
             "eua"     : round(total_eua),
-            "eua_cost": round(total_eua * eua_price),
+            "eua_cost": round(total_eua) * eua_price,
             "cb"      : round(from_to_leg_total_cb / 1000000, 1),
             "cb_cost" : round(from_to_leg_total_cb_cost)
         }
@@ -941,7 +941,7 @@ def lambda_handler(event, context):
             "ghg"     : round(total_GHG),
             "distance": round(total_distance),
             "eua"     : round(total_eua),
-            "eua_cost": round(total_eua * eua_price),
+            "eua_cost": round(total_eua) * eua_price,
             "cb"      : round(from_to_voyage_total_cb / 1000000, 1),
             "cb_cost" : round(from_to_voyage_total_cb_cost)
         }

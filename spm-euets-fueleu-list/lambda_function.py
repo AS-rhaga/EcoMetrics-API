@@ -108,11 +108,9 @@ def lambda_handler(event, context):
 
     # 合計値用
     ytd_total_eua      = 0
-    ytd_total_eua_cost = 0
     ytd_total_cb       = 0
     ytd_total_cb_cost  = 0
     eoy_total_eua      = 0
-    eoy_total_eua_cost = 0
     eoy_total_cb       = 0
     eoy_total_cb_cost  = 0
 
@@ -184,11 +182,9 @@ def lambda_handler(event, context):
             for data in dataset:
                 # EUA、CBをytdとeoy毎に合計する
                 ytd_total_eua      += float(data["ytd_eua"])
-                ytd_total_eua_cost += float(data["ytd_eua_cost"])
                 ytd_total_cb       += float(data["ytd_cb"])
                 ytd_total_cb_cost  += float(data["ytd_cb_cost"])
                 eoy_total_eua      += float(data["eoy_eua"])
-                eoy_total_eua_cost += float(data["eoy_eua_cost"])
                 eoy_total_cb       += float(data["eoy_cb"])
                 eoy_total_cb_cost  += float(data["eoy_cb_cost"])
                 rows.append(data)
@@ -201,7 +197,6 @@ def lambda_handler(event, context):
             for data in dataset:
                 # EUA、CBをytdとeoy毎に合計する（Year to Dateは全てゼロ）
                 eoy_total_eua      += float(data["eoy_eua"])
-                eoy_total_eua_cost += float(data["eoy_eua_cost"])
                 eoy_total_cb       += float(data["eoy_cb"])
                 eoy_total_cb_cost  += float(data["eoy_cb_cost"])
                 rows.append(data)
@@ -219,11 +214,11 @@ def lambda_handler(event, context):
 
     total_list = {
         "ytd_total_eua"     : ytd_total_eua,
-        "ytd_total_eua_cost": ytd_total_eua_cost,
+        "ytd_total_eua_cost": round(ytd_total_eua) * int(eua_price),
         "ytd_total_cb"      : round(ytd_total_cb, 1),
         "ytd_total_cb_cost" : ytd_total_cb_cost,
         "eoy_total_eua"     : eoy_total_eua,
-        "eoy_total_eua_cost": eoy_total_eua_cost,
+        "eoy_total_eua_cost": round(eoy_total_eua) * int(eua_price),
         "eoy_total_cb"      : round(eoy_total_cb, 1),
         "eoy_total_cb_cost" : eoy_total_cb_cost
     }
