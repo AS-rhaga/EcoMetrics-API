@@ -527,7 +527,8 @@ def lambda_handler(event, context):
 
             # 平均値算出用処理
             # TotalTimeをに日数に換算
-            actual_day_count = round(leg_total_time / 24)
+            actual_day_count = math.ceil(leg_total_time / 24)
+            print(f"leg_actual_time:{(leg_actual_time)} actual_day_count:{(actual_day_count)}")
             all_log_speed = log_speed * actual_day_count
             average_data_count_log_speed += actual_day_count
             average_log_speed_total += all_log_speed
@@ -586,7 +587,8 @@ def lambda_handler(event, context):
                 tmp_distance_voyage = float(simulation_leg["distance"]["S"]) * calc_time_rate
                 tmp_foc_voyage = leg_total_FOC_voyage * calc_time_rate
                 tmp_co2_emission_voyage = leg_total_co2_emission * calc_time_rate
-                tmp_log_speed_total = log_speed * round(caluculated_time / 24)
+                tmp_log_speed_total = log_speed * math.ceil(caluculated_time / 24)
+                print(f"target_month:{(target_month)} caluculated_time:{(caluculated_time)} actual_day_count:{(actual_day_count)}")
                 monthly_total_list[target_month - 1]["distance"] += tmp_distance_voyage
 
                 print(f"【before】monthly_total_list[{(target_month - 1)}][foc]:{(monthly_total_list[target_month - 1]["foc"])}")
@@ -596,7 +598,7 @@ def lambda_handler(event, context):
 
                 monthly_total_list[target_month - 1]["co2_emission"] += tmp_co2_emission_voyage
                 monthly_total_list[target_month - 1]["log_speed_total"] += tmp_log_speed_total
-                monthly_total_list[target_month - 1]["count_log_speed"] += round(caluculated_time / 24)
+                monthly_total_list[target_month - 1]["count_log_speed"] += math.ceil(caluculated_time / 24)
 
         # 変数定義
         cii_score_transition_list = []

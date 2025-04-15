@@ -528,7 +528,8 @@ def lambda_handler(event, context):
 
                 # 平均値算出用処理
                 # TotalTimeをに日数に換算
-                actual_day_count = round(leg_actual_time / 24)
+                actual_day_count = math.ceil(leg_actual_time / 24)
+                print(f"leg_actual_time:{(leg_actual_time)} actual_day_count:{(actual_day_count)}")
                 all_log_speed = log_speed * actual_day_count
                 average_data_count_log_speed += actual_day_count
                 average_log_speed_total += all_log_speed
@@ -599,7 +600,7 @@ def lambda_handler(event, context):
                     tmp_distance_voyage = float(simulation_leg["distance"]["S"]) * calc_time_rate
                     tmp_foc_voyage = leg_total_FOC_voyage * calc_time_rate
                     tmp_co2_emission_voyage = leg_total_co2_emission * calc_time_rate
-                    tmp_log_speed_total = log_speed * round(caluculated_time / 24)
+                    tmp_log_speed_total = log_speed * math.ceil(caluculated_time / 24)
 
                     print(f"target_month:{target_month}, tmp_distance_voyage:{tmp_distance_voyage}, tmp_foc_voyage:{tmp_foc_voyage}, tmp_co2_emission_voyage:{tmp_co2_emission_voyage}")
 
@@ -612,7 +613,7 @@ def lambda_handler(event, context):
 
                     monthly_total_list[target_month - 1]["co2_emission"] += tmp_co2_emission_voyage
                     monthly_total_list[target_month - 1]["log_speed_total"] += tmp_log_speed_total
-                    monthly_total_list[target_month - 1]["count_log_speed"] += round(caluculated_time / 24)
+                    monthly_total_list[target_month - 1]["count_log_speed"] += math.ceil(caluculated_time / 24)
 
         else:
             # SpeedPlanのSimulation処理実施
@@ -640,8 +641,8 @@ def lambda_handler(event, context):
 
             # 平均値算出用処理
             # TotalTimeをに日数に換算
-            ballast_day_count = round(ballast_sailing_time / 24)
-            laden_day_count = round(laden_sailing_time / 24)
+            ballast_day_count = math.ceil(ballast_sailing_time / 24)
+            laden_day_count = math.ceil(laden_sailing_time / 24)
             ballast_all_log_speed = ballast_logspeed * ballast_day_count
             laden_all_log_speed = laden_logspeed * laden_day_count
             average_data_count_log_speed += ballast_day_count + laden_day_count
@@ -723,12 +724,12 @@ def lambda_handler(event, context):
                 tmp_distance_speed = total_ballast_laden_distance * calc_time_rate
                 tmp_foc_speed = leg_total_FOC_speed * calc_time_rate
                 tmp_co2_emission_speed = leg_total_co2_emission_speed * calc_time_rate
-                tmp_log_speed_total = ballast_logspeed * round(ballast_sailing_time * calc_time_rate / 24) + laden_logspeed * round(laden_sailing_time * calc_time_rate / 24)
+                tmp_log_speed_total = ballast_logspeed * math.ceil(ballast_sailing_time * calc_time_rate / 24) + laden_logspeed * math.ceil(laden_sailing_time * calc_time_rate / 24)
                 monthly_total_list[target_month - 1]["distance"] += tmp_distance_speed
                 monthly_total_list[target_month - 1]["foc"] += tmp_foc_speed
                 monthly_total_list[target_month - 1]["co2_emission"] += tmp_co2_emission_speed
                 monthly_total_list[target_month - 1]["log_speed_total"] += tmp_log_speed_total
-                monthly_total_list[target_month - 1]["count_log_speed"] += round(ballast_sailing_time * calc_time_rate / 24) + round(laden_sailing_time * calc_time_rate / 24)
+                monthly_total_list[target_month - 1]["count_log_speed"] += math.ceil(ballast_sailing_time * calc_time_rate / 24) + math.ceil(laden_sailing_time * calc_time_rate / 24)
 
         # 変数定義
         cii_score_transition_list = []
