@@ -129,7 +129,7 @@ def lambda_handler(event, context):
                 # 1時間あたりのFOC算出
                 foc_per_hour = foc_per_day / 24
                 # 総FOCを算出
-                foc = round(float(foc_per_hour * total_time), 1)
+                foc = round(float(foc_per_hour * total_time))
             else:
                 foc = "-"
             

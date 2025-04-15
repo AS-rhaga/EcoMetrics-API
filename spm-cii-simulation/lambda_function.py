@@ -914,7 +914,7 @@ def lambda_handler(event, context):
 
                 # FOC算出（FOC Formulasが取得出来なかった場合は計算しない）
                 if res_foc_formulas:
-                    foc = round(float(calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, total_time)), 1)
+                    foc = round(float(calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, total_time)))
                 else:
                     foc = "-"
                 
@@ -1039,7 +1039,7 @@ def lambda_handler(event, context):
                 "avg_speed_laden"              : laden_logspeed,
                 "fuel"                         : output_fuel_list,
                 "distance"                     : round(float(total_ballast_laden_distance)),
-                "foc"                          : round(float(leg_total_FOC_speed), 1),
+                "foc"                          : round(float(leg_total_FOC_speed)),
             }
 
             simulation_infomation_speed_list.append(data)

@@ -851,7 +851,7 @@ def lambda_handler(event, context):
                 "distance"       : str(round(leg_distance)),
                 "log_speed"      : str(round(leg_log_speed, 1)),
                 "fuel"           : output_fuel_list,
-                "foc"            : str(round(leg_total_actual_foc, 1)),
+                "foc"            : str(round(leg_total_actual_foc)),
                 "eua"            : str_eua,
                 "cb"             : str_cb
             }

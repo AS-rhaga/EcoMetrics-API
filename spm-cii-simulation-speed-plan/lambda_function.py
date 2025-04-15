@@ -732,7 +732,7 @@ def lambda_handler(event, context):
         "avg_speed_laden"              : laden_logspeed,
         "fuel"                         : output_fuel_list,
         "distance"                     : round(float(total_ballast_laden_distance)),
-        "foc"                          : round(float(leg_total_FOC_speed), 1),
+        "foc"                          : round(float(leg_total_FOC_speed)),
     }
 
     simulation_infomation_speed_list.append(data)

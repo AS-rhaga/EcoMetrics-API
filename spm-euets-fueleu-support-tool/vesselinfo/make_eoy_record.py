@@ -571,7 +571,7 @@ def make_speed_plans_data(imo, vessel_name, year, thisyear_year_total, speed_pla
         laden_foc_per_hour = laden_foc_per_day / 24
         # FOC算出
         ballast_foc = ballast_foc_per_hour * ballast_sailing_time
-        laden_foc = laden_foc_per_hour * ballast_sailing_time
+        laden_foc = laden_foc_per_hour * laden_sailing_time
         # 航海Leg内総FOCを算出
         leg_total_actual_foc = ballast_foc + laden_foc
         leg_total_FOC_speed  = leg_total_actual_foc * leg_eu_rate / 100

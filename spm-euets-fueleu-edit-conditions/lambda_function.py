@@ -411,7 +411,7 @@ def lambda_handler(event, context):
                 # 1時間あたりのFOC算出
                 foc_per_hour = foc_per_day / 24
                 # 総FOC（表示用）を算出
-                foc_str = str(round(foc_per_hour * total_time, 1))
+                foc_str = str(foc_per_hour * total_time)
                 # 総FOC（EU Rate考慮済）を算出
                 foc = foc_per_hour * total_time * eu_rate / 100
                 print(f"foc: {(foc)}")
@@ -554,7 +554,7 @@ def lambda_handler(event, context):
                 "fuel"           : output_fuel_list,
                 "displacement"   : res_item["dispracement"]["S"],
                 "log_speed"      : res_item["log_speed"]["S"],
-                "foc"            : res_item["foc"]["S"],
+                "foc"            : str(round(float(res_item["foc"]["S"]))),
                 "eua"            : str(round(float(res_item["eua"]["S"]), 1)),
                 "cb"             : str(round(float(res_item["cb"]["S"]) / 1000000, 1))
             }

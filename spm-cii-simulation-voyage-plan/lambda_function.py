@@ -775,7 +775,7 @@ def lambda_handler(event, context):
                 # FOC算出（FOC Formulasが取得出来なかった場合は計算しない）
                 if res_foc_formulas:
                     tmp_foc = calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, total_time)
-                    foc = round(tmp_foc, 1)
+                    foc = round(tmp_foc)
                 else:
                     foc = "-"
                 

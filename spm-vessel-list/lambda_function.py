@@ -430,7 +430,7 @@ def lambda_handler(event, context):
             laden_foc_per_hour = laden_foc_per_day / 24
             # FOC算出
             ballast_foc = ballast_foc_per_hour *ballast_sailing_time
-            laden_foc = laden_foc_per_hour *ballast_sailing_time
+            laden_foc = laden_foc_per_hour *laden_sailing_time
             port_total_foc = auxiliary_equipment / 24 * port_time
             # Leg内総FOCを算出
             leg_total_FOC_speed = ballast_foc + laden_foc + port_total_foc

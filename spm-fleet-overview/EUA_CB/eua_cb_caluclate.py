@@ -735,7 +735,7 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         laden_foc_per_hour = laden_foc_per_day / 24
         # FOC算出
         ballast_foc = ballast_foc_per_hour * ballast_sailing_time
-        laden_foc = laden_foc_per_hour * ballast_sailing_time
+        laden_foc = laden_foc_per_hour * laden_sailing_time
         # Leg内総FOCを算出
         simulation_salling_foc = (ballast_foc + laden_foc) * leg_eu_rate / 100
         simulation_port_foc    = auxiliary_equipment / 24 * port_time * leg_eu_rate / 100
