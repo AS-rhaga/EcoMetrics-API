@@ -383,32 +383,40 @@ def calc_cii(imo, res_vesselmaster, res_vesselalarm):
             arrival_time_string = res_simulation_voyage[i]["arrival_time"]["S"]
             arrival_time = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
 
+            # departure_timeが来年以降のものはスキップ
+            if departure_time.year > dt_now.year:
+                print(f"来年以降なので処理スキップ→simulation_leg:{(res_simulation_voyage[i])}")
+                continue
+            
+            # start_timeを決める。
+            print(f"datetime_now{type(dt_now)}:{(dt_now)}, departure_time{type(departure_time)}:{(departure_time)}")
+            if dt_now <= departure_time:
+                start_time = departure_time
+            elif dt_now <= arrival_time:
+                start_time = dt_now
+            else:
+                # 上記以外の場合、すでに日付が過ぎているLegになるため次の要素へスキップ
+                continue
+
+            # endTimeにArrivalTimeを設定
+            if arrival_time.year == dt_now.year:
+                # ArrivalTimeが当年の場合、endTimeにArrivalTimeを設定
+                end_time = arrival_time
+            else:
+                # 来年以降の場合、今年の12月31日23:59を返す（前年以前はフロントではじくので入ってこない前提）
+                end_time = datetime(dt_now.year, 12, 31, 23, 59)
+
             # Leg航海時間算出
             leg_sailing_time = calc_time_diff(departure_time, arrival_time)
-            
-            # Legの範囲をそのまま使えるか判定
-            if departure_time >= dt_now:
+            # 現在時間からArrivalTimeまでの時間算出
+            calculated_sailing_time = calc_time_diff(start_time, end_time)
+            # Leg内航海時間との割合を算出し、その分のDistanceを切り出して使用
+            tmp_ratio = 0
+            if leg_sailing_time != 0:
+                tmp_ratio =  calculated_sailing_time / leg_sailing_time
+            calculated_distance = float(res_simulation_voyage[i]["distance"]["S"]) * tmp_ratio
 
-                # 航海時間、Distanceをそのまま使用
-                calculated_sailing_time = leg_sailing_time
-                calculated_distance = float(res_simulation_voyage[i]["distance"]["S"])
-                
-            elif arrival_time >= dt_now:
-
-                # 現在時間からArrivalTimeまでの時間算出
-                calculated_sailing_time = calc_time_diff(dt_now, arrival_time)
-                # Leg内航海時間との割合を算出し、その分のDistanceを切り出して使用
-                tmp_ratio = 0
-                if leg_sailing_time != 0:
-                    tmp_ratio =  calculated_sailing_time / leg_sailing_time
-                calculated_distance = float(res_simulation_voyage[i]["distance"]["S"]) * tmp_ratio
-
-                # print(f"imo:{imo}, kokonihairuhazu")
-                # print(f"imo:{imo}, leg_sailing_time:{leg_sailing_time}, calculated_sailing_time:{calculated_sailing_time}, tmp_ratio:{tmp_ratio}, tmpcalculated_distance:{calculated_distance},")
-
-            else:
-                # 上記以外の場合、処理不要のため次の要素へ
-                continue
+            print(f"処理するレグ(start_time:{(start_time)} end_time:{(end_time)}) → leg_total_time:{(leg_sailing_time)} leg_actual_time:{(calculated_sailing_time)}")
 
             # 総Distance（予測値）に計算用Distanceを加算
             all_distance_simulation += calculated_distance
@@ -446,6 +454,7 @@ def calc_cii(imo, res_vesselmaster, res_vesselalarm):
             foc_per_hour = foc_per_day / 24
             # Leg内総FOCを算出
             leg_total_FOC_voyage = foc_per_hour * calculated_sailing_time
+            print(f"leg_total_FOC_voyage:{(leg_total_FOC_voyage)}")
 
             # print(f"imo:{imo}, leg_total_FOC_voyage:{leg_total_FOC_voyage}, foc_per_hour:{foc_per_hour}, foc_per_day:{foc_per_day}")
 

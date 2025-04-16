@@ -224,7 +224,7 @@ def calc_foc_using_foc_formulas(foc_formulas, displacement, log_speed, total_tim
 
     # auxiliary_equipment（いつでも加算する燃料消費量）を考慮
     auxiliary_equipment = float(foc_formulas["auxiliary_equipment"]["S"])
-    print(f"auxiliary_equipment: {(auxiliary_equipment)}")
+    # print(f"auxiliary_equipment: {(auxiliary_equipment)}")
 
     alpah = calc_param_list[0]
     a = calc_param_list[1]
@@ -495,23 +495,36 @@ def lambda_handler(event, context):
                 arrival_time_string = simulation_leg["arrival_time"]["S"]
                 arrival_time = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
 
+                # departure_timeが来年以降のものはスキップ
+                if departure_time.year > datetime_now.year:
+                    print(f"来年以降なので処理スキップ(departure_time:{(departure_time)} arrival_time:{(arrival_time)})→simulation_leg:{(simulation_leg)}")
+                    continue
+
                 # start_timeを決める。
-                print(f"datetime_now{type(datetime_now)}:{(datetime_now)}, departure_time{type(departure_time)}:{(departure_time)}")
+                # print(f"datetime_now{type(datetime_now)}:{(datetime_now)}, departure_time{type(departure_time)}:{(departure_time)}")
                 if datetime_now <= departure_time:
                     start_time = departure_time
                 elif datetime_now <= arrival_time:
                     start_time = datetime_now
                 else:
                     # 上記以外の場合、すでに日付が過ぎているLegになるため次の要素へスキップ
+                    print(f"過去なので処理スキップ(departure_time:{(departure_time)} arrival_time:{(arrival_time)})→simulation_leg:{(simulation_leg)}")
                     continue
 
                 # endTimeにArrivalTimeを設定
-                end_time = arrival_time
+                if arrival_time.year == datetime_now.year:
+                    # ArrivalTimeが当年の場合、endTimeにArrivalTimeを設定
+                    end_time = arrival_time
+                else:
+                    # 来年以降の場合、今年の12月31日23:59を返す（前年以前はフロントではじくので入ってこない前提）
+                    end_time = datetime(datetime_now.year, 12, 31, 23, 59)
 
                 # DepartureTimeからArrivalTimeまでのTotalTimeを算出
                 leg_total_time = calc_time_diff(departure_time, arrival_time)
                 leg_actual_time = calc_time_diff(start_time, end_time)
-                
+
+                print(f"処理するレグ(start_time:{(start_time)} end_time:{(end_time)}) → leg_total_time:{(leg_total_time)} leg_actual_time:{(leg_actual_time)}")
+
                 # LogSpeed算出
                 log_speed= 0
                 if leg_total_time != 0:
@@ -521,7 +534,7 @@ def lambda_handler(event, context):
                 leg_time_rate = 0
                 if leg_total_time != 0:
                     leg_time_rate = leg_actual_time / leg_total_time
-                print(f"leg_time_rate:{(leg_time_rate)}")
+                # print(f"leg_time_rate:{(leg_time_rate)}")
 
                 # voyageのdistanceのうち、未来期間に航海する距離を求める。
                 actual_distance = float(simulation_leg["distance"]["S"]) * leg_time_rate
@@ -529,13 +542,13 @@ def lambda_handler(event, context):
                 # 平均値算出用処理
                 # TotalTimeをに日数に換算
                 actual_day_count = math.ceil(leg_actual_time / 24)
-                print(f"leg_actual_time:{(leg_actual_time)} actual_day_count:{(actual_day_count)}")
                 all_log_speed = log_speed * actual_day_count
                 average_data_count_log_speed += actual_day_count
                 average_log_speed_total += all_log_speed
 
                 # Leg内総FOCを算出
-                leg_total_FOC_voyage = calc_foc_using_foc_formulas(res_foc_formulas[0], simulation_leg["dispracement"]["S"], log_speed, leg_actual_time)
+                leg_total_FOC_voyage = calc_foc_using_foc_formulas(res_foc_formulas[0], simulation_leg["dispracement"]["S"], log_speed, leg_total_time)
+                print(f"leg_total_FOC_voyage:{(leg_total_FOC_voyage)}")
 
                 #Fuel取得
                 fuel_list = convertFuelOileStringToList(simulation_leg["fuel"]["S"])
@@ -547,9 +560,9 @@ def lambda_handler(event, context):
                 end_month = end_time.month
                 diff_month = end_month - start_month
 
-                print(f"start_time:{start_time}, end_time:{end_time}")
-                print(f"start_month:{start_month}, end_month:{end_month}, diff_month:{diff_month}")
-                print(f"leg_total_FOC_voyage:{leg_total_FOC_voyage}, leg_total_co2_emission:{leg_total_co2_emission}")
+                # print(f"start_time:{start_time}, end_time:{end_time}")
+                # print(f"start_month:{start_month}, end_month:{end_month}, diff_month:{diff_month}")
+                # print(f"leg_total_FOC_voyage:{leg_total_FOC_voyage}, leg_total_co2_emission:{leg_total_co2_emission}")
 
                 # ※例：start：10月、end：12月の場合、3回ループさせる。
                 for i in range(diff_month + 1):
@@ -571,7 +584,7 @@ def lambda_handler(event, context):
                         
                         caluculated_time = calc_time_diff(start_time, start_last_day_dt)
 
-                        print(f"target_month:{target_month}, start_last_day:{start_last_day}, start_last_day_dt:{start_last_day_dt}, caluculated_time:{caluculated_time}")
+                        # print(f"target_month:{target_month}, start_last_day:{start_last_day}, start_last_day_dt:{start_last_day_dt}, caluculated_time:{caluculated_time}")
 
                     elif start_month < target_month < end_month:
                         # target_monthの月末までの時間を算出
@@ -580,21 +593,21 @@ def lambda_handler(event, context):
                         target_month_farst_day_dt = datetime(start_time.year, target_month, 1, 0, 0, 0)
                         caluculated_time = calc_time_diff(target_month_farst_day_dt, target_month_last_day_dt)
 
-                        print(f"target_month:{target_month}, target_month_last_day:{target_month_last_day}, target_month_last_day_dt:{target_month_last_day_dt}, target_month_farst_day_dt: {target_month_farst_day_dt},caluculated_time:{caluculated_time}")
+                        # print(f"target_month:{target_month}, target_month_last_day:{target_month_last_day}, target_month_last_day_dt:{target_month_last_day_dt}, target_month_farst_day_dt: {target_month_farst_day_dt},caluculated_time:{caluculated_time}")
 
                     else:
                         # endTimeの月の1日からendTimeまでの時間を算出
                         end_first_day_dt = datetime(end_time.year, end_time.month, 1, 0, 0, 0)
                         caluculated_time = calc_time_diff(end_first_day_dt, end_time)
 
-                        print(f"target_month:{target_month}, end_first_day_dt:{end_first_day_dt}, caluculated_time:{caluculated_time}")
+                        # print(f"target_month:{target_month}, end_first_day_dt:{end_first_day_dt}, caluculated_time:{caluculated_time}")
                     
                     # TotalTimeと算出した時間の割合を算出
                     calc_time_rate = 0
                     if leg_total_time != 0:
                         calc_time_rate = caluculated_time / leg_total_time
 
-                    print(f"calc_time_rate:{calc_time_rate}")
+                    # print(f"calc_time_rate:{calc_time_rate}")
 
                     # 月別集計リストの該当月に加算
                     tmp_distance_voyage = float(simulation_leg["distance"]["S"]) * calc_time_rate
@@ -602,14 +615,14 @@ def lambda_handler(event, context):
                     tmp_co2_emission_voyage = leg_total_co2_emission * calc_time_rate
                     tmp_log_speed_total = log_speed * math.ceil(caluculated_time / 24)
 
-                    print(f"target_month:{target_month}, tmp_distance_voyage:{tmp_distance_voyage}, tmp_foc_voyage:{tmp_foc_voyage}, tmp_co2_emission_voyage:{tmp_co2_emission_voyage}")
+                    # print(f"target_month:{target_month}, tmp_distance_voyage:{tmp_distance_voyage}, tmp_foc_voyage:{tmp_foc_voyage}, tmp_co2_emission_voyage:{tmp_co2_emission_voyage}")
 
                     monthly_total_list[target_month - 1]["distance"] += tmp_distance_voyage
 
-                    print(f"【before】monthly_total_list[{(target_month - 1)}][foc]:{(monthly_total_list[target_month - 1]["foc"])}")
-                    print(f"tmp_foc_voyage:{(tmp_foc_voyage)}")
+                    # print(f"【before】monthly_total_list[{(target_month - 1)}][foc]:{(monthly_total_list[target_month - 1]["foc"])}")
+                    # print(f"tmp_foc_voyage:{(tmp_foc_voyage)}")
                     monthly_total_list[target_month - 1]["foc"] += tmp_foc_voyage
-                    print(f"【after】monthly_total_list[{(target_month - 1)}][foc]:{(monthly_total_list[target_month - 1]["foc"])}")
+                    # print(f"【after】monthly_total_list[{(target_month - 1)}][foc]:{(monthly_total_list[target_month - 1]["foc"])}")
 
                     monthly_total_list[target_month - 1]["co2_emission"] += tmp_co2_emission_voyage
                     monthly_total_list[target_month - 1]["log_speed_total"] += tmp_log_speed_total
