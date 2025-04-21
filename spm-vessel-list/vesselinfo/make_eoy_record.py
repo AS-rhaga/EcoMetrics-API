@@ -64,27 +64,8 @@ def make_voyage_plans_data(voyage_plan_list, res_foc_formulas, fuel_oil_type_inf
 
         # legの開始・終了時刻からlegの時間を算出する
         dt_departure_time = Util.to_datetime(str_departure_time)
-        # test_departure_time = dt_departure_time.strftime('%Y-%m-%dT%H:%M:%SZ')
         dt_arrival_time = Util.to_datetime(str_arrival_time)
-        # test_arrival_time = dt_arrival_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-        # print(f"departure_time: {(test_departure_time)}, arrival_time: {(test_arrival_time)}")     
         leg_total_time = Util.calc_time_diff(dt_departure_time, dt_arrival_time)
-
-        # 各legの期間から、反映割合を算出する
-        # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
-        if str_now <= str_departure_time:
-            print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
-            leg_part_time = leg_total_time
-
-        elif str_now <= str_arrival_time:
-            # 表示する範囲の時間を算出し、leg全体に対する割合を求める。
-            dt_time_from  = Util.to_datetime(str_now)
-            dt_time_to    = Util.to_datetime(str_arrival_time)
-            leg_part_time = Util.calc_time_diff(dt_time_from, dt_time_to)
-
-        else:
-            leg_part_time = leg_total_time
-            # 以降の処理は行わず、次のlegを確認
 
         # 各項目を取得
         distance               = float(voyage_plan["distance"]["S"])
@@ -121,7 +102,7 @@ def make_voyage_plans_data(voyage_plan_list, res_foc_formulas, fuel_oil_type_inf
             # 1時間あたりのFOC算出
             simulation_foc_per_hour = simulation_foc_per_day / 24
             # Leg内総FOCを算出
-            simulation_leg_foc = simulation_foc_per_hour * leg_part_time * eu_rate / 100
+            simulation_leg_foc = simulation_foc_per_hour * leg_total_time * eu_rate / 100
             eoy_foc += simulation_leg_foc
 
             # 燃料別消費量を算出する

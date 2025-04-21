@@ -157,7 +157,7 @@ def lambda_handler(event, context):
                 "distance"          : res_item["distance"]["S"],
                 "fuel"              : output_fuel_list,
                 "dispracement"      : res_item["dispracement"]["S"],
-                "log_speed"         : round(float(log_speed), 1),
+                "log_speed"         : str(round(float(log_speed), 1)),
                 "foc"               : str(foc),
             }
 

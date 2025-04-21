@@ -52,7 +52,6 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
     for i in range(len(voyage_plan_list)):
 
         # 変数の設定
-        leg_rate                = 0
         leg_total_time          = 0
         simulation_foc_per_day  = 0
         leg_part_time           = 0
@@ -63,43 +62,13 @@ def make_voyage_plans_data(imo, vessel_name, thisyear_year_total, voyage_plan_li
 
         # legの開始・終了時刻からlegの時間を算出する
         dt_departure_time = Util.to_datetime(str_departure_time)
-        # test_departure_time = dt_departure_time.strftime('%Y-%m-%dT%H:%M:%SZ')
         dt_arrival_time = Util.to_datetime(str_arrival_time)
-        # test_arrival_time = dt_arrival_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-        # print(f"departure_time: {(test_departure_time)}, arrival_time: {(test_arrival_time)}")     
         leg_total_time = Util.calc_time_diff(dt_departure_time, dt_arrival_time)
-
-        # 各legの期間から、反映割合を算出する
-        # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
-        if str_now <= str_departure_time:
-            print(f"str_now:{str_now}, departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
-            leg_rate              = 1
-
-        elif str_now <= str_arrival_time:
-            print(f"str_now:{str_now}, departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは現在進行中")
-            # 表示する範囲の時間を算出し、leg全体に対する割合を求める。
-            dt_time_from  = Util.to_datetime(str_now)
-            dt_time_to    = Util.to_datetime(str_arrival_time)
-            leg_part_time = Util.calc_time_diff(dt_time_from, dt_time_to)
-
-            leg_rate = 0
-            if leg_total_time != 0:
-                leg_rate = float(leg_part_time / leg_total_time)
-
-            # 割合を考慮した時間で上書き
-            leg_total_time = leg_part_time
-
-        else:
-            print("このレグは範囲外")
-            print(f"str_now:{str_now}, departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
-            # 以降の処理は行わず、次のlegを確認
-            continue
 
         # 各項目を取得
         operator     = voyage_plan_list[i]["operator"]["S"]
         displacement = voyage_plan_list[i]["dispracement"]["S"]
-        leg_distance = float(voyage_plan_list[i]["distance"]["S"]) * leg_rate
-        print(f"voyage_plan_list[i][distance][S]:{(voyage_plan_list[i]["distance"]["S"])}, leg_rate:{(leg_rate)}, leg_distance:{(leg_distance)}")
+        leg_distance = float(voyage_plan_list[i]["distance"]["S"])
         leg_eu_rate  = int(voyage_plan_list[i]["eu_rate"]["S"])
 
         # log_speedを算出

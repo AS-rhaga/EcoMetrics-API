@@ -358,8 +358,6 @@ def lambda_handler(event, context):
     FOCFormulas  = []
     FuelOilList  = []
     VesselList   = []
-    SimulationInformationVoyageList = []
-    SimulationInformationSpeedList  = []
     EUAList_YeartoDate = []
     CBList_YeartoDate  = []
     EUAList_Simulation = []
@@ -561,7 +559,6 @@ def lambda_handler(event, context):
     for i in range(len(res_simulation)):
 
         # 変数の設定
-        leg_rate                = 0
         leg_total_time          = 0
         simulation_leg_lng      = 0
         simulation_leg_hfo      = 0
@@ -573,9 +570,6 @@ def lambda_handler(event, context):
         simulation_leg_lpg_b    = 0
         simulation_leg_methanol = 0
         simulation_foc_per_day  = 0
-        return_departure_time   = ""
-        return_arrival_time     = ""
-        return_leg_total_time   = 0
 
         # Leg No 取得
         tmp_text = res_simulation[i]["year_and_serial_number"]["S"]
@@ -587,51 +581,18 @@ def lambda_handler(event, context):
 
         # legの開始・終了時刻からlegの時間を算出する
         dt_departure_time = Util.to_datetime(str_departure_time)
-        # test_departure_time = dt_departure_time.strftime('%Y-%m-%dT%H:%M:%SZ')
         dt_arrival_time = Util.to_datetime(str_arrival_time)
-        # test_arrival_time = dt_arrival_time.strftime('%Y-%m-%dT%H:%M:%SZ')
-        # print(f"departure_time: {(test_departure_time)}, arrival_time: {(test_arrival_time)}")     
         leg_total_time = Util.calc_time_diff(dt_departure_time, dt_arrival_time)
-
-        # 各legの期間から、反映割合を算出する
-        # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
-        leg_part_time = leg_total_time
-        if str_now <= str_departure_time:
-            print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
-            return_departure_time = str_departure_time
-            return_arrival_time   = str_arrival_time
-            return_leg_total_time = leg_total_time
-
-        elif str_now <= str_arrival_time:
-            print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは現在進行中")
-            # 表示する範囲の時間を算出し、leg全体に対する割合を求める。
-            dt_time_from  = Util.to_datetime(str_now)
-            dt_time_to    = Util.to_datetime(str_arrival_time)
-            leg_part_time = Util.calc_time_diff(dt_time_from, dt_time_to)
-
-            return_departure_time = str_now
-            return_arrival_time   = str_arrival_time
-            return_leg_total_time = leg_part_time
-
-        else:
-            print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
-            # 以降の処理は行わず、次のlegを確認
-            continue
-
-        leg_rate = 0
-        if leg_total_time != 0:
-            leg_rate = float(leg_part_time / leg_total_time)
-        print(f"leg_rate:{(leg_rate)} leg_part_time:{(leg_part_time)} leg_total_time:{(leg_total_time)}")
 
         # 各項目を取得し、必要項目にはleg_rateを反映する
         displacement           = res_simulation[i]["dispracement"]["S"]
-        leg_distance           = float(res_simulation[i]["distance"]["S"]) * leg_rate
+        leg_distance           = float(res_simulation[i]["distance"]["S"])
         simulation_leg_eu_rate = int(res_simulation[i]["eu_rate"]["S"])
 
         # log_speedを算出
         leg_log_speed = 0
-        if return_leg_total_time != 0:
-            leg_log_speed = leg_distance / return_leg_total_time
+        if leg_total_time != 0:
+            leg_log_speed = leg_distance / leg_total_time
 
         # FOC Formulasがある場合
         if res_foc_formulas:
@@ -659,8 +620,7 @@ def lambda_handler(event, context):
             # 1時間あたりのFOC算出
             simulation_foc_per_hour = simulation_foc_per_day / 24
             # Leg内総FOCを算出
-            leg_total_actual_foc = simulation_foc_per_hour * return_leg_total_time
-            simulation_leg_foc   = leg_total_actual_foc * simulation_leg_eu_rate / 100
+            leg_total_actual_foc = simulation_foc_per_hour * leg_total_time
 
             # 燃料別消費量を算出する
             output_fuel_list = []
@@ -833,99 +793,9 @@ def lambda_handler(event, context):
             }
             SimulationResultUnit.append(simulation_result_data)
 
-            # Voyage Planのシミュレーション用データ
-            str_eua = str(round(simulation_leg_eua, 1))
-            str_cb  = str(round(float(simulation_leg_cb) / 1000000, 1))
-            print(f"str_cb:{(str_cb)} simulation_leg_cb:{(simulation_leg_cb)}")
-
-            simulation_data = {
-                "leg_no"         : leg_no,
-                "departure_port" : res_simulation[i]["departure_port"]["S"], 
-                "departure_time" : return_departure_time,
-                "arrival_port"   : res_simulation[i]["arrival_port"]["S"], 
-                "arrival_time"   : return_arrival_time,
-                "total_time"     : str(return_leg_total_time),
-                "eu_rate"        : str(round(simulation_leg_eu_rate)),
-                "displacement"   : res_simulation[i]["dispracement"]["S"],
-                "operator"       : res_simulation[i]["operator"]["S"],
-                "distance"       : str(round(leg_distance)),
-                "log_speed"      : str(round(leg_log_speed, 1)),
-                "fuel"           : output_fuel_list,
-                "foc"            : str(round(leg_total_actual_foc)),
-                "eua"            : str_eua,
-                "cb"             : str_cb
-            }
-            SimulationInformation_VoyageList.append(simulation_data)
-
-        # FOC Formulasが無い場合
-        else:
-            # 燃料リストを整形する
-            output_fuel_list = []
-            fuel_list = convertFuelOileStringToList(res_simulation[i]["fuel"]["S"]) 
-
-            for fuel in fuel_list:
-                fuel_info_list = fuel.split(',')
-                fuel_type = fuel_info_list[0]
-                fuel_rate = int(fuel_info_list[1])
-
-                # 表示用fuel_listに追加
-                output_fuel = {
-                    "fuel_type" : fuel_type,
-                    "fuel_rate" : fuel_rate,
-                }
-                output_fuel_list.append(output_fuel)
-
-            simulation_data = {
-                "leg_no"         : leg_no,
-                "departure_port" : res_simulation[0]["departure_port"]["S"], 
-                "departure_time" : return_departure_time,
-                "arrival_port"   : res_simulation[0]["arrival_port"]["S"], 
-                "arrival_time"   : return_arrival_time,
-                "total_time"     : str(return_leg_total_time),
-                "eu_rate"        : str(round(simulation_leg_eu_rate)),
-                "displacement"   : res_simulation[0]["displacement"]["S"],
-                "operator"       : res_simulation[i]["operator"]["S"],
-                "distance"       : str(round(leg_distance)),
-                "log_speed"      : str(round(leg_log_speed, 1)),
-                "fuel"           : output_fuel_list,
-                "foc"            : "",
-                "eua"            : "",
-                "cb"             : ""
-            }
-            SimulationInformation_VoyageList.append(simulation_data)
-
     # ---------- res_simulationループ終了 ---------
 
     print(f"EUAList_Simulation:{(EUAList_Simulation)}")
-
-    # leg_noでソート
-    SimulationInformation_VoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["leg_no"])
-
-    print(f"CBList_Simulation:{(CBList_Simulation)}")
-    print(f"SimulationInformation_VoyageList:{(SimulationInformation_VoyageList)}")
-
-    # 通番を設定する
-    num = 0
-    for data in SimulationInformation_VoyageList:
-        num += 1
-        list_data = {
-            "leg_no"         : "E" + str(num),
-            "departure_port" : data["departure_port"], 
-            "departure_time" : data["departure_time"],
-            "arrival_port"   : data["arrival_port"],
-            "arrival_time"   : data["arrival_time"],
-            "total_time"     : data["total_time"],
-            "eu_rate"        : data["eu_rate"],
-            "displacement"   : data["displacement"],
-            "operator"       : data["operator"],
-            "distance"       : data["distance"],
-            "log_speed"      : data["log_speed"],
-            "fuel"           : data["fuel"],
-            "foc"            : data["foc"],
-            "eua"            : data["eua"],
-            "cb"             : data["cb"],
-        }    
-        SimulationInformationVoyageList.append(list_data)
 
     # 返却値を作成していく。
     # Total CBの算出
@@ -1077,8 +947,6 @@ def lambda_handler(event, context):
         "VesselList"                        : VesselList,
         "FuelOilList"                       : FuelOilList,
         "FOCFormulas"                       : foc_formulas,
-        "SimulationInformationVoyageList"   : SimulationInformationVoyageList,
-        "SimulationInformationSpeedList"    : SimulationInformationSpeedList,
         "EUAList"                           : EUA_graph_data,
         "CBList_YeartoDate"                 : CBList_YeartoDate,
         "CBList_Simulation"                 : CBList_Simulation,

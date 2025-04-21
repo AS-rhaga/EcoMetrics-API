@@ -712,126 +712,6 @@ def lambda_handler(event, context):
         foc_formulas["ME_Laden"] = ast.literal_eval(res_foc_formulas[0]["me_laden"]["S"])
         foc_formulas["AuxiliryEquipment"] = ast.literal_eval(res_foc_formulas[0]["auxiliary_equipment"]["S"])
 
-    # SimulationList
-    simulation_infomation_voyage_list = []
-    simulation_infomation_speed_list = []
-
-    if res_simulation:
-        # Simulationテーブルが取得出来た場合
-        
-        if plan == "Voyage":
-            # Voyageの場合
-
-            tmp_simulation_infomation_voyage_list = []
-
-            for item in res_simulation:
-
-                # Leg No 取得
-                tmp_text = item["year_and_serial_number"]["S"]
-                leg_no = int(tmp_text.split("E")[1])  # 'E' 以降を抽出
-
-                # total time算出
-                # DepartureTime取得
-                departure_time_string = item["departure_time"]["S"]
-                departure_time = datetime.strptime(departure_time_string, "%Y/%m/%d %H:%M")
-
-                # ArrivalTime取得
-                arrival_time_string = item["arrival_time"]["S"]
-                arrival_time = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
-
-                # Leg航海時間算出
-                total_time = calc_time_diff(departure_time, arrival_time)
-
-                # start_timeを決める。
-                if datetime_now <= departure_time:
-                    start_time = departure_time
-                elif datetime_now <= arrival_time:
-                    start_time = datetime_now
-                else:
-                    # 上記以外の場合、すでに日付が過ぎているLegになるため次の要素へスキップ
-                    continue
-
-                # endTimeにArrivalTimeを設定
-                end_time = arrival_time
-
-                # DepartureTimeからArrivalTimeまでのTotalTimeを算出
-                voyage_total_time = calc_time_diff(departure_time, arrival_time)
-                total_time = calc_time_diff(start_time, end_time)
-                # Leg内航海時間との割合を算出し、その分のDistanceを切り出して使用
-                tmp_ratio = 0
-                if voyage_total_time != 0:
-                    tmp_ratio =  total_time / voyage_total_time
-                calculated_distance = float(item["distance"]["S"]) * tmp_ratio
-                print(f"calculated_distance:{(calculated_distance)} item[distance][S]:{(item["distance"]["S"])} tmp_ratio:{(tmp_ratio)}")
-
-                # Log Speed算出
-                log_speed = 0
-                if total_time != 0:
-                    log_speed = float(item["distance"]["S"]) / voyage_total_time
-
-                # fuel
-                output_fuel_list = []
-                fuel_list = convertFuelOileStringToList(item["fuel"]["S"])
-
-                for fuel in fuel_list:
-                    print(f"fuel:{fuel}")
-                    fuel_info_list = fuel.split(',')
-                    print(f"fuel_info_list:{fuel_info_list}")
-
-                    output_fuel = {
-                        "fuel_type" : fuel_info_list[0],
-                        "fuel_rate" : fuel_info_list[1],
-                    }
-
-                    output_fuel_list.append(output_fuel)
-
-
-                # FOC算出（FOC Formulasが取得出来なかった場合は計算しない）
-                if res_foc_formulas:
-                    tmp_foc = calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, total_time)
-                    foc = round(tmp_foc)
-                else:
-                    foc = "-"
-                
-                print(f"start_time{type(start_time)}:{(start_time)}")
-                data = {
-                    "leg_no"            : leg_no,
-                    "departure_port"    : item["departure_port"]["S"],
-                    "departure_time"    : start_time.strftime('%Y/%m/%d %H:%M'),
-                    "arrival_port"      : item["arrival_port"]["S"],
-                    "arrival_time"      : item["arrival_time"]["S"],
-                    "total_time"        : str(total_time),
-                    "distance"          : str(round(calculated_distance)),
-                    "fuel"              : output_fuel_list,
-                    "dispracement"      : item["dispracement"]["S"],
-                    "log_speed"         : str(round(log_speed, 1)),
-                    "foc"               : str(foc),
-                }
-
-                tmp_simulation_infomation_voyage_list.append(data)
-            
-            # Leg Noでソート
-            tmp_simulation_infomation_voyage_list_sorted = sorted(tmp_simulation_infomation_voyage_list, key=lambda x: x['leg_no'])
-
-            # 通番を設定する
-            num = 0
-            for voyage_data in tmp_simulation_infomation_voyage_list_sorted:
-                num += 1
-                data = {
-                    "leg_no"            : str(num),
-                    "departure_port"    : voyage_data["departure_port"],
-                    "departure_time"    : voyage_data["departure_time"],
-                    "arrival_port"      : voyage_data["arrival_port"],
-                    "arrival_time"      : voyage_data["arrival_time"],
-                    "total_time"        : voyage_data["total_time"],
-                    "distance"          : voyage_data["distance"],
-                    "fuel"              : voyage_data["fuel"],
-                    "dispracement"      : voyage_data["dispracement"],
-                    "log_speed"         : voyage_data["log_speed"],
-                    "foc"               : voyage_data["foc"],
-                }
-                simulation_infomation_voyage_list.append(data)
-
     # グラフエリアに表示する情報
     total_ciiscorelist_yeartodate = []
     total_ciiscorelist_simulation = []
@@ -911,8 +791,6 @@ def lambda_handler(event, context):
         "VESSELMASTER"                      : vessel_master,
         "FuelOilList"                       : fuel_oil_list,
         "FOCFormulas"                       : foc_formulas, 
-        "SimulationInformationVoyageList"   : simulation_infomation_voyage_list,
-        "SimulationInformationLogSpeedList" : simulation_infomation_speed_list,
         "TotalCiiScoreList_YeartoDate"      : total_ciiscorelist_yeartodate,
         "TotalCiiScoreList_Simulation"      : total_ciiscorelist_simulation,
         "MonthlyCiiScoreList_YeartoDate"    : monthly_ciiscorelist_yeartodate,

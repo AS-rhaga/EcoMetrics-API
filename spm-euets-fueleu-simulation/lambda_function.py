@@ -582,9 +582,6 @@ def lambda_handler(event, context):
             simulation_leg_lpg_b    = 0
             simulation_leg_methanol = 0
             simulation_foc_per_day  = 0
-            return_departure_time   = ""
-            return_arrival_time     = ""
-            return_leg_total_time   = 0
 
             # Leg No 取得
             tmp_text = res_simulation[i]["year_and_serial_number"]["S"]
@@ -602,55 +599,17 @@ def lambda_handler(event, context):
             # print(f"departure_time: {(test_departure_time)}, arrival_time: {(test_arrival_time)}")     
             leg_total_time = Util.calc_time_diff(dt_departure_time, dt_arrival_time)
 
-            # 各legの期間から、反映割合を算出する
-            # リスト項目の時刻はlocal時刻。UTCと比較してもJTCと比較しても多少ズレる
-            print(f"str_now:{str_now}")
-            print(f"str_departure_time:{str_departure_time}")
-            print(f"dt_departure_time:{dt_departure_time}")
-            leg_part_time = leg_total_time
-            if str_now <= str_departure_time:
-                print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完全に先時刻")
-                return_departure_time = str_departure_time
-                return_arrival_time   = str_arrival_time
-                return_leg_total_time = leg_total_time
-
-            elif str_now <= str_arrival_time:
-                print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは現在進行中")
-                # 表示する範囲の時間を算出し、leg全体に対する割合を求める。
-                dt_time_from  = Util.to_datetime(str_now)
-                dt_time_to    = Util.to_datetime(str_arrival_time)
-                leg_part_time = Util.calc_time_diff(dt_time_from, dt_time_to)
-
-                return_departure_time = str_now
-                return_arrival_time   = str_arrival_time
-                return_leg_total_time = leg_part_time
-
-            else:
-                print(f"departure_time: {(str_departure_time)}, arrival_time: {(str_arrival_time)} → このlegは完結済")
-                # 以降の処理は行わず、次のlegを確認
-                continue
-
-            leg_rate = 0
-            if leg_total_time != 0:
-                leg_rate = float(leg_part_time / leg_total_time)
-            print(f"leg_rate:{(leg_rate)} leg_part_time:{(leg_part_time)} leg_total_time:{(leg_total_time)}")
-
-
             # 各項目を取得し、必要項目にはleg_rateを反映する
             displacement           = res_simulation[i]["dispracement"]["S"]
-            leg_distance           = float(res_simulation[i]["distance"]["S"]) * leg_rate
+            leg_distance           = float(res_simulation[i]["distance"]["S"])
             print(f"res_simulation[{(i)}][distance][S]:{(res_simulation[i]["distance"]["S"])} leg_rate:{(leg_rate)} leg_distance:{(leg_distance)}")
             simulation_leg_eu_rate = int(res_simulation[i]["eu_rate"]["S"])
 
-            print(f"leg_distance:{leg_distance}")
-
             # log_speedを算出
             leg_log_speed = 0
-            if return_leg_total_time != 0:
-                leg_log_speed = leg_distance / return_leg_total_time
-            print(f"return_leg_total_time:{return_leg_total_time}")
-            print(f"leg_log_speed:{leg_log_speed}")
-
+            if leg_total_time != 0:
+                leg_log_speed = leg_distance / leg_total_time
+            print(f"leg_log_speed:{leg_log_speed} leg_distance:{leg_distance} leg_total_time:{leg_total_time}")
 
             # FOC Formulasがある場合
             if res_foc_formulas:
@@ -678,8 +637,7 @@ def lambda_handler(event, context):
                 # 1時間あたりのFOC算出
                 simulation_foc_per_hour = simulation_foc_per_day / 24
                 # Leg内総FOCを算出
-                leg_total_actual_foc = simulation_foc_per_hour * return_leg_total_time
-                simulation_leg_foc   = leg_total_actual_foc * simulation_leg_eu_rate / 100
+                leg_total_actual_foc = simulation_foc_per_hour * leg_total_time
 
                 # 燃料別消費量を算出する
                 output_fuel_list = []
@@ -854,14 +812,14 @@ def lambda_handler(event, context):
                 simulation_data = {
                     "leg_no"         : leg_no,
                     "departure_port" : res_simulation[i]["departure_port"]["S"], 
-                    "departure_time" : return_departure_time,
+                    "departure_time" : res_simulation[i]["departure_time"]["S"],
                     "arrival_port"   : res_simulation[i]["arrival_port"]["S"], 
-                    "arrival_time"   : return_arrival_time,
-                    "total_time"     : str(return_leg_total_time),
+                    "arrival_time"   : res_simulation[i]["arrival_time"]["S"],
+                    "total_time"     : str(leg_total_time),
                     "eu_rate"        : str(simulation_leg_eu_rate),
                     "displacement"   : res_simulation[i]["dispracement"]["S"],
                     "operator"       : res_simulation[i]["operator"]["S"],
-                    "distance"       : str(round(leg_distance)),
+                    "distance"       : res_simulation[i]["distance"]["S"],
                     "log_speed"      : str(round(leg_log_speed, 1)),
                     "fuel"           : output_fuel_list,
                     "foc"            : str(round(leg_total_actual_foc)),
@@ -891,14 +849,14 @@ def lambda_handler(event, context):
                 simulation_data = {
                     "leg_no"         : leg_no,
                     "departure_port" : res_simulation[i]["departure_port"]["S"], 
-                    "departure_time" : return_departure_time,
+                    "departure_time" : res_simulation[i]["departure_time"]["S"],
                     "arrival_port"   : res_simulation[i]["arrival_port"]["S"], 
-                    "arrival_time"   : return_arrival_time,
-                    "total_time"     : str(return_leg_total_time),
+                    "arrival_time"   : res_simulation[i]["arrival_time"]["S"],
+                    "total_time"     : str(leg_total_time),
                     "eu_rate"        : str(simulation_leg_eu_rate),
                     "displacement"   : res_simulation[i]["displacement"]["S"],
                     "operator"       : res_simulation[i]["operator"]["S"],
-                    "distance"       : str(round(leg_distance)),
+                    "distance"       : res_simulation[i]["distance"]["S"],
                     "log_speed"      : str(round(leg_log_speed, 1)),
                     "fuel"           : output_fuel_list,
                     "foc"            : "",
@@ -910,34 +868,11 @@ def lambda_handler(event, context):
         # ---------- res_simulationループ終了 ---------
 
         # departure timeでソート
-        SimulationInformation_VoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["leg_no"])
+        SimulationInformationVoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["leg_no"])
 
-        # 通番を設定する
-        num = 0
-        for data in SimulationInformation_VoyageList:
-            
-            print(f"data[distance]:{data["distance"]}")
-
-
-            num += 1
-            list_data = {
-                "leg_no"         : "E" + str(num),
-                "departure_port" : data["departure_port"], 
-                "departure_time" : data["departure_time"],
-                "arrival_port"   : data["arrival_port"],
-                "arrival_time"   : data["arrival_time"],
-                "total_time"     : data["total_time"],
-                "eu_rate"        : data["eu_rate"],
-                "displacement"   : data["displacement"],
-                "operator"       : data["operator"],
-                "distance"       : data["distance"],
-                "log_speed"      : data["log_speed"],
-                "fuel"           : data["fuel"],
-                "foc"            : data["foc"],
-                "eua"            : data["eua"],
-                "cb"             : data["cb"],
-            }    
-            SimulationInformationVoyageList.append(list_data)
+        # LEG NO.に "E" をつける
+        for data in SimulationInformationVoyageList:
+            data["leg_no"] = "E" + str(data["leg_no"])
     
     # 表示画面がSpeed Planの場合
     else:

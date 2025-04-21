@@ -861,6 +861,7 @@ def lambda_handler(event, context):
         if plan == "Voyage":
             # Voyageの場合
 
+            # リスト表示用。シミュレーション対象かに関わらず、登録されているものをそのまま表示する。
             tmp_simulation_infomation_voyage_list = []
 
             for item in res_simulation:
@@ -878,35 +879,13 @@ def lambda_handler(event, context):
                 arrival_time_string = item["arrival_time"]["S"]
                 arrival_time = datetime.strptime(arrival_time_string, "%Y/%m/%d %H:%M")
 
-                # start_timeを決める。
-                if datetime_now <= departure_time:
-                    start_time = departure_time
-                elif datetime_now <= arrival_time:
-                    start_time = datetime_now
-                else:
-                    # 上記以外の場合、すでに日付が過ぎているLegになるため次の要素へスキップ
-                    continue
-
-                # endTimeにArrivalTimeを設定
-                end_time = arrival_time
-
                 # DepartureTimeからArrivalTimeまでのTotalTimeを算出
                 voyage_total_time = calc_time_diff(departure_time, arrival_time)
-                total_time = calc_time_diff(start_time, end_time)
-                # Leg内航海時間との割合を算出し、その分のDistanceを切り出して使用
-                tmp_ratio = 0
-                if voyage_total_time != 0:
-                    tmp_ratio =  total_time / voyage_total_time
-                calculated_distance = float(item["distance"]["S"]) * tmp_ratio
-                print(f"calculated_distance:{(calculated_distance)} item[distance][S]:{(item["distance"]["S"])} tmp_ratio:{(tmp_ratio)}")
-
-                # # Leg航海時間算出
-                # total_time = calc_time_diff(departure_time, arrival_time)
 
                 # Log Speed算出
                 log_speed = 0
-                if total_time != 0:
-                    log_speed = calculated_distance / total_time
+                if voyage_total_time != 0:
+                    log_speed = float(item["distance"]["S"]) / voyage_total_time
 
                 # fuel
                 output_fuel_list = []
@@ -927,18 +906,18 @@ def lambda_handler(event, context):
 
                 # FOC算出（FOC Formulasが取得出来なかった場合は計算しない）
                 if res_foc_formulas:
-                    foc = round(float(calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, total_time)))
+                    foc = round(float(calc_foc_using_foc_formulas(res_foc_formulas[0], item["dispracement"]["S"], log_speed, voyage_total_time)))
                 else:
                     foc = "-"
                 
                 data = {
                     "leg_no"            : leg_no,
                     "departure_port"    : item["departure_port"]["S"],
-                    "departure_time"    : start_time.strftime('%Y/%m/%d %H:%M'),
+                    "departure_time"    : item["departure_time"]["S"],
                     "arrival_port"      : item["arrival_port"]["S"],
                     "arrival_time"      : item["arrival_time"]["S"],
-                    "total_time"        : str(total_time),
-                    "distance"          : str(round(calculated_distance)),
+                    "total_time"        : str(voyage_total_time),
+                    "distance"          : item["distance"]["S"],
                     "fuel"              : output_fuel_list,
                     "dispracement"      : item["dispracement"]["S"],
                     "log_speed"         : str(round(log_speed, 1)),
@@ -947,28 +926,9 @@ def lambda_handler(event, context):
 
                 tmp_simulation_infomation_voyage_list.append(data)
             
-            # departure timeでソート
+            # leg_noでソート
             print(f"tmp_simulation_infomation_voyage_list:{(tmp_simulation_infomation_voyage_list)}")
-            tmp_simulation_infomation_voyage_list_sorted = sorted(tmp_simulation_infomation_voyage_list, key=lambda x: x['leg_no'])
-
-            # 通番を設定する
-            num = 0
-            for voyage_data in tmp_simulation_infomation_voyage_list_sorted:
-                num += 1
-                data = {
-                    "leg_no"            : str(num),
-                    "departure_port"    : voyage_data["departure_port"],
-                    "departure_time"    : voyage_data["departure_time"],
-                    "arrival_port"      : voyage_data["arrival_port"],
-                    "arrival_time"      : voyage_data["arrival_time"],
-                    "total_time"        : voyage_data["total_time"],
-                    "distance"          : voyage_data["distance"],
-                    "fuel"              : voyage_data["fuel"],
-                    "dispracement"      : voyage_data["dispracement"],
-                    "log_speed"         : voyage_data["log_speed"],
-                    "foc"               : voyage_data["foc"],
-                }
-                simulation_infomation_voyage_list.append(data)
+            simulation_infomation_voyage_list = sorted(tmp_simulation_infomation_voyage_list, key=lambda x: x['leg_no'])
 
         else:
             # 上記以外の場合（Speedの場合）
