@@ -14,20 +14,18 @@ from vesselinfo import make_eoy_record
 def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
 
     # 必要な変数・リストを作成
-    last_year = 0
     voyage_flag = "0"
     speed_flag  = "0"
     penalty_factor = 1.0
 
-    thisyear_year_total_list = []
     operator_total_list      = []
     ytd_dataset_list         = []
 
     # 返却用データセット
     record_data_list = []
 
-    # imoのみをキーに、year-totalリストを取得
-    total_year_total_list = select.get_year_total_by_imo(imo)
+    # imoとyear（現在年）をキーに、year-totalリストを取得
+    total_year_total_list = select.get_year_total_by_year(imo, year)
 
     # FOCFormulas取得
     res_foc_formulas = select.get_foc_formulas(imo)
@@ -50,13 +48,6 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
     ytd_exist_speed_list      = []
     ytd_not_exist_speed_list  = []
 
-    # 同一imoのyear-totalリストでループ
-    for year_rec in total_year_total_list:
-
-        # 処理対象年のレコードを抽出。
-        if year_rec["year_and_ope"]["S"][0:4] == year:
-            thisyear_year_total_list.append(year_rec)
-
     # 各種燃料の消費量と、消費エネルギーの合計値用変数を設定する。
     ytd_lng    = 0
     ytd_hfo    = 0
@@ -66,69 +57,12 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
     energy     = 0
 
     # 今年分のyear-totalレコード分ループ
-    for rec in thisyear_year_total_list:
+    for rec in total_year_total_list:
 
         # オペレータ
         operator = rec["year_and_ope"]["S"][4:50]
-        
-        # 昨年分のレコードを入れるリスト
-        last_year_rec = []
 
         print(f"total_year_total_list:{total_year_total_list}")
-        # 同一imoのyear-totalリストでループ
-        for year_rec in total_year_total_list:
-
-            tmp_operator = year_rec["year_and_ope"]["S"][4:50]
-
-            # 同一オペレータのレコードを抽出
-            if tmp_operator == operator:
-                operator_total_list.append(year_rec)
-
-                # 西暦部分の確認、昨年のレコードであれば保持しておく。
-                tmp_year = year_rec["year_and_ope"]["S"][0:4]
-                if tmp_year == str(int(year) - 1):
-                    last_year_rec = year_rec
-
-        operator_total_list = sorted(operator_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-        # 連続罰金年数カウンターを設定
-        consecutive_years = 0
-        year_count = 0
-
-        for operator_rec in operator_total_list:
-            
-            # 先頭要素はスキップ（先頭要素は今年のレコード、前年以前を見たいため、スキップで良い）
-            if year_count == 0:
-                year_count += 1
-                continue
-
-            # １年ずつさかのぼる（年が飛んだ時点で確認不要のためbreak）
-            if operator_rec["year_and_ope"]["S"][0:4] == str(int(year) - year_count):
-                # 罰金フラグの確認
-                fine_flag = operator_rec["fine_flag"]["S"]
-
-                if fine_flag == "1":
-                    consecutive_years += 1
-                else:
-                    break
-            else:
-                break
-            
-            year_count += 1
-
-
-        # オペレーター別リストの中に昨年のレコードがあるかを確認する
-        last_year = 0
-        if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
-
-            if last_year_borrowing > 0:
-                last_year = last_year_borrowing * (-1.1)
-            elif last_year_banking > 0:
-                last_year = last_year_banking
-            else:
-                last_year = 0
 
         # オペレーター別リストの今年のレコードから各項目を取得
 
@@ -143,8 +77,6 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"]) if "banking" in rec and rec["banking"]["S"] != "" else 0
-        borrowing = float(rec["borrowing"]["S"]) if "borrowing"in rec and rec["borrowing"]["S"] != "" else 0
 
         # EUAからEUA costを算出する
         eua_cost  = round(eua) * int(eua_price)
@@ -154,28 +86,11 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         energy     = calculate_function.calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
 
         # 必要な計算を行う
-        total_cb        = cb - borrowing + banking + last_year
-        penalty_factor  = (consecutive_years) / 10 + 1
-        print(f"penalty_factor:{penalty_factor}")
-        print(f"consecutive_years:{consecutive_years}")
+        total_cb        = cb
 
         cb_cost = 0
-        if total_cb >= 0:
-            cb_cost = 0
-        else:
-            # CBコストの算出場合分け
-            if last_year >= 0:
-                cb_cost    = abs(float(total_cb)) * 2400 / (GHG_Actual * 41000) * penalty_factor
-            else:
-                # 昨年分のGHG強度を算出
-                last_year_lng   = float(last_year_rec["total_lng"]["S"]) if "total_lng" in last_year_rec and last_year_rec["total_lng"]["S"] != "" else 0
-                last_year_hfo   = float(last_year_rec["total_hfo"]["S"]) if "total_hfo" in last_year_rec and last_year_rec["total_hfo"]["S"] != "" else 0
-                last_year_lfo   = float(last_year_rec["total_lfo"]["S"]) if "total_lfo" in last_year_rec and last_year_rec["total_lfo"]["S"] != "" else 0
-                last_year_mdo   = float(last_year_rec["total_mdo"]["S"]) if "total_mdo" in last_year_rec and last_year_rec["total_mdo"]["S"] != "" else 0
-                last_year_mgo   = float(last_year_rec["total_mgo"]["S"]) if "total_mgo" in last_year_rec and last_year_rec["total_mgo"]["S"] != "" else 0
-
-                GHG_last_year   = calculate_function.calc_GHG_Actual(0, last_year_lng, 0, last_year_hfo, last_year_lfo, last_year_mdo, last_year_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-                cb_cost         = abs(float(total_cb)) * 2400 / (GHG_last_year * 41000) * penalty_factor
+        if total_cb < 0 and GHG_Actual != 0:
+            cb_cost    = abs(float(total_cb)) * 2400 / (GHG_Actual * 41000) 
 
         ytd_dataset = {
             "imo"            : imo,
@@ -352,8 +267,8 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
                     "ytd_foc"            : "0",
                     "ytd_eua"            : "0",
                     "ytd_eua_cost"       : "0",
-                    "ytd_cb"             : round(float(eoy_vessel_data_list[i]["last_year"]) / 1000000, 1),
-                    "ytd_cb_cost"        : round(float(eoy_vessel_data_list[i]["last_year_cost"])),
+                    "ytd_cb"             : "0",
+                    "ytd_cb_cost"        : "0",
                     "eoy_distance"       : round(eoy_vessel_data_list[i]["eoy_distance"]),
                     "eoy_foc"            : round(eoy_vessel_data_list[i]["eoy_foc"]),
                     "eoy_eua"            : round(eoy_vessel_data_list[i]["eoy_eua"]),
@@ -377,8 +292,8 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
             "ytd_foc"            : "0",
             "ytd_eua"            : "0",
             "ytd_eua_cost"       : "0",
-            "ytd_cb"             : round(float(eoy_vessel_data["last_year"]) / 1000000, 1),
-            "ytd_cb_cost"        : round(float(eoy_vessel_data["last_year_cost"])),
+            "ytd_cb"             : "0",
+            "ytd_cb_cost"        : "0",
             "eoy_distance"       : round(eoy_vessel_data["eoy_distance"]),
             "eoy_foc"            : round(eoy_vessel_data["eoy_foc"]),
             "eoy_eua"            : round(eoy_vessel_data["eoy_eua"]),
@@ -414,86 +329,18 @@ def make_recoed(eua_price, imo, year, fuel_oil_type_list, vessel_master):
 def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
 
     # 必要な変数・リストを作成
-    last_year = 0
-
-    thisyear_year_total_list = []
-    operator_total_list      = []
-
     # 返却用データセット
     record_data_list = []
 
-    # imoのみをキーに、year-totalリストを取得
-    total_year_total_list = select.get_year_total_by_imo(imo)
-
-    # 同一imoのyear-totalリストでループ
-    for year_rec in total_year_total_list:
-
-        if year_rec["year_and_ope"]["S"][0:4] == year:
-            thisyear_year_total_list.append(year_rec)
+    # imoとyear（現在年）をキーに、year-totalリストを取得
+    total_year_total_list = select.get_year_total_by_year(imo, year)
 
     # 今年分のyear-totalレコード分ループ
-    for rec in thisyear_year_total_list:
+    for rec in total_year_total_list:
 
         operator = rec["year_and_ope"]["S"][4:50]
 
-        # 昨年分のレコードを入れるリスト
-        last_year_rec = []
-
         print(f"total_year_total_list:{total_year_total_list}")
-        # 同一imoのyear-totalリストでループ
-        for year_rec in total_year_total_list:
-
-            tmp_operator = year_rec["year_and_ope"]["S"][4:50]
-
-            # 同一オペレータのレコードを抽出
-            if tmp_operator == operator:
-                operator_total_list.append(year_rec)
-
-                # 西暦部分の確認、昨年のレコードであれば保持しておく。
-                tmp_year = year_rec["year_and_ope"]["S"][0:4]
-                if tmp_year == str(int(year) - 1):
-                    last_year_rec = year_rec
-        
-        operator_total_list = sorted(operator_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-        # 連続罰金年数カウンターを設定
-        consecutive_years = 0
-        year_count = 0
-
-        for operator_rec in operator_total_list:
-            
-            # 先頭要素はスキップ（先頭要素は今年のレコード、前年以前を見たいため、スキップで良い）
-            if year_count == 0:
-                year_count += 1
-                continue
-
-            # １年ずつさかのぼる（年が飛んだ時点で確認不要のためbreak）
-            if operator_rec["year_and_ope"]["S"][0:4] == str(int(year) - year_count):
-                # 罰金フラグの確認
-                fine_flag = operator_rec["fine_flag"]["S"]
-
-                if fine_flag == "1":
-                    consecutive_years += 1
-                else:
-                    break
-            else:
-                break
-            
-            year_count += 1
-
-        # オペレーター別リストの中に昨年のレコードがあるかを確認する
-        last_year = 0
-        if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
-
-            if last_year_borrowing > 0:
-                last_year += last_year_borrowing * (-1.1)
-                thisYear_borrowing = False
-            elif last_year_banking > 0:
-                last_year += last_year_borrowing
-            else:
-                last_year += 0
 
         # オペレーター別リストの今年のレコードから各項目を取得
 
@@ -509,20 +356,17 @@ def make_recoed_past(eua_price, imo, year, fuel_oil_type_list, vessel_master):
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"]) if "banking" in rec and rec["banking"]["S"] != "" else 0
-        borrowing = float(rec["borrowing"]["S"]) if "borrowing" in rec and rec["borrowing"]["S"] != "" else 0
 
         # EUAからEUA costを算出する
-        eua_cost  = round(eua, 1) * int(eua_price)
+        eua_cost  = round(eua) * int(eua_price)
 
         # 必要な計算を行う
         GHG_Actual = calculate_function.calc_GHG_Actual(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-        total_cb        = cb + borrowing + banking + last_year
-        penalty_factor  = (consecutive_years) / 10 + 1
+        total_cb        = cb
 
         cb_cost = 0
-        if total_cb < 0:
-            cb_cost = abs(total_cb) * 2400 * penalty_factor / (GHG_Actual * 41000)
+        if total_cb < 0 and GHG_Actual != 0:
+            cb_cost = abs(total_cb) * 2400 / (GHG_Actual * 41000)
 
         # 全てゼロのytdデータを合わせて、データセットを作成
         dataset = {

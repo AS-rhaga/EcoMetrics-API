@@ -291,11 +291,11 @@ def main(imo, timestamp):
         year_and_ope = year_timestamp + operator
 
         # 更新前のyear-totalレコードを取得し、既存のborrowingを保持する
-        bk_str_borrowing = ""
         bk_year_total = select.get_year_total(imo, year_and_ope)
         print(f"bk_year_total:{(bk_year_total)}")
-        bk_str_borrowing = ""
-        this_year_borrowing = 0
+        bk_str_borrowing     = ""
+        bk_str_eoy_borrowing = ""
+        this_year_borrowing  = 0
         if bk_year_total:
             bk_str_borrowing     = bk_year_total[0]["borrowing"]["S"] if "borrowing" in bk_year_total[0] and bk_year_total[0]["borrowing"]["S"] != "" else "0.0"
             bk_str_eoy_borrowing = bk_year_total[0]["eoy_borrowing"]["S"] if "eoy_borrowing" in bk_year_total[0] and bk_year_total[0]["eoy_borrowing"]["S"] != "" else "0.0"
@@ -316,14 +316,14 @@ def main(imo, timestamp):
 
         # 今年のborrowing, 昨年のbanking, borrrowingと合わせて罰金フラグを確認する
         if last_year_borrowing_cb > 0:
-            if operator_total_cb - last_year_borrowing_cb * 1.1 > 0:
+            if operator_total_cb - last_year_borrowing_cb * 1.1 >= 0:
                 banking = operator_total_cb - last_year_borrowing_cb * 1.1
             else:
                 banking = 0
                 fine_flag = "1"
         
         elif last_year_banking_cb > 0:
-            if last_year_banking_cb + this_year_borrowing + operator_total_cb > 0:
+            if last_year_banking_cb + this_year_borrowing + operator_total_cb >= 0:
                 banking = last_year_banking_cb + this_year_borrowing + operator_total_cb
             else:
                 banking = 0
@@ -336,8 +336,10 @@ def main(imo, timestamp):
                 if operator_total_cb + this_year_borrowing < 0:
                     fine_flag = "1"
             else:
-                if operator_total_cb > 0:
+                if operator_total_cb >= 0:
                     banking = operator_total_cb
+                else:
+                    fine_flag = "1"
 
         bk_pooling_info = ""
         if bk_year_total:
@@ -444,6 +446,7 @@ def lambda_handler(event,context):
         print("Upserting eco-euets-fueleu-year-total is succeeded.")
 
     except Exception as e:
+        print(f"Error occurred: {str(e)}")
         return {
             "statusCode": 500,
             "body": json.dumps(str(e))

@@ -149,7 +149,7 @@ def get_year_total_by_year(imo, year):
         TableName=__table_name_year_total,
         ExpressionAttributeNames={
             '#name0': 'imo',
-            '#name1': 'company_and_year'
+            '#name1': 'year_and_ope'
         },
         ExpressionAttributeValues={
             ':value0': {'S': imo},

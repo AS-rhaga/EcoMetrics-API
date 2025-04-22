@@ -13,17 +13,19 @@ __table_name_simulation_voyage   = os.environ['EU_SIMULTATION_VOYAGE_PLAN']
 __table_name_simulation_speed    = os.environ['EU_SIMULTATION_SPEED_PLAN']
 __table_name_fuel_oil_type       = os.environ['FUEL_OIL_TYPE']
 
-def get_year_total_by_imo(imo):
+def get_year_total_by_imo_year(imo, year):
     data = []
     response = __dynamodb_client.query(
         TableName=__table_name_year_total,
         ExpressionAttributeNames={
-            '#name0': 'imo'
+            '#name0': 'imo',
+            '#name1': 'year_and_ope'
         },
         ExpressionAttributeValues={
-            ':value0': {'S': imo}
+            ':value0': {'S': imo},
+            ':value1': {'S': year}
         },
-        KeyConditionExpression='#name0 = :value0'
+        KeyConditionExpression='#name0 = :value0 AND begins_with(#name1, :value1)'
     )
     data = response['Items']
     
@@ -32,12 +34,14 @@ def get_year_total_by_imo(imo):
         response = __dynamodb_client.query(
             TableName=__table_name_year_total,
             ExpressionAttributeNames={
-                '#name0': 'imo'
+                '#name0': 'imo',
+                '#name1': 'year_and_ope'
             },
             ExpressionAttributeValues={
-                ':value0': {'S': imo}
+                ':value0': {'S': imo},
+                ':value1': {'S': year}
             },
-            KeyConditionExpression='#name0 = :value0',
+            KeyConditionExpression='#name0 = :value0 AND begins_with(#name1, :value1)',
             ExclusiveStartKey=response['LastEvaluatedKey']
         )
         data.extend(response['Items'])
@@ -804,10 +808,9 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
 
     return dataset
 
-def calc_eua_cb(imo):
+def calc_eua_cb(imo, year):
 
     # 必要な変数・リストを作成
-    last_year = 0
     voyage_flag = "0"
     speed_flag  = "0"
 
@@ -817,14 +820,11 @@ def calc_eua_cb(imo):
     
     fuel_oil_type_list = make_fuel_oil_type_list()
 
-    thisyear_year_total_list = []
-    operator_total_list      = []
-
     # 返却用データセット
     return_data_list = []
 
-    # imoのみをキーに、year-totalリストを取得
-    total_year_total_list = get_year_total_by_imo(imo)
+    # imoとyear（現在年）をキーに、year-totalリストを取得
+    total_year_total_list = get_year_total_by_imo_year(imo, year)
 
     # FOCFormulas取得
     res_foc_formulas = get_foc_formulas(imo)
@@ -847,13 +847,6 @@ def calc_eua_cb(imo):
     ytd_exist_speed_list      = []
     ytd_not_exist_speed_list  = []
 
-    # 同一imoのyear-totalリストでループ
-    for year_rec in total_year_total_list:
-
-        # 処理対象年のレコードを抽出。
-        if year_rec["year_and_ope"]["S"][0:4] == year_now:
-            thisyear_year_total_list.append(year_rec)
-
     # 各種燃料の消費量と、消費エネルギーの合計値用変数を設定する。
     ytd_lng    = 0
     ytd_hfo    = 0
@@ -862,43 +855,10 @@ def calc_eua_cb(imo):
     ytd_mgo    = 0
 
     # 今年分のyear-totalレコード分ループ
-    for rec in thisyear_year_total_list:
+    for rec in total_year_total_list:
 
         # オペレータ
         operator = rec["year_and_ope"]["S"][4:50]
-        
-        # 昨年分のレコードを入れるリスト
-        last_year_rec = []
-
-        # print(f"total_year_total_list:{total_year_total_list}")
-        # 同一imoのyear-totalリストでループ
-        for year_rec in total_year_total_list:
-
-            tmp_operator = year_rec["year_and_ope"]["S"][4:50]
-
-            # 同一オペレータのレコードを抽出
-            if tmp_operator == operator:
-                operator_total_list.append(year_rec)
-
-                # 西暦部分の確認、昨年のレコードであれば保持しておく。
-                tmp_year = year_rec["year_and_ope"]["S"][0:4]
-                if tmp_year == str(int(year_now) - 1):
-                    last_year_rec = year_rec
-
-        operator_total_list = sorted(operator_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-        # オペレーター別リストの中に昨年のレコードがあるかを確認する
-        last_year = 0
-        if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"] if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else "0")
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"] if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else "0")
-
-            if last_year_borrowing > 0:
-                last_year = last_year_borrowing * (-1.1)
-            elif last_year_banking > 0:
-                last_year = last_year_banking
-            else:
-                last_year = 0
 
         # オペレーター別リストの今年のレコードから各項目を取得
 
@@ -911,15 +871,13 @@ def calc_eua_cb(imo):
         distance  = float(rec["distance"]["S"])
         eua       = float(rec["eua"]["S"])
         cb        = float(rec["cb"]["S"])
-        banking   = float(rec["banking"]["S"] if "banking" in rec and rec["banking"]["S"] != "" else "0")
-        borrowing = float(rec["borrowing"]["S"] if "borrowing" in rec and rec["borrowing"]["S"] != "" else "0")
 
         # CBから消費量エネルギー（EU Rate考慮済）を算出する
         energy     = calc_energy(0, lng, 0, hfo, lfo, mdo, mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
 
         # 必要な計算を行う
         foc             = lng + hfo + lfo + mdo + mgo
-        total_cb        = cb + borrowing + banking + last_year
+        total_cb        = cb
 
         ytd_dataset = {
             "imo"            : imo,

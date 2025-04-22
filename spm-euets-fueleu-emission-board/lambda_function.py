@@ -506,23 +506,8 @@ def lambda_handler(event, context):
             # CBコスト取得
             tmp_cb = float(display_leg["cb"]["S"])
 
-            if tmp_cb >= 0:
-                tmp_total_cb_cost = 0
-            else:
-                res_year_total_list    = select.get_year_total(imo)
-                year_total_list_sorted = sorted(res_year_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-                flag_count = 0
-
-                for year in year_total_list_sorted:
-                            fine_flag = year["fine_flag"]["S"]
-                            if fine_flag == "1":
-                                flag_count += 1
-                            else:
-                                break
-                                
-                penalty_factor = 1 + (flag_count / 10)
-                tmp_total_cb_cost  = abs(tmp_cb) * penalty_factor * 2400 / (tmpGHGActual * 41000)
+            if tmp_cb < 0 and tmpGHGActual != 0:
+                tmp_total_cb_cost  = abs(tmp_cb) * 2400 / (tmpGHGActual * 41000)
 
             # 各種合計値に加算
             total_foc      += float(display_leg["total_foc"]["S"])
@@ -809,23 +794,8 @@ def lambda_handler(event, context):
             # CBコスト算出
             tmp_cb = float(display_voyage["cb"]["S"])
 
-            if tmp_cb >= 0:
-                tmp_total_cb_cost = 0
-            else:
-                res_year_total_list    = select.get_year_total(imo)
-                year_total_list_sorted = sorted(res_year_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-                flag_count = 0
-
-                for year in year_total_list_sorted:
-                            fine_flag = year["fine_flag"]["S"]
-                            if fine_flag == "1":
-                                flag_count += 1
-                            else:
-                                break
-                                
-                penalty_factor = 1 + (flag_count / 10)
-                tmp_total_cb_cost  = abs(tmp_cb) * penalty_factor * 2400 / (tmpGHGActual * 41000)
+            if tmp_cb < 0 and tmpGHGActual != 0:
+                tmp_total_cb_cost  = abs(tmp_cb) * 2400 / (tmpGHGActual * 41000)
 
                 print(f"tmp_total_cb_cost:{tmp_total_cb_cost}")
 

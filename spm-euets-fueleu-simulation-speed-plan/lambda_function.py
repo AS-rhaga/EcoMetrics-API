@@ -891,38 +891,8 @@ def lambda_handler(event, context):
 
     # Total CB Costの算出
     total_cb_cost = 0
-    if total_cb < 0:
-        # ペナルティーファクターを調べる
-        # 同一imoのyear-totalテーブルを取得（複数オペになったらどうする？）
-        res_year_total_list    = select.get_year_total(imo)
-        year_total_list_sorted = sorted(res_year_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-        # 初期値設定
-        consecutive_years = 0
-        year_count = 0
-
-        for year_total in year_total_list_sorted:
-            # 先頭要素はスキップ（先頭要素は今年のレコード、前年以前を見たいため、スキップで良い）
-            if year_count == 0:
-                year_count += 1
-                continue
-
-            # １年ずつさかのぼる（年が飛んだ時点で確認不要のためbreak）
-            if year_total["year_and_ope"]["S"][0:4] == str(int(now_year) - year_count):
-                # 罰金フラグの確認
-                fine_flag = year_total["fine_flag"]["S"]
-                if fine_flag == "1":
-                    consecutive_years += 1
-                else:
-                    break
-            else:
-                break
-
-            year_count += 1
-
-        penalty_factor = 1 + (consecutive_years) / 10
-        if total_GHG_Actual != 0:
-            total_cb_cost  = abs(float(total_cb)) * penalty_factor * 2400 / (total_GHG_Actual * 41000)
+    if total_cb < 0 and total_GHG_Actual != 0:
+            total_cb_cost  = abs(float(total_cb)) * 2400 / (total_GHG_Actual * 41000)
 
     # Simulation Resultの右側とX軸のラベル作成
     SimulationResultTotal = None

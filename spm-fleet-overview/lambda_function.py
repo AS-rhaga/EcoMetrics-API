@@ -341,7 +341,7 @@ def lambda_handler(event, context):
         res_cii_data = cii_caluclate.calc_cii(imo, res_vessel_master, res_vessel_alarm)
 
         # Year to Date、End of YearのEUA、CB算出
-        res_eua_cb_data = eua_cb_caluclate.calc_eua_cb(imo)        
+        res_eua_cb_data = eua_cb_caluclate.calc_eua_cb(imo, year)        
         
         favorite               = "default"
         imo                    = res_vessel_master[0].get("imo", {}).get("S", "")
@@ -383,13 +383,15 @@ def lambda_handler(event, context):
         cbEndOfYear            = res_eua_cb_data["eoy_cb"]
 
         # stateの設定値決定
+        print(f"imo:{imo}   state:{res_noonreport[0]["state"]["S"]}")
+        print(f"imo:{imo}   leg_type:{res_euets_fueleu_leg_total[0]["leg_type"]["S"]}")
         state = ""
-        if "state" in res_noonreport and res_noonreport[0]["state"]["S"] != "":
+        if "state" in res_noonreport[0] and res_noonreport[0]["state"]["S"] != "":
             state = res_noonreport[0]["state"]["S"]
         else:
-            if res_euets_fueleu_leg_total[0]["leg_type"] == "Sailing":
+            if res_euets_fueleu_leg_total[0]["leg_type"]["S"] == "Sailing":
                 state = "AT SEA"
-            elif res_euets_fueleu_leg_total[0]["leg_type"] == "Port":
+            elif res_euets_fueleu_leg_total[0]["leg_type"]["S"] == "Port":
                 state = "IN PORT"
             else:
                 state = "-"

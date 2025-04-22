@@ -264,66 +264,6 @@ def make_voyage_plans_data(imo, thisyear_year_total, voyage_plan_list, res_foc_f
     print(f"imo:{(imo)} operator_total_list:{(operator_total_list)}")
     for operator_total in operator_total_list:
 
-        # 該当オペレーターの過去実績を取得する。
-        operator_total_list = []
-        last_year_rec       = []
-        for year_rec in total_year_total_list:
-
-            tmp_operator = year_rec["year_and_ope"]["S"][4:50]
-
-            # 同一オペレータのレコードを抽出
-            if tmp_operator == operator_total["operator"]:
-                print(f"オペレーター一致。tmp_operator:{(tmp_operator)}, シミュレーションoperator:{(operator)}")
-                operator_total_list.append(year_rec)
-
-                # 西暦部分の確認、昨年のレコードであれば保持しておく。
-                tmp_year = year_rec["year_and_ope"]["S"][0:4]
-                if tmp_year == str(int(year) - 1):
-                    print(f"オペレーター一致の昨年分。")
-                    last_year_rec = year_rec
-
-        operator_total_list = sorted(operator_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-        # 連続罰金年数カウンターを設定
-        consecutive_years = 0
-        year_count = 0
-
-        for operator_rec in operator_total_list:
-            
-            # 先頭要素はスキップ（先頭要素は今年のレコード、前年以前を見たいため、スキップで良い）
-            if year_count == 0:
-                year_count += 1
-                continue
-
-            # １年ずつさかのぼる（年が飛んだ時点で確認不要のためbreak）
-            if operator_rec["year_and_ope"]["S"][0:4] == str(int(year) - year_count):
-                # 罰金フラグの確認
-                fine_flag = operator_rec["fine_flag"]["S"]
-
-                if fine_flag == "1":
-                    consecutive_years += 1
-                else:
-                    break
-            else:
-                break
-            
-            year_count += 1
-
-        penalty_factor  = (consecutive_years) / 10 + 1
-
-        # オペレーター別リストの中に昨年のレコードがあるかを確認する
-        last_year = 0
-        if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
-
-            if last_year_borrowing > 0:
-                last_year = last_year_borrowing * (-1.1)
-                thisYear_borrowing = False
-            elif last_year_banking > 0:
-                last_year = last_year_borrowing
-            else:
-                last_year = 0
             
         # シミュレーション対象のvoyageがある場合のみ
         if operator_total["voyage_count"] > 0:
@@ -354,35 +294,12 @@ def make_voyage_plans_data(imo, thisyear_year_total, voyage_plan_list, res_foc_f
             total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
             eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
 
-            # banking, borrowingを取得
-            banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
-            borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
-            total_cb  = eoy_cb - banking + borrowing + last_year
+            total_cb  = eoy_cb
 
             # CB Costの算出
-            eoy_cb_cost    = 0
-            penalty_factor  = (consecutive_years) / 10 + 1
-
-            # 昨年分のGHG強度を算出
-            last_year_lng   = float(last_year_rec["total_lng"]["S"]) if "total_lng" in last_year_rec and last_year_rec["total_lng"]["S"] != "" else 0
-            last_year_hfo   = float(last_year_rec["total_hfo"]["S"]) if "total_hfo" in last_year_rec and last_year_rec["total_hfo"]["S"] != "" else 0
-            last_year_lfo   = float(last_year_rec["total_lfo"]["S"]) if "total_lfo" in last_year_rec and last_year_rec["total_lfo"]["S"] != "" else 0
-            last_year_mdo   = float(last_year_rec["total_mdo"]["S"]) if "total_mdo" in last_year_rec and last_year_rec["total_mdo"]["S"] != "" else 0
-            last_year_mgo   = float(last_year_rec["total_mgo"]["S"]) if "total_mgo" in last_year_rec and last_year_rec["total_mgo"]["S"] != "" else 0
-            
-            GHG_last_year = calculate_function.calc_GHG_Actual(0, last_year_lng, 0, last_year_hfo, last_year_lfo, last_year_mdo, last_year_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-            last_year_cost = 0
-            if last_year < 0:
-                 last_year_cost    = abs(float(last_year)) * 2400 / (GHG_last_year * 41000) * penalty_factor
-
-            if total_cb >= 0:
-                eoy_cb_cost = 0
-            else:
-                # CBコストの算出場合分け
-                if last_year >= 0:
-                    eoy_cb_cost    = abs(float(total_cb)) * 2400 / (total_GHG * 41000) * penalty_factor
-                else:
-                    eoy_cb_cost    = abs(float(total_cb)) * 2400 / (GHG_last_year * 41000) * penalty_factor
+            eoy_cb_cost = 0
+            if total_cb < 0 and total_GHG != 0:
+                eoy_cb_cost    = abs(float(total_cb)) * 2400 / (total_GHG * 41000)
 
             # Voyage Planのシミュレーション用データ
             dataset = {
@@ -390,8 +307,6 @@ def make_voyage_plans_data(imo, thisyear_year_total, voyage_plan_list, res_foc_f
                 "eoy_distance"   : total_distance,
                 "eoy_foc"        : total_eu_actual_foc,
                 "eoy_eua"        : total_eua,
-                "last_year"      : last_year,
-                "last_year_cost" : last_year_cost,
                 "eoy_cb"         : total_cb,
                 "eoy_cb_cost"    : eoy_cb_cost
             }
@@ -418,8 +333,6 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
     total_foc         = 0
     total_eu_actual_foc = 0
     total_distance    = 0
-    last_year         = 0
-    last_year_cost    = 0
     total_eua         = 0
     total_energy      = 0
     eoy_cb            = 0
@@ -596,107 +509,24 @@ def make_speed_plans_data(thisyear_year_total, speed_plan, res_foc_formulas, fue
         total_eu_actual_foc += total_actual_foc
         total_eua      += simulation_leg_eua
 
-        # 該当オペレーターの過去実績を取得する。
-        operator_total_list = []
-        last_year_rec       = []
-        for year_rec in total_year_total_list:
-
-            tmp_operator = year_rec["year_and_ope"]["S"][4:50]
-
-            # 同一オペレータのレコードを抽出
-            if tmp_operator == operator:
-                operator_total_list.append(year_rec)
-
-                # 西暦部分の確認、昨年のレコードであれば保持しておく。
-                tmp_year = year_rec["year_and_ope"]["S"][0:4]
-                if tmp_year == str(int(year) - 1):
-                    last_year_rec = year_rec
-
-        operator_total_list = sorted(operator_total_list, key=lambda x:x["year_and_ope"]["S"], reverse=True)
-
-        # 連続罰金年数カウンターを設定
-        consecutive_years = 0
-        year_count = 0
-
-        for operator_rec in operator_total_list:
-            
-            # 先頭要素はスキップ（先頭要素は今年のレコード、前年以前を見たいため、スキップで良い）
-            if year_count == 0:
-                year_count += 1
-                continue
-
-            # １年ずつさかのぼる（年が飛んだ時点で確認不要のためbreak）
-            if operator_rec["year_and_ope"]["S"][0:4] == str(int(year) - year_count):
-                # 罰金フラグの確認
-                fine_flag = operator_rec["fine_flag"]["S"]
-
-                if fine_flag == "1":
-                    consecutive_years += 1
-                else:
-                    break
-            else:
-                break
-            
-            year_count += 1
-
-        # オペレーター別リストの中に昨年のレコードがあるかを確認する
-        last_year = 0
-        if len(last_year_rec) != 0:
-            last_year_banking   = float(last_year_rec["banking"]["S"]) if "banking" in last_year_rec and last_year_rec["banking"]["S"] != "" else 0
-            last_year_borrowing = float(last_year_rec["borrowing"]["S"]) if "borrowing" in last_year_rec and last_year_rec["borrowing"]["S"] != "" else 0
-
-            if last_year_borrowing > 0:
-                last_year = last_year_borrowing * (-1.1)
-                thisYear_borrowing = False
-            elif last_year_banking > 0:
-                last_year = last_year_borrowing
-            else:
-                last_year = 0
 
         # CB算出
         total_GHG = calculate_function.calc_GHG_Actual(total_lng_ods, total_lng_oms, total_lng_oss, total_hfo, total_lfo, total_mdo, total_mgo, total_lpg_p, total_lpg_b, total_nh3_ng, total_nh3_ef, total_methanol_ng, total_h2_ng, fuel_oil_type_list)
         eoy_cb    = calculate_function.calc_cb(now_year, total_energy, total_GHG)
         print(f"simulation_energy:{simulation_energy}, ytd_energy:{ytd_energy}, total_energy:{total_energy}, total_GHG:{total_GHG}")
 
-        # banking, borrowingを取得
-        banking   = float(thisyear_year_total["banking"]["S"]) if thisyear_year_total and "banking" in thisyear_year_total and thisyear_year_total["banking"]["S"] != "" else 0
-        borrowing = float(thisyear_year_total["borrowing"]["S"]) if thisyear_year_total and "borrowing" in thisyear_year_total and thisyear_year_total["borrowing"]["S"] != "" else 0
-        total_cb  = eoy_cb + borrowing + last_year
+        total_cb  = eoy_cb
 
         # CB Costの算出
-        eoy_cb_cost    = 0
-        penalty_factor  = (consecutive_years) / 10 + 1
-
-        # 昨年分のGHG強度を算出
-        last_year_lng   = float(last_year_rec["total_lng"]["S"]) if "total_lng" in last_year_rec and last_year_rec["total_lng"]["S"] != "" else 0
-        last_year_hfo   = float(last_year_rec["total_hfo"]["S"]) if "total_hfo" in last_year_rec and last_year_rec["total_hfo"]["S"] != "" else 0
-        last_year_lfo   = float(last_year_rec["total_lfo"]["S"]) if "total_lfo" in last_year_rec and last_year_rec["total_lfo"]["S"] != "" else 0
-        last_year_mdo   = float(last_year_rec["total_mdo"]["S"]) if "total_mdo" in last_year_rec and last_year_rec["total_mdo"]["S"] != "" else 0
-        last_year_mgo   = float(last_year_rec["total_mgo"]["S"]) if "total_mgo" in last_year_rec and last_year_rec["total_mgo"]["S"] != "" else 0
-        
-        GHG_last_year = calculate_function.calc_GHG_Actual(0, last_year_lng, 0, last_year_hfo, last_year_lfo, last_year_mdo, last_year_mgo, 0, 0, 0, 0, 0, 0, fuel_oil_type_list)
-        print(f"GHG_last_year:{(GHG_last_year)}")
-
-        last_year_cost = 0
-        if last_year < 0:
-            last_year_cost = abs(float(last_year)) * 2400 / (GHG_last_year * 41000) * penalty_factor
-
-        if total_cb >= 0:
-            eoy_cb_cost = 0
-        else:
-            # CBコストの算出場合分け
-            if last_year >= 0:
-                eoy_cb_cost    = abs(float(total_cb)) * 2400 / (total_GHG * 41000) * penalty_factor
-            else:
-                eoy_cb_cost    = abs(float(total_cb)) * 2400 / (GHG_last_year * 41000) * penalty_factor
+        eoy_cb_cost = 0
+        if total_cb < 0 and total_GHG != 0:
+            eoy_cb_cost    = abs(float(total_cb)) * 2400 / (total_GHG * 41000)
 
         # Voyage Planのシミュレーション用データ
         dataset = {
             "eoy_distance"   : total_distance,
             "eoy_foc"        : total_eu_actual_foc,
             "eoy_eua"        : total_eua,
-            "last_year"      : last_year,
-            "last_year_cost" : last_year_cost,
             "eoy_cb"         : total_cb,
             "eoy_cb_cost"    : eoy_cb_cost
         }
