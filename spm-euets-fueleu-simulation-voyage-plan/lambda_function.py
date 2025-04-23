@@ -437,6 +437,9 @@ def lambda_handler(event, context):
     # 最新のeco-eu-simulation-cond-voyage-plan取得
     res_simulation = select.get_simulation_voyage(imo, now_year)
     print(f"res_simulation{type(res_simulation)}: {res_simulation}")
+    res_simulation = sorted(res_simulation, key=lambda x:int(x["year_and_serial_number"]["S"].split("E")[1]))
+    print(f"ソート後res_simulation:{res_simulation}")
+
 
     # VesselMaster取得
     res_vesselmaster = select.get_vessel_master(imo)
