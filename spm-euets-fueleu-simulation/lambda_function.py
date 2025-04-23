@@ -454,6 +454,8 @@ def lambda_handler(event, context):
     if plan == "Voyage":
         # eco-eu-simulation-cond-voyage-plan取得
         res_simulation = select.get_simulation_voyage(imo, now_year)
+        res_simulation = sorted(res_simulation, key=lambda x:int(x["year_and_serial_number"]["S"].split("E")[1]))
+        print(f"ソート後res_simulation:{res_simulation}")
     else:
         # eco-eu-simulation-cond-speed-plan取得
         res_simulation = select.get_simulation_speed(imo, now_year)
@@ -867,8 +869,7 @@ def lambda_handler(event, context):
 
         # ---------- res_simulationループ終了 ---------
 
-        # departure timeでソート
-        SimulationInformationVoyageList = sorted(SimulationInformation_VoyageList, key=lambda x:x["leg_no"])
+        SimulationInformationVoyageList = SimulationInformation_VoyageList
 
         # LEG NO.に "E" をつける
         for data in SimulationInformationVoyageList:
