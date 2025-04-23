@@ -461,6 +461,7 @@ def util_EmissionBoard_Unit(imo, Timestamp_from, Timestamp_to, response, Unit, c
     # VoyageInformation
     CII_ScoreALL           = ""
     CII_valueALL           = 0
+    cii_RatingAll          = []
     Total_FOCALL           = 0
     ME_FOCALL              = 0
     Total_DistanceALL      = 0
