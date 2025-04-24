@@ -167,6 +167,7 @@ def make_leg_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_list,
     total_mdo             = 0
     total_mgo             = 0
     total_total_foc       = 0
+    total_eu_actual_foc   = 0
     eta_local_date        = ""
     eua                   = 0
     cb                    = 0
@@ -239,6 +240,7 @@ def make_leg_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_list,
             total_lfo = total_lfo * float(eu_rate) / 100
             total_mdo = total_mdo * float(eu_rate) / 100
             total_mgo = total_mgo * float(eu_rate) / 100
+            total_eu_actual_foc = total_total_foc
             total_total_foc = total_total_foc * float(eu_rate) / 100
 
             print("Leg終了、登録処理開始")
@@ -268,6 +270,7 @@ def make_leg_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_list,
             total_mdo        = str(float(total_mdo))
             total_mgo        = str(float(total_mgo))
             total_total_foc  = str(float(total_total_foc))
+            total_eu_actual_foc = str(total_eu_actual_foc)
             GHG_Actual       = str(float(GHG_Actual))
             cb               = str(float(cb))
 
@@ -288,6 +291,7 @@ def make_leg_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_list,
                 "total_mdo": total_mdo,
                 "total_mgo": total_mgo,
                 "total_foc": total_total_foc,
+                "eu_actual_foc": total_eu_actual_foc,
                 "GHG_Actual": GHG_Actual,
                 "eta_local_date": eta_local_date,
                 # "latest_course": latest_course,

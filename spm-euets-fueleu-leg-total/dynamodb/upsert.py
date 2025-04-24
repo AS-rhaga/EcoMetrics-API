@@ -39,6 +39,7 @@ def upsert_leg_total(data, retry_count: int=42) -> None:
                     "total_mdo"             : { "S": data["total_mdo"] },
                     "total_mgo"             : { "S": data["total_mgo"] },
                     "total_foc"             : { "S": data["total_foc"] },
+                    "eu_actual_foc"         : { "S": data["eu_actual_foc"]},
                     "eta_local_date"        : { "S": data["eta_local_date"] },
                     "latest_course"         : { "S": data["latest_course"] },
                     "latest_wind_direction" : { "S": data["latest_wind_direction"] },

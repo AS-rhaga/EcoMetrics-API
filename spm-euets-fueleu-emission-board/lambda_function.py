@@ -101,7 +101,7 @@ def calc_GHG_Actual(lng, hfo, lfo, mdo, mgo, fuel_oil_type_list):
     GHG_Actual = 0
     if sum_foc != 0:
         GHG_Actual = round(float(sum_ghg / sum_foc), 2)
-    print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
+    # print(f"GHG_Actual{type(GHG_Actual)}: {GHG_Actual}")
     return GHG_Actual
 
 def calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list):
@@ -148,7 +148,7 @@ def calc_GHG_Max(year):
         target_rate = 80
 
     GHG_Max = round(float(91.16 * (100 - float(target_rate)) / 100), 2)
-    print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
+    # print(f"GHG_Max{type(GHG_Max)}: {GHG_Max}")
     return GHG_Max
 
 # CBとCB Costを返す
@@ -162,7 +162,7 @@ def calc_cb(year_timestamp, energy, total_lng, total_hfo, total_lfo, total_mdo, 
 
         GHG_Actual = calc_GHG_Actual(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
         cb = (GHG_Max - GHG_Actual) * energy
-        print(f"cb{type(cb)}: {cb}")
+        # print(f"cb{type(cb)}: {cb}")
 
         if cb < 0:
             cb_cost = abs(cb) / GHG_Actual * 24000 / 410000
@@ -208,7 +208,7 @@ def choise_period_noonreport(res_np, time_from, time_to):
 # 最大桁の値以外を０に変換する（例：43⇒40、549⇒500、0.345→0.3）
 def maxDigitOnly(n):
     # 数値を文字列に変換
-    print(f"maxDigitOnly input:{(n)}")
+    # print(f"maxDigitOnly input:{(n)}")
     str_n = str(n)
     # ゼロ以外の最初の桁を取得
     count  = 0
@@ -223,7 +223,7 @@ def maxDigitOnly(n):
         result = degits + '0' * (len(str(round(n))) - count)
     else:
         result = degits
-    print(f"maxDigitOnly result:{(result)}")
+    # print(f"maxDigitOnly result:{(result)}")
     # 数値型に変換して返す
     return float(result)
 
@@ -353,7 +353,7 @@ def lambda_handler(event, context):
             leg_eu_rate = leg_info["eu_rate"]["S"]
             if leg_eu_rate != "0":
                 res_leg.append(leg_info)
-        print(f"len(res_leg): {len(res_leg)}")
+        # print(f"len(res_leg): {len(res_leg)}")
         res_leg_list = res_leg
         
         # 必要な年数分のLegリストでループ
@@ -450,6 +450,7 @@ def lambda_handler(event, context):
                         "total_mdo"     : {"S": record_data["total_mdo"]},
                         "total_mgo"     : {"S": record_data["total_mgo"]},
                         "total_foc"     : {"S": record_data["total_foc"]},
+                        "eu_actual_foc" : {"S": record_data["eu_actual_foc"]},
                         "eta_local_date": {"S": record_data["eta_local_date"]},
                         "eua"           : {"S": record_data["eua"]},
                         "cb"            : {"S": record_data["cb"]}
@@ -506,12 +507,13 @@ def lambda_handler(event, context):
             # CBコスト取得
             tmp_cb = float(display_leg["cb"]["S"])
 
+            tmp_total_cb_cost = 0
             if tmp_cb < 0 and tmpGHGActual != 0:
                 tmp_total_cb_cost  = abs(tmp_cb) * 2400 / (tmpGHGActual * 41000)
 
             # 各種合計値に加算
             total_foc      += float(display_leg["total_foc"]["S"])
-            eu_actual_total_foc += float(display_leg["total_foc"]["S"]) / (int(display_leg["eu_rate"]["S"]) / 100)
+            eu_actual_total_foc += float(display_leg["eu_actual_foc"]["S"])
             total_GHG      += tmp_co2_Actual
             total_distance += float(display_leg["distance"]["S"]) if display_leg["distance"]["S"] != "" else 0
             total_eua      += float(display_leg["eua"]["S"])
@@ -531,7 +533,7 @@ def lambda_handler(event, context):
                 if int(leg_year) % 5 == 0 and int(leg_year) <= 2050:
                     keep_total_cb      = from_to_leg_total_cb
                     keep_total_cb_cost = from_to_leg_total_cb_cost
-                    print(f"leg_count:{(leg_count)} keep_total_cb:{(keep_total_cb)} keep_total_cb_cost:{(keep_total_cb_cost)}")
+                    # print(f"leg_count:{(leg_count)} keep_total_cb:{(keep_total_cb)} keep_total_cb_cost:{(keep_total_cb_cost)}")
                     from_to_leg_lng = tmp_total_lng
                     from_to_leg_hfo = tmp_total_hfo
                     from_to_leg_lfo = tmp_total_lfo
@@ -564,7 +566,7 @@ def lambda_handler(event, context):
             # DepartureTimeからArrivalTimeまでのTotalTimeを算出
             tmp_total_time = calc_time_diff(departure_time, arrival_time)
             # EU範囲内の実績FOC算出
-            eu_actual_foc = float(display_leg["total_foc"]["S"]) / (int(display_leg["eu_rate"]["S"]) / 100)
+            # eu_actual_foc = float(display_leg["total_foc"]["S"]) / (int(display_leg["eu_rate"]["S"]) / 100)
 
             #画面返却用データを作成
             datarow = {
@@ -580,7 +582,7 @@ def lambda_handler(event, context):
                 "displacement"  : str(round(float(display_leg["displacement"]["S"]))) if display_leg["displacement"]["S"] != "" else "",
                 "distance"      : str(round(float(display_leg["distance"]["S"]))) if display_leg["distance"]["S"] != "" else "",
                 "fuel"          : fuel_list,
-                "foc"           : str(round(eu_actual_foc, 1)),
+                "foc"           : str(round(float(display_leg["eu_actual_foc"]["S"]), 1)),
                 "eua"           : str(round(float(display_leg["eua"]["S"]))),
                 "cb"            : str(round(float(display_leg["cb"]["S"]) / 1000000, 1))
             }
@@ -590,7 +592,7 @@ def lambda_handler(event, context):
             eua_data = [leg_count, float(display_leg["eua"]["S"])]
             EUAList.append(eua_data)
 
-            print(f"【from_to_leg】lng:{(from_to_leg_lng)}, hfo:{(from_to_leg_hfo)}, lfo:{(from_to_leg_lfo)}, mdo:{(from_to_leg_mdo)}, mgo:{(from_to_leg_mgo)}")
+            # print(f"【from_to_leg】lng:{(from_to_leg_lng)}, hfo:{(from_to_leg_hfo)}, lfo:{(from_to_leg_lfo)}, mdo:{(from_to_leg_mdo)}, mgo:{(from_to_leg_mgo)}")
             from_to_leg_energy = calc_energy(from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
             from_to_leg_cb, from_to_leg_cb_cost = calc_cb(int(leg_year), from_to_leg_energy, from_to_leg_lng, from_to_leg_hfo, from_to_leg_lfo, from_to_leg_mdo, from_to_leg_mgo, fuel_oil_info_list)
             from_to_leg_total_cb      = from_to_leg_cb      + keep_total_cb
@@ -619,8 +621,9 @@ def lambda_handler(event, context):
                 timestamp_arrival_time = Util.timestamp_calc_datetime(arrival_time)
                 unit_timestamp_list.append(timestamp_arrival_time)
         
+        print(f"imo:{imo} LEG選択時　eu_actual_total_foc:{round(eu_actual_total_foc, 5)}")
         VoyageInformationTotal = {
-            "foc"     : round(eu_actual_total_foc),
+            "foc"     : round(round(eu_actual_total_foc, 5)),
             "ghg"     : round(total_GHG),
             "distance": round(total_distance),
             "eua"     : round(total_eua),
@@ -773,7 +776,7 @@ def lambda_handler(event, context):
         keep_total_cb      = 0
         keep_total_cb_cost = 0
 
-        print(f"display_voyage_list_sorted:{(display_voyage_list_sorted)}")
+        # print(f"display_voyage_list_sorted:{(display_voyage_list_sorted)}")
         # 画面表示用に整形
         for display_voyage in display_voyage_list_sorted:
 
@@ -794,10 +797,11 @@ def lambda_handler(event, context):
             # CBコスト算出
             tmp_cb = float(display_voyage["cb"]["S"])
 
+            tmp_total_cb_cost = 0
             if tmp_cb < 0 and tmpGHGActual != 0:
                 tmp_total_cb_cost  = abs(tmp_cb) * 2400 / (tmpGHGActual * 41000)
 
-                print(f"tmp_total_cb_cost:{tmp_total_cb_cost}")
+                # print(f"tmp_total_cb_cost:{tmp_total_cb_cost}")
 
             # 各種合計値に加算
             total_foc      += float(display_voyage["total_foc"]["S"])
@@ -817,11 +821,11 @@ def lambda_handler(event, context):
                 from_to_voyage_mgo += tmp_total_mgo
             else:
                 # 2025年～2050年の間、5年ごとにGHG強度上限の削減率が変わる
-                print(f"voyage_count:{(voyage_count)} voyage_year:{(voyage_year)}")
+                # print(f"voyage_count:{(voyage_count)} voyage_year:{(voyage_year)}")
                 if int(voyage_year) % 5 == 0 and int(voyage_year) <= 2050:
                     keep_total_cb      = from_to_voyage_total_cb
                     keep_total_cb_cost = from_to_voyage_total_cb_cost
-                    print(f"voyage_count:{(voyage_count)} keep_total_cb:{(keep_total_cb)} keep_total_cb_cost:{(keep_total_cb_cost)}")
+                    # print(f"voyage_count:{(voyage_count)} keep_total_cb:{(keep_total_cb)} keep_total_cb_cost:{(keep_total_cb_cost)}")
                     from_to_voyage_lng = tmp_total_lng
                     from_to_voyage_hfo = tmp_total_hfo
                     from_to_voyage_lfo = tmp_total_lfo
@@ -876,7 +880,7 @@ def lambda_handler(event, context):
             eua_data = [voyage_count, float(display_voyage["eua"]["S"])]
             EUAList.append(eua_data)
 
-            print(f"【from_to_voyage】lng:{(from_to_voyage_lng)}, hfo:{(from_to_voyage_hfo)}, lfo:{(from_to_voyage_lfo)}, mdo:{(from_to_voyage_mdo)}, mgo:{(from_to_voyage_mgo)}")
+            # print(f"【from_to_voyage】lng:{(from_to_voyage_lng)}, hfo:{(from_to_voyage_hfo)}, lfo:{(from_to_voyage_lfo)}, mdo:{(from_to_voyage_mdo)}, mgo:{(from_to_voyage_mgo)}")
             from_to_voyage_energy = calc_energy(from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
             from_to_voyage_cb, from_to_voyage_cb_cost = calc_cb(int(voyage_year), from_to_voyage_energy, from_to_voyage_lng, from_to_voyage_hfo, from_to_voyage_lfo, from_to_voyage_mdo, from_to_voyage_mgo, fuel_oil_info_list)
             from_to_voyage_total_cb      = from_to_voyage_cb      + keep_total_cb
@@ -906,8 +910,9 @@ def lambda_handler(event, context):
                 unit_timestamp_list.append(timestamp_arrival_time)
 
         
+        print(f"imo:{imo} VOYAGE選択時　eu_actual_total_foc:{round(eu_actual_total_foc, 5)}")
         VoyageInformationTotal = {
-            "foc"     : round(eu_actual_total_foc),
+            "foc"     : round(round(eu_actual_total_foc, 5)),
             "ghg"     : round(total_GHG),
             "distance": round(total_distance),
             "eua"     : round(total_eua),
@@ -917,7 +922,7 @@ def lambda_handler(event, context):
         }
 
     # その他のグラフデータ取得（CII EmissionBoardから流用）
-    print(f"unit_timestamp_list:{unit_timestamp_list}")
+    # print(f"unit_timestamp_list:{unit_timestamp_list}")
     data = EmissionBoard.util_EmissionBoard_main(imo, Timestamp_from, Timestamp_to, response, unit_timestamp_list, unit)
 
     # CB_YAXISの桁数を調整する

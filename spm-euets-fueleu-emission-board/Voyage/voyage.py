@@ -194,6 +194,7 @@ def calc_sum_fuel(res_np, eu_rate):
     total_lfo       = total_lfo * eu_rate / 100
     total_mdo       = total_mdo * eu_rate / 100
     total_mgo       = total_mgo * eu_rate / 100
+    eu_actual_foc   = total_total_foc
     total_total_foc = total_total_foc * eu_rate / 100
 
     print(f"record_count: {(count)}")
@@ -202,7 +203,7 @@ def calc_sum_fuel(res_np, eu_rate):
     if count > 0:
         avg_displacement = total_displacement/count
 
-    return total_distance, avg_displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_total_foc
+    return total_distance, avg_displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_total_foc, eu_actual_foc
 
 def choise_period_noonreport(res_np, time_from, time_to):
 
@@ -285,6 +286,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
         total_mdo      = float(res_leg[j]["total_mdo"]["S"])
         total_mgo      = float(res_leg[j]["total_mgo"]["S"])
         total_foc      = float(res_leg[j]["total_foc"]["S"])
+        eu_actual_foc  = float(res_leg[j]["eu_actual_foc"]["S"])
         eua            = float(res_leg[j]["eua"]["S"])
 
         # 各legがこのvoyageに関わっているかを確認する。
@@ -304,7 +306,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 voyage_total_mdo          += total_mdo
                 voyage_total_mgo          += total_mgo
                 voyage_total_foc          += total_foc
-                eu_actual_total_foc       += total_foc / (leg_eu_rate / 100)
+                eu_actual_total_foc       += eu_actual_foc
                 voyage_total_displacement += displacement
                 voyage_count_displacement += 1
                 voyage_total_eua          += eua
@@ -320,7 +322,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 nr_list = choise_period_noonreport(res_np, departure_time, arrival_time)
                 # print(f"record_len: {(nr_list)}")
 
-                distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list, leg_eu_rate)
+                distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc, eu_actual_foc = calc_sum_fuel(nr_list, leg_eu_rate)
                 print(f"distance: {(distance)}, displacement: {(displacement)}, total_lng: {(total_lng)}, total_hfo: {(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo: {(total_mdo)}, total_mgo: {(total_mgo)}, total_foc: {(total_foc)}")
                 voyage_eua = calc_EUA(str_year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
                 voyage_energy = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
@@ -331,7 +333,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
                 voyage_total_mdo          += total_mdo
                 voyage_total_mgo          += total_mgo
                 voyage_total_foc          += total_foc
-                eu_actual_total_foc       += total_foc / (leg_eu_rate / 100)
+                eu_actual_total_foc       += eu_actual_foc
                 voyage_total_displacement += displacement
                 voyage_count_displacement += 1
                 voyage_total_eua          += voyage_eua
@@ -345,7 +347,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
             nr_list = choise_period_noonreport(res_np, voyage_departure_time, arrival_time)
             # print(f"record_len: {(nr_list)}")
 
-            distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc = calc_sum_fuel(nr_list, leg_eu_rate)
+            distance, displacement, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, total_foc, eu_actual_foc = calc_sum_fuel(nr_list, leg_eu_rate)
             print(f"distance: {(distance)}, displacement: {(displacement)}, total_lng: {(total_lng)}, total_hfo: {(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo: {(total_mdo)}, total_mgo: {(total_mgo)}, total_foc: {(total_foc)}")
             voyage_eua = calc_EUA(str_year, total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
             voyage_energy = calc_energy(total_lng, total_hfo, total_lfo, total_mdo, total_mgo, fuel_oil_info_list)
@@ -356,7 +358,7 @@ def make_voyage_data(imo, Timestamp_from, Timestamp_to, res_np, fuel_oil_info_li
             voyage_total_mdo          += total_mdo
             voyage_total_mgo          += total_mgo
             voyage_total_foc          += total_foc
-            eu_actual_total_foc       += total_foc / (leg_eu_rate / 100)
+            eu_actual_total_foc       += eu_actual_foc
             voyage_total_displacement += displacement
             voyage_count_displacement += 1
             voyage_total_eua          += voyage_eua

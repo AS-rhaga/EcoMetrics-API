@@ -219,6 +219,7 @@ def main(imo, timestamp):
     total_mdo             = 0
     total_mgo             = 0
     total_total_foc       = 0
+    total_actual_foc      = 0
     eta_local_date        = ""
     latest_course         = 0
     latest_wind_direction = 0
@@ -372,8 +373,13 @@ def main(imo, timestamp):
                 print("Leg終了、登録処理開始")
                 print(f"year_timestamp:{(year_timestamp)}, eu_rate:{(eu_rate)}, total_lng:{(total_lng)}, total_hfo:{(total_hfo)}, total_lfo:{(total_lfo)}, total_mdo:{(total_mdo)}, total_mgo:{(total_mgo)}")
                 
-                # EU Rateを設定する
-                eu_rate = check_eu_rate(keep_departure_port_code, port_code)
+                # 到着港のport_codeを確認し、EU Rateを設定する
+                # 航海レグであれば今のまま（次のレグの最初となるNoonReportのport_code項目）
+                arrival_port_code = port_code
+                if leg_type == "Port":
+                    # 停泊レグであれば出発港と同じもの
+                    arrival_port_code = keep_departure_port_code
+                eu_rate = check_eu_rate(keep_departure_port_code, arrival_port_code)
                 
                 # 各種燃料消費量にEU Rateを考慮する
                 total_lng = total_lng * float(eu_rate) / 100
@@ -381,6 +387,7 @@ def main(imo, timestamp):
                 total_lfo = total_lfo * float(eu_rate) / 100
                 total_mdo = total_mdo * float(eu_rate) / 100
                 total_mgo = total_mgo * float(eu_rate) / 100
+                total_actual_foc = total_total_foc
                 total_total_foc = total_total_foc * float(eu_rate) / 100
                 
                 #EUA, CBを算出
@@ -410,6 +417,7 @@ def main(imo, timestamp):
                 total_mdo        = str(float(total_mdo))
                 total_mgo        = str(float(total_mgo))
                 total_total_foc  = str(float(total_total_foc))
+                total_actual_foc = str(total_actual_foc)
                 leg_eua          = str(float(leg_eua))
                 leg_cb           = str(float(leg_cb))
                 eu_rate          = str(eu_rate)
@@ -431,6 +439,7 @@ def main(imo, timestamp):
                     "total_mdo": total_mdo,
                     "total_mgo": total_mgo,
                     "total_foc": total_total_foc,
+                    "eu_actual_foc": total_actual_foc,
                     "eta_local_date": eta_local_date,
                     "latest_course": latest_course,
                     "latest_wind_direction": latest_wind_direction,
@@ -540,6 +549,7 @@ def main(imo, timestamp):
             total_lfo = total_lfo * float(eu_rate) / 100
             total_mdo = total_mdo * float(eu_rate) / 100
             total_mgo = total_mgo * float(eu_rate) / 100
+            total_actual_foc = total_total_foc
             total_total_foc = total_total_foc * float(eu_rate) / 100
 
             #EUA, CBを算出
@@ -569,6 +579,7 @@ def main(imo, timestamp):
             total_mdo        = str(float(total_mdo))
             total_mgo        = str(float(total_mgo))
             total_total_foc  = str(float(total_total_foc))
+            total_actual_foc = str(total_actual_foc)
             leg_eua          = str(float(leg_eua))
             leg_cb           = str(float(leg_cb))
             eu_rate          = str(eu_rate)
@@ -590,6 +601,7 @@ def main(imo, timestamp):
                 "total_mdo": total_mdo,
                 "total_mgo": total_mgo,
                 "total_foc": total_total_foc,
+                "eu_actual_foc": total_actual_foc,
                 "eta_local_date": eta_local_date,
                 "latest_course": latest_course,
                 "latest_wind_direction": latest_wind_direction,
@@ -636,6 +648,7 @@ def lambda_handler(event,context):
             print(json.dumps(str(e)))
 
     except Exception as e:
+        print(f"Error occurred: {str(e)}")
         return {
             "statusCode": 500,
             "body": json.dumps(str(e))
