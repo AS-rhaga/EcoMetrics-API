@@ -195,7 +195,7 @@ def make_recoed(imo, vessel_name, year, para_year, fuel_oil_type_info_list):
             "foc"            : round(eu_actual_foc),
             "year_to_date"   : round(cb / 1000000, 1),     # 修正。実際のCBを表示するべき
             "last_year"      : round(last_year / 1000000, 1),
-            "borrowing_limit": round(borrowing_limit / 1000000),
+            "borrowing_limit": round(borrowing_limit / 1000000, 1),
             "borrowing"      : round(borrowing / 1000000, 1),
             "banking"        : round(banking / 1000000, 1),
             "total"          : round(total_cb / 1000000, 1),
